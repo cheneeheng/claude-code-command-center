@@ -1,0 +1,578 @@
+/* ============================================================================
+   TIDEWATER — Brand Design System
+   ----------------------------------------------------------------------------
+   One canonical foundation for every Tidewater project. Import this first,
+   then layer app-specific CSS on top. Everything is token-driven: change a
+   value here and it propagates everywhere.
+
+   Identity:  terracotta + teal on a cool minty ground. Flat, border-led depth.
+              Fraunces (display) · Hanken Grotesk (UI) · JetBrains Mono (data).
+   Principle: defer to content. One accent, one secondary, no atmosphere.
+              The only memorable device is the active-edge — and it means
+              something (state), so it stays.
+
+   Contents
+     1. Fonts
+     2. Tokens — light (also the :root fallback)
+     3. Tokens — dark (OS preference + explicit)
+     4. Compatibility alias layer (legacy names → canonical)
+     5. Reset & document base
+     6. Typography primitives
+     7. Surfaces — card
+     8. Controls — buttons, inputs, toggle
+     9. Indicators — badge, pill, dot, spinner, state text
+    10. Data — table, bar, legend
+    11. Accessibility — focus, reduced motion
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   1. Fonts
+   ------------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ----------------------------------------------------------------------------
+   2. Tokens — light  (this :root is also the universal fallback)
+   ------------------------------------------------------------------------- */
+:root {
+  /* — Type families ----------------------------------------------------- */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-ui:      "Hanken Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  /* — Type scale  (anchored at a 16px root; rem so it stays predictable) - */
+  --fs-50:  0.6875rem;  /* 11px · eyebrows, micro-labels, mono data       */
+  --fs-75:  0.75rem;    /* 12px · captions, table cells, badges           */
+  --fs-100: 0.8125rem;  /* 13px · secondary body, controls                */
+  --fs-200: 0.9375rem;  /* 15px · body default                            */
+  --fs-300: 1.0625rem;  /* 17px · emphasized body, lead-in                */
+  --fs-400: 1.3125rem;  /* 21px · card / section display                  */
+  --fs-500: 1.625rem;   /* 26px · stat values                             */
+  --fs-600: 2.25rem;    /* 36px · page heading                            */
+  --fs-700: 3.25rem;    /* 52px · hero                                    */
+
+  --lh-tight: 1.1;
+  --lh-snug:  1.3;
+  --lh-base:  1.5;
+
+  --tracking-tight: -0.02em;
+  --tracking-flat:   0;
+  --tracking-wide:   0.06em;
+  --tracking-eyebrow:0.1em;
+
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* — Spacing  (4px grid) ---------------------------------------------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* — Radius ------------------------------------------------------------ */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-full: 999px;
+
+  /* — Elevation  (border-led; shadow is the exception, not the rule) ---- */
+  --shadow-sm: 0 1px 2px rgba(15,50,48,.06), 0 1px 3px rgba(15,50,48,.05);
+  --shadow-md: 0 4px 12px rgba(15,50,48,.10), 0 2px 4px rgba(15,50,48,.06); /* overlays only */
+
+  /* — Motion ------------------------------------------------------------ */
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 130ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+
+  /* — Surfaces ---------------------------------------------------------- */
+  --bg:        #F0F5F3;
+  --surface:   #FFFFFF;
+  --surface-2: #F3F8F6;
+
+  /* — Ink --------------------------------------------------------------- */
+  --fg:        #143230;
+  --fg-muted:  #5F7E7A;
+  --fg-subtle: #7A938E;   /* third tier: placeholders, disabled, inherited */
+
+  /* — Lines ------------------------------------------------------------- */
+  --border:        #DCEAE6;
+  --border-strong: #C7DBD6;
+
+  /* — Brand: terracotta ------------------------------------------------- */
+  --accent:      #CB6442;
+  --accent-hi:   #E27A50;
+  --accent-wash: #FAEDE6;
+
+  /* — Brand: teal ------------------------------------------------------- */
+  --secondary:      #0E7E77;
+  --secondary-hi:   #14938C;
+  --secondary-wash: #E2F1EF;
+
+  /* — Text that sits on a brand fill ------------------------------------ */
+  --on-text: #FFFFFF;
+
+  /* — Semantic state ---------------------------------------------------- */
+  --success:      #2E8B57; --success-wash: #E2F0E8;
+  --warning:      #B5791F; --warning-wash: #F6EDD9;
+  --danger:       #C0392B; --danger-wash:  #F8E6E3;
+  --error: var(--danger);  /* alias kept for legacy var(--error,…) usage   */
+
+  /* — Data visualization  (model families / token categories) ----------- */
+  --data-1: #0E7E77;  /* teal      */
+  --data-2: #3B82F6;  /* blue      */
+  --data-3: #A855F7;  /* purple    */
+  --data-4: #CB6442;  /* terracotta*/
+  --data-5: #22C55E;  /* green     */
+  --data-6: #EAB308;  /* amber     */
+
+  /* — App-specific neutrals (inherited / nested rows) ------------------- */
+  --inherited-fg: #7A938E;
+  --inherited-bg: #E9F0EE;
+
+  /* — Focus ------------------------------------------------------------- */
+  --focus-ring: var(--secondary);
+}
+
+/* ----------------------------------------------------------------------------
+   3. Tokens — dark
+   ------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-md: 0 6px 18px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+
+    --bg:        #0C1F1D;
+    --surface:   #122A27;
+    --surface-2: #163230;
+
+    --fg:        #E7F1EE;
+    --fg-muted:  #7C9590;
+    --fg-subtle: #6E8782;
+
+    --border:        #203F3A;
+    --border-strong: #2D544D;
+
+    --accent:      #E98A62;
+    --accent-hi:   #F4A37D;
+    --accent-wash: rgba(233,138,98,.11);
+
+    --secondary:      #2FB3A8;
+    --secondary-hi:   #45C7BC;
+    --secondary-wash: rgba(47,179,168,.12);
+
+    --on-text: #06201E;
+
+    --success: #5FB985; --success-wash: rgba(95,185,133,.14);
+    --warning: #E0A94B; --warning-wash: rgba(224,169,75,.14);
+    --danger:  #E36B5E; --danger-wash:  rgba(227,107,94,.14);
+
+    --data-1: #2FB3A8;
+    --data-2: #5B9BF8;
+    --data-3: #BD7DF0;
+    --data-4: #E98A62;
+    --data-5: #4ADE80;
+    --data-6: #F2C94C;
+
+    --inherited-fg: #6E8782;
+    --inherited-bg: #15302D;
+  }
+}
+
+:root[data-theme="dark"] {
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-md: 0 6px 18px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+
+  --bg:        #0C1F1D;
+  --surface:   #122A27;
+  --surface-2: #163230;
+
+  --fg:        #E7F1EE;
+  --fg-muted:  #7C9590;
+  --fg-subtle: #6E8782;
+
+  --border:        #203F3A;
+  --border-strong: #2D544D;
+
+  --accent:      #E98A62;
+  --accent-hi:   #F4A37D;
+  --accent-wash: rgba(233,138,98,.11);
+
+  --secondary:      #2FB3A8;
+  --secondary-hi:   #45C7BC;
+  --secondary-wash: rgba(47,179,168,.12);
+
+  --on-text: #06201E;
+
+  --success: #5FB985; --success-wash: rgba(95,185,133,.14);
+  --warning: #E0A94B; --warning-wash: rgba(224,169,75,.14);
+  --danger:  #E36B5E; --danger-wash:  rgba(227,107,94,.14);
+
+  --data-1: #2FB3A8;
+  --data-2: #5B9BF8;
+  --data-3: #BD7DF0;
+  --data-4: #E98A62;
+  --data-5: #4ADE80;
+  --data-6: #F2C94C;
+
+  --inherited-fg: #6E8782;
+  --inherited-bg: #15302D;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark;  }
+
+/* ----------------------------------------------------------------------------
+   4. Compatibility alias layer
+   Legacy names used by existing markup map onto the canonical tokens so
+   older stylesheets keep working unchanged. New projects: use the canonical
+   names above and ignore these.
+   ------------------------------------------------------------------------- */
+:root {
+  --text:    var(--fg);
+  --muted:   var(--fg-muted);
+  --border2: var(--border-strong);
+  --accent2: var(--accent);
+  --sans:    var(--font-ui);
+  --mono:    var(--font-mono);
+
+  /* legacy flat chart names — pinned to the original dashboard hexes and kept
+     theme-independent, so existing charts render identically. (The --data-*
+     ramp above is the modern, theme-aware palette for new work.) */
+  --green:  #22C55E;
+  --blue:   #3B82F6;
+  --purple: #A855F7;
+  --red:    #EF4444;
+}
+
+/* ----------------------------------------------------------------------------
+   5. Reset & document base
+   ------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 100%;            /* canonical 16px root — the rem scale depends on it */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--fs-200);
+  line-height: var(--lh-base);
+  min-height: 100vh;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--accent-wash); color: var(--fg); }
+
+a { color: var(--secondary); text-decoration: none; }
+a:hover { color: var(--secondary-hi); text-decoration: underline; }
+
+hr { border: none; border-top: 1px solid var(--border); }
+
+/* ----------------------------------------------------------------------------
+   6. Typography primitives
+   ------------------------------------------------------------------------- */
+h1, .display-1 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: var(--fs-600);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+h2, .display-2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: var(--fs-400);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+h3 {
+  font-family: var(--font-ui);
+  font-size: var(--fs-300);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+}
+
+/* The eyebrow: uppercase mono micro-label. The system's connective tissue. */
+.eyebrow,
+.section-title {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-50);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+}
+
+.lead    { font-size: var(--fs-300); color: var(--fg); }
+.muted   { color: var(--fg-muted); }
+.subtle  { color: var(--fg-subtle); }
+.mono    { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.numeric { font-variant-numeric: tabular-nums; }
+
+/* ----------------------------------------------------------------------------
+   7. Surfaces — card
+   ------------------------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Signature: the active-edge. A solid 3px brand rule + wash on the leading
+   border of an element that is "on". It marks state, not decoration — so it
+   only ever appears on something the user has activated. */
+.has-edge      { border-left: 3px solid var(--secondary); }
+.is-active,
+.has-edge.is-active {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-wash);
+}
+
+/* ----------------------------------------------------------------------------
+   8. Controls
+   ------------------------------------------------------------------------- */
+button,
+.btn {
+  font-family: var(--font-ui);
+  font-size: var(--fs-100);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard),
+              color var(--dur-fast) var(--ease-standard);
+}
+button:hover,
+.btn:hover { background: var(--bg); border-color: var(--fg-muted); }
+button:disabled,
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Primary: solid teal. Use once per view — the single most important action. */
+.btn-primary {
+  background: var(--secondary);
+  border-color: var(--secondary);
+  color: var(--on-text);
+}
+.btn-primary:hover { background: var(--secondary-hi); border-color: var(--secondary-hi); }
+
+/* Outline: teal hairline that fills on hover. The workhorse affordance. */
+.btn-outline {
+  background: transparent;
+  border-color: var(--secondary);
+  color: var(--secondary);
+}
+.btn-outline:hover:not(:disabled) { background: var(--secondary-hi); border-color: var(--secondary-hi); color: var(--on-text); }
+.btn-outline:disabled { border-color: var(--border); color: var(--fg-muted); }
+
+/* Ghost: no chrome until needed. */
+.btn-ghost {
+  background: none;
+  border-color: transparent;
+  color: var(--fg-muted);
+}
+.btn-ghost:hover { background: var(--surface-2); color: var(--fg); border-color: transparent; }
+
+/* Danger: reserved for destructive, irreversible actions. */
+.btn-danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: transparent;
+}
+.btn-danger:hover { background: var(--danger-wash); border-color: var(--danger); color: var(--danger); }
+
+.btn-sm { font-size: var(--fs-75); padding: var(--space-1) var(--space-3); }
+
+/* Inputs */
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="email"],
+select,
+textarea,
+.input {
+  font-family: var(--font-ui);
+  font-size: var(--fs-100);
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+input::placeholder, textarea::placeholder { color: var(--fg-subtle); }
+input:focus, select:focus, textarea:focus, .input:focus {
+  outline: none;
+  border-color: var(--secondary);
+}
+.input-mono { font-family: var(--font-mono); }
+
+/* Toggle switch */
+.toggle {
+  appearance: none; -webkit-appearance: none;
+  width: 34px; height: 19px;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.toggle::after {
+  content: "";
+  position: absolute; top: 3px; left: 3px;
+  width: 13px; height: 13px;
+  background: var(--fg);
+  border-radius: 50%;
+  transition: left var(--dur-fast) var(--ease-standard);
+}
+.toggle:checked { background: var(--secondary); }
+.toggle:checked::after { left: 18px; }
+.toggle:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ----------------------------------------------------------------------------
+   9. Indicators
+   ------------------------------------------------------------------------- */
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-50);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.08rem 0.35rem;
+  white-space: nowrap;
+}
+.badge-accent    { color: var(--accent);    background: var(--accent-wash);    border-color: var(--accent); }
+.badge-secondary { color: var(--fg-muted); background: var(--secondary-wash); border-color: var(--secondary); }
+.badge-dashed    { border-style: dashed; }
+
+/* State text */
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-danger  { color: var(--danger);  }
+
+/* Status dot — steady, or live (pulsing) */
+.dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--fg-subtle);
+  vertical-align: middle;
+}
+.dot-live     { background: var(--secondary); animation: tw-pulse 2s var(--ease-standard) infinite; }
+.dot-success  { background: var(--success); }
+.dot-warning  { background: var(--warning); }
+.dot-danger   { background: var(--danger);  }
+
+@keyframes tw-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 1.5px solid var(--border-strong);
+  border-top-color: var(--secondary);
+  border-radius: 50%;
+  animation: tw-spin 0.8s linear infinite;
+}
+@keyframes tw-spin { to { transform: rotate(360deg); } }
+
+/* ----------------------------------------------------------------------------
+   10. Data — table, bar, legend
+   ------------------------------------------------------------------------- */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--fs-75);
+  font-variant-numeric: tabular-nums;
+}
+.table th {
+  text-align: left;
+  font-size: var(--fs-50);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  padding: 0 var(--space-3) var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.table td {
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  vertical-align: middle;
+}
+.table tr:last-child td { border-bottom: none; }
+
+/* Horizontal bar (CSS-only meter) */
+.bar-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+.bar-fill.is-1 { background: var(--data-1); }
+.bar-fill.is-2 { background: var(--data-2); }
+.bar-fill.is-3 { background: var(--data-3); }
+.bar-fill.is-4 { background: var(--data-4); }
+
+.legend-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+/* ----------------------------------------------------------------------------
+   11. Accessibility
+   ------------------------------------------------------------------------- */
+:where(a, button, .btn, input, select, textarea, .toggle, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

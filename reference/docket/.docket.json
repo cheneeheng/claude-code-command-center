@@ -1,0 +1,13 @@
+{
+  "$schema": "docket/schema/docket.schema.json",
+  "port": 8765,
+  "defaults": {
+    "instruction_template": "Read the plan at {path} and implement it fully. The plan may reference sibling files (e.g. a SKELETON or earlier iterations) — read those as needed. Make the code changes the plan describes.",
+    "model": "claude-sonnet-4-6",
+    "max_turns": 40
+  },
+  "projects": [
+    { "name": "docket", "path": "~/WorkLocal/00_Project/docket" },
+    { "name": "agent skills", "path": "~/WorkLocal/00_Project/agent-skills" }
+  ]
+}

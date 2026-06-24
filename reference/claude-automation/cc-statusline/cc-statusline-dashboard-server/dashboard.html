@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code · Usage</title>
+<link rel="stylesheet" href="/dashboard.css">
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">CC</div>
+      <div class="logo-text"><span>claude code</span> · usage monitor</div>
+    </div>
+    <div class="header-actions">
+      <div class="theme-toggle" id="theme-toggle">
+        <button class="theme-btn" data-theme-mode="auto">Auto</button>
+        <button class="theme-btn" data-theme-mode="light">Light</button>
+        <button class="theme-btn" data-theme-mode="dark">Dark</button>
+      </div>
+      <div class="status-badge">
+        <div class="pulse" id="pulse"></div>
+        <span id="last-updated">–</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="refresh-bar">
+    <div class="spinner" id="spinner"></div>
+    <span id="refresh-countdown">refreshing in 10s</span>
+  </div>
+
+  <div id="main"></div>
+
+</div>
+
+<script src="/dashboard.js"></script>
+</body>
+</html>

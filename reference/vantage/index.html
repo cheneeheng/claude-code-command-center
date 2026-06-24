@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vantage — local repo explorer</title>
+
+  <!-- =====================================================================
+       v3 is multi-file: classic <link> stylesheets and classic <script src>
+       files, never type="module" — so the page works opened directly over
+       file:// with no server and no build (ES-module import is CORS-blocked
+       there). Cross-file sharing is via the window.Vantage namespace, and the
+       LOAD ORDER below is the dependency contract: tokens → layout → components
+       for CSS, and namespace → leaf modules → ui → app for JS.
+       No network calls: no CDN, no remote fonts (type tokens fall back to
+       Georgia / system-ui / monospace).
+       ===================================================================== -->
+  <link rel="stylesheet" href="styles/tokens.css" />
+  <link rel="stylesheet" href="styles/layout.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===== Header (brand) ===== -->
+    <header class="toolbar">
+      <div class="toolbar-left">
+        <h1 class="app-title">Vantage</h1>
+        <span class="app-tagline">local repo explorer</span>
+      </div>
+
+      <div class="toolbar-center">
+        <input
+          id="filter-input"
+          class="filter-input"
+          type="text"
+          placeholder="Filter repos by name…"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="toolbar-right">
+        <select id="sort-select" class="sort-select" title="Sort the board">
+          <option value="last-activity">Last activity</option>
+          <option value="alphabetical">A–Z</option>
+          <option value="stack">Stack</option>
+        </select>
+        <button id="root-path-btn" class="btn btn-ghost" title="Set the absolute projects-root path (needed only to open repos in VSCode)">Set root path</button>
+        <button id="rescan-btn" class="btn" hidden>Rescan</button>
+        <button id="reconnect-btn" class="btn btn-primary" hidden>Reconnect folder</button>
+        <button id="choose-folder-btn" class="btn btn-primary">Change folder</button>
+      </div>
+    </header>
+
+    <!-- ===== Notice bar (non-blocking errors / status) ===== -->
+    <div id="notice-bar" class="notice-bar" hidden></div>
+
+    <!-- ===== Selection bar (bridge to the diff sidebar) ===== -->
+    <div id="selection-bar" class="selection-bar" hidden>
+      <div id="selection-slots" class="selection-bar-slots"></div>
+      <div class="selection-bar-actions">
+        <span id="selection-next" class="selection-next"></span>
+        <button id="selection-swap-btn" class="btn btn-ghost btn-sm" title="Swap A and B">Swap</button>
+        <button id="selection-clear-btn" class="btn btn-ghost btn-sm" title="Clear selection">Clear</button>
+      </div>
+    </div>
+
+    <!-- ===== Main ===== -->
+    <main class="main">
+      <!-- Empty state -->
+      <section id="empty-state" class="empty-state">
+        <div class="empty-state-inner">
+          <h2>No folder chosen</h2>
+          <p>Pick a projects folder to scan its immediate subfolders as repos.</p>
+          <button id="empty-choose-folder-btn" class="btn btn-primary">Choose folder</button>
+        </div>
+      </section>
+
+      <!-- Board -->
+      <section id="board" class="board" hidden></section>
+    </main>
+
+    <!-- ===== Diff Sidebar (slide-in, right; modes: open | minimized) ===== -->
+    <aside id="diff-sidebar" class="diff-sidebar" aria-label="File diff">
+      <div class="sidebar-header">
+        <div class="sidebar-title">
+          <span class="eyebrow">Compare</span>
+          <div id="sidebar-sides" class="sidebar-sides"></div>
+        </div>
+        <div class="sidebar-controls">
+          <!-- Swap mirrors the selection-bar control; it never re-opens the panel. -->
+          <button id="sidebar-swap-btn" class="btn btn-ghost icon-btn" title="Swap A and B">⇄</button>
+          <!-- v3: minimize only — there is no close/×. -->
+          <button id="sidebar-minimize-btn" class="btn btn-ghost icon-btn" title="Minimize">–</button>
+        </div>
+      </div>
+
+      <div class="sidebar-body">
+        <div id="diff-status" class="diff-status" hidden></div>
+        <div id="diff-view" class="diff-view"></div>
+      </div>
+
+      <div id="sidebar-footer" class="sidebar-footer" hidden>
+        <button id="copy-a-to-b" class="btn btn-outline">Copy A → B</button>
+        <button id="copy-b-to-a" class="btn btn-outline">Copy B → A</button>
+      </div>
+    </aside>
+
+    <!-- ===== Floating puck (minimized sidebar) ===== -->
+    <button id="floating-puck" class="floating-puck" hidden>Diff</button>
+
+    <!-- ===== Root-path modal ===== -->
+    <div id="root-path-overlay" class="overlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Set projects-root path">
+        <h3>Set projects-root path</h3>
+        <p>
+          Optional. The File System Access API never exposes the real path of the
+          folder you pick, so the absolute path is needed separately to build
+          <span class="mono">vscode://</span> links. Vantage works fully without it —
+          only the "Open in VSCode" buttons depend on it.
+        </p>
+        <div class="modal-field">
+          <label for="root-path-input" class="eyebrow">Absolute path</label>
+          <input id="root-path-input" type="text" class="input-mono"
+                 placeholder="/Users/you/projects  or  C:\Users\you\projects" autocomplete="off" />
+        </div>
+        <div class="modal-actions">
+          <button id="root-path-clear-btn" class="btn btn-ghost">Clear</button>
+          <button id="root-path-cancel-btn" class="btn">Cancel</button>
+          <button id="root-path-save-btn" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Confirm overwrite modal ===== -->
+    <div id="confirm-overlay" class="overlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Confirm overwrite">
+        <h3 id="confirm-title">Confirm overwrite</h3>
+        <p id="confirm-message"></p>
+        <div class="modal-actions">
+          <button id="confirm-cancel-btn" class="btn">Cancel</button>
+          <button id="confirm-ok-btn" class="btn btn-danger">Overwrite</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Toast ===== -->
+    <div id="toast" class="toast" hidden></div>
+
+  </div>
+
+  <!-- =====================================================================
+       Script load order IS the dependency contract (no import/export):
+       namespace first; leaf modules; ui (uses all of them); app last.
+       ===================================================================== -->
+  <script src="scripts/namespace.js"></script>
+  <script src="scripts/persist.js"></script>
+  <script src="scripts/scanner.js"></script>
+  <script src="scripts/compare.js"></script>
+  <script src="scripts/copy.js"></script>
+  <script src="scripts/editor.js"></script>
+  <script src="scripts/ui.js"></script>
+  <script src="scripts/app.js"></script>
+</body>
+</html>

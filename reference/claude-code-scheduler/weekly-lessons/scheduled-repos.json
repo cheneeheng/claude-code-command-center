@@ -1,0 +1,9 @@
+{
+  "repos": [
+    {
+      "path": "/path/to/your/local/repo",
+      "lessons_file": "LESSONS_LEARNED.md"
+    }
+  ],
+  "master_lessons_file": "MASTER_LESSONS_LEARNED.md"
+}

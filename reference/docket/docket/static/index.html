@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>docket</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>docket</h1>
+    <div class="batch-bar">
+      <button id="implement-selected" disabled>Implement selected</button>
+      <span id="notice" class="notice"></span>
+    </div>
+  </header>
+
+  <main>
+    <section id="tree-pane" class="pane">
+      <div id="tree" aria-label="projects and plans">
+        <p class="placeholder">loading…</p>
+      </div>
+    </section>
+
+    <section id="plan-pane" class="pane">
+      <div id="plan-header">
+        <span id="plan-title" class="placeholder">select a plan</span>
+        <span id="plan-status" class="badge"></span>
+      </div>
+      <div id="plan-controls" class="controls" hidden>
+        <button id="btn-implement" disabled>Implement</button>
+        <button id="btn-runmyself">Run myself</button>
+        <button id="btn-mark">Mark implemented</button>
+        <button id="btn-reopen">Reopen</button>
+      </div>
+      <pre id="plan-body" class="placeholder">No plan selected.</pre>
+    </section>
+
+    <section id="log-pane" class="pane">
+      <div class="log-head">Run log <button id="btn-stop" hidden>Stop</button></div>
+      <div id="logs"><p class="placeholder">no output yet</p></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

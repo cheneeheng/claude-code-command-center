@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docket"
+version = "2.0.0"
+description = "Local plan command-center for many Claude Code repos"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["textual>=0.60"]
+
+[project.scripts]
+docket = "docket.__main__:main"
+
+[tool.setuptools]
+packages = ["docket"]
+
+[tool.setuptools.package-data]
+docket = ["static/*", "schema/*.json"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.18",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--cov=docket --cov-report=term-missing --cov-report=html"
+
+[tool.coverage.run]
+branch = true
+source = ["docket"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]

@@ -1,0 +1,142 @@
+/* ==========================================================================
+   VANTAGE — layout & positioning (v3)
+   Page shell, reset, document base, board grid, sidebar / puck positioning,
+   modal overlay and toast placement. Visual treatment of components lives in
+   components.css; tokens come from tokens.css.
+   ========================================================================== */
+
+/* — Reset & document base — */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 100%; -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--fs-200);
+  line-height: var(--lh-base);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* — Header — */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.toolbar-left { display: flex; align-items: baseline; gap: var(--space-3); }
+.toolbar-center { flex: 1; min-width: 0; }
+.filter-input { max-width: 420px; }
+.toolbar-right { display: flex; align-items: center; gap: var(--space-2); }
+.sort-select { width: auto; }
+
+/* — Notice bar — */
+.notice-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+
+/* — Selection bar (bridge to the diff sidebar) — */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-6);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 57px;
+  z-index: 19;
+}
+.selection-bar-slots { display: flex; align-items: center; gap: var(--space-2); flex: 1; min-width: 0; flex-wrap: wrap; }
+.selection-bar-actions { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
+
+/* — Main / regions — */
+.main { flex: 1; padding: var(--space-6); }
+
+.empty-state {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60vh; text-align: center;
+}
+.empty-state-inner { max-width: 420px; }
+
+/* — Board grid — */
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* — Diff sidebar (slide-in, off-canvas by default) — */
+.diff-sidebar {
+  position: fixed;
+  top: 0; right: 0;
+  height: 100vh;
+  width: min(560px, 92vw);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  transform: translateX(100%);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.diff-sidebar.open { transform: translateX(0); }
+
+.sidebar-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+.sidebar-controls { display: flex; gap: var(--space-1); flex-shrink: 0; }
+.sidebar-body { flex: 1; overflow: auto; padding: var(--space-3) 0; }
+.sidebar-footer { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-5); }
+
+/* — Floating puck (minimized sidebar) — */
+.floating-puck {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  z-index: 35;
+}
+
+/* — Modal overlay (root path + confirm) — */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,50,48,.40);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 60;
+  padding: var(--space-4);
+}
+.modal {
+  width: 100%;
+  max-width: 460px;
+}
+.modal-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
+.modal-field { margin-bottom: var(--space-2); }
+
+/* — Toast — */
+.toast {
+  position: fixed;
+  bottom: var(--space-6); left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+}
+
+[hidden] { display: none !important; }
