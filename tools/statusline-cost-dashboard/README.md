@@ -8,7 +8,7 @@ scheduled-task scripts live in `cc-statusline-dashboard-server/`.
 | File | Description |
 |------|-------------|
 | `statusline.ps1` / `statusline.sh` | Claude Code `StatusLine` hook (PowerShell / Bash). Reads the JSON piped by Claude Code each turn, prints a colour-coded one-liner (`model \| context bar \| runtime \| cost \| 5H rate \| 7D rate`), and appends a compact record to `~/.claude/statusline/<project>/<session>.jsonl`. The Bash version needs `jq`. |
-| `statusline.py` | Abandoned Python port — has a stdin pipe bug; **do not use**. |
+| `statusline.py` | Stdlib Python port of the hook — UTF-8-safe stdin/stdout, same output and per-project JSONL logging as the shell versions. Run with `python3 statusline.py`. |
 | `cc-statusline-dashboard-server/` | Stdlib-only HTTP server (default port 8080) that reads `~/.claude/projects/**/*.jsonl` (history) and `~/.claude/statusline/**/*.jsonl` (live rates) and serves a single-page dashboard: token charts, cost by model, rate-limit gauges, session table. See its own README for the data-flow walkthrough. |
 
 ## Quick start (Windows)
