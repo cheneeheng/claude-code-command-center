@@ -1,0 +1,21 @@
+# Secrets / local env — never commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Node / JS
+node_modules/
+*.vsix
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
