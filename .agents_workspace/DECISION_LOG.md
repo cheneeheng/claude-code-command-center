@@ -61,3 +61,27 @@ and confirmed all Python should use `uv`.
 README yet (the suite README covered them) — flagged as a Phase 2 follow-up.
 
 **Outcome:** Relocation staged as 225 renames + 5 license deletions + root README/.gitignore.
+
+### Entry 3
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-25T00:00:00Z
+**Task:** Phase 1b — adopt `uv` for all Python members.
+
+**Context:** User confirmed "they should all use uv." Only `multi-repo-plan-runner` (docket)
+had a pyproject. The two other Python members (`statusline-cost-dashboard`,
+`per-project-plugin-toggler`) were stdlib-only with no project file. Open question from the
+skeleton (§5.3): one root uv workspace vs independent uv projects.
+
+**Decision:** Independent uv projects (each its own `pyproject.toml` + `uv.lock`), not a root
+workspace yet. Reasons: minimal change, no shared deps to dedupe today, and the skeleton
+defers a workspace to Phase 4 when `libs/` appears. Both new projects are `dependencies = []`
+(stdlib) and `[tool.uv] package = false` (run as scripts, not installed). Dev tooling pinned:
+ruff + mypy. Did NOT retrofit strict typing/lint fixes onto the existing code — that is a
+separate follow-up, kept out of the uv-adoption change.
+
+**Impact / Risk:** Low. No runtime deps added; lockfiles contain only dev tools. `.venv/` is
+gitignored. Existing scripts still run unchanged via `uv run`.
+
+**Outcome:** `uv lock` resolves in both members; `uv run` confirmed working.
