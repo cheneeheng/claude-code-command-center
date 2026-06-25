@@ -1,8 +1,9 @@
 # Claude Code Usage Dashboard
 
-A stdlib-only HTTP server that reads Claude Code's local logs and serves a
-single-page dashboard of token usage, cost, and live rate limits. No pip
-install, no dependencies — just `python cc-statusline-dashboard-server.py`.
+An HTTP server that reads Claude Code's local logs and serves a single-page
+dashboard of token usage, cost, and live rate limits. Its one dependency is the
+local [`claude-usage`](../../libs/claude-usage/) library (transcript parsing +
+pricing); run it with `uv run python cc-statusline-dashboard-server.py`.
 
 ```
 http://localhost:8080
@@ -27,7 +28,7 @@ Keeping them straight is the whole point of the module layout.
 | **Written by** | Claude Code itself, every turn | The `statusline.ps1` / `.sh` hook, every prompt |
 | **Module** | `session_stats.py` | `live_statusline.py` |
 | **Gives us** | Exact token counts per session (input / output / cache) for **all** sessions, ever | Live state for **currently active** sessions: rate limits (5h / 7d), context-window %, and the model display name |
-| **Cost** | **Estimated** — token counts × the pricing table in `dashboard_config.py` | **Actual** — the real `total_cost_usd` Anthropic reported |
+| **Cost** | **Estimated** — token counts × the `claude-usage` pricing table | **Actual** — the real `total_cost_usd` Anthropic reported |
 | **History** | Full history | Only recent (sessions idle past the timeout are dropped) |
 
 These two notions of "cost" are the only place the sources overlap, and it is
@@ -46,7 +47,8 @@ That single override lives in `merge.py._apply_actual_cost` and nowhere else.
 ```
 cc-statusline-dashboard-server.py   ← entry point (CLI, starts HTTP server)
 │
-├── dashboard_config.py             ← CLAUDE_DIRS, timeout, MODEL_COSTS pricing table
+├── claude-usage (library)          ← transcript parsing + pricing (load_sessions, estimated_cost)
+├── dashboard_config.py             ← CLAUDE_DIRS, live-session timeout
 │
 ├── session_stats.py    ─┐
 ├── live_statusline.py  ─┤── the two data sources + the reconciler
@@ -119,8 +121,8 @@ sessions and aggregates everything, the server ships it as JSON, and
 | File | Responsibility |
 |------|----------------|
 | `cc-statusline-dashboard-server.py` | Entry point. CLI args (`--host/--port/--claude-dir`), trims statusline logs on startup, starts the HTTP server. |
-| `dashboard_config.py` | Config (`CLAUDE_DIRS`, live-session timeout) + the model pricing table and `model_family` / `model_costs` helpers. **The pricing table is the single source of truth for estimated cost.** |
-| `session_stats.py` | **Source 1.** Parses session transcripts into per-session token totals and *estimated* cost; aggregates them (`summarize_sessions`) into totals and the by-day / by-project / by-model breakdowns. |
+| `dashboard_config.py` | Runtime config only: `CLAUDE_DIRS` (overridable via `--claude-dir`) and the live-session timeout. Parsing and the pricing table live in the `claude-usage` library. |
+| `session_stats.py` | **Source 1.** Loads per-session token/cost summaries from `claude-usage` and aggregates them (`summarize_sessions`) into totals and the by-day / by-project / by-model breakdowns. |
 | `live_statusline.py` | **Source 2.** Reads the statusline logs into live per-session state (rate limits, context %, *actual* cost); also `trim_statusline_logs` to bound disk growth. |
 | `merge.py` | Reconciles the two sources into the `/api/data` payload. Owns the estimated-vs-actual cost override. |
 | `dashboard_server.py` | HTTP transport only: serves the static assets and the `merge.build_payload` JSON. |
@@ -147,9 +149,9 @@ sessions and aggregates everything, the server ships it as JSON, and
                      doesn't split cost per model)
 ```
 
-- **Estimated** (`session_stats._estimated_cost`): `tokens / 1e6 × per-token price`,
+- **Estimated** (`claude_usage.estimated_cost`): `tokens / 1e6 × per-token price`,
   summed across the four token classes (input, output, cache-write, cache-read)
-  and every model a session used. Prices come from `dashboard_config.MODEL_COSTS`,
+  and every model a session used. Prices come from `claude_usage.MODEL_COSTS`,
   keyed by model *family* so `claude-opus-4-7` and `claude-opus-4-8` share a row.
   Update that table when Anthropic changes pricing.
 - **Actual** (`live_statusline`): read straight from `data.cost.total_cost_usd`
@@ -168,13 +170,13 @@ parsing.
 
 ```bash
 # Default: localhost:8080, reads ~/.claude
-python cc-statusline-dashboard-server.py
+uv run python cc-statusline-dashboard-server.py
 
 # Custom host/port
-python cc-statusline-dashboard-server.py --host 0.0.0.0 --port 9000
+uv run python cc-statusline-dashboard-server.py --host 0.0.0.0 --port 9000
 
 # Aggregate multiple Claude config dirs as if they were one
-python cc-statusline-dashboard-server.py --claude-dir ~/.claude ~/.claude_devcontainer
+uv run python cc-statusline-dashboard-server.py --claude-dir ~/.claude ~/.claude_devcontainer
 ```
 
 To run it automatically on Windows (logon + resume from sleep), use the
@@ -196,8 +198,9 @@ scheduled-task installer:
 
 ## Extending it
 
-- **New model / new pricing:** edit `dashboard_config.MODEL_COSTS`. If the family
-  detection in `model_family` doesn't catch the id, adjust it there. The UI's
+- **New model / new pricing:** edit `claude_usage.MODEL_COSTS` (in the `claude-usage`
+  library). If the family detection in `claude_usage.model_family` doesn't catch the id,
+  adjust it there. The UI's
   matching color/label logic lives in `dashboard.js` (`modelFamily`, `MODEL_SHADES`,
   `modelShort`) and must be kept in step.
 - **New aggregate stat:** add it in `session_stats.summarize_sessions`, then render

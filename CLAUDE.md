@@ -12,8 +12,8 @@ apps/      full applications you run (cross-repo-file-diff, multi-repo-plan-runn
            per-project-plugin-toggler, usage-dashboard)
 tools/     single-purpose utilities & scripts (statusline-hook,
            session-name-date-prefixer, claude-md-devcontainer-sync,
-           settings-devcontainer-sync, scheduled-automations)
-libs/      shared libraries (planned)
+           settings-devcontainer-sync, scheduled-automations, usage-report)
+libs/      shared libraries (claude-usage)
 plugins/   packaged Claude Code skills/plugins (planned)
 docs/      monorepo-wide docs
 ```
@@ -22,6 +22,11 @@ docs/      monorepo-wide docs
 TUI, dashboard, editor extension). A **tool** is plumbing that does one job, usually invoked by
 something else (a hook, a scheduled task, a CLI shim) or run-and-forget, with no interactive
 surface. When a member bundles both (e.g. the statusline hook + its dashboard), split them.
+
+**when something belongs in `libs/`:** only with a **cohesive domain** *and* **≥2 real
+consumers** — never a utilities junk drawer, and never a single-consumer extraction. Extract on
+the second consumer, not the first. `claude-usage` (Claude Code local-data access, used by
+`usage-dashboard` and `usage-report`) is the worked example.
 
 Members are **self-contained**: each keeps its own README, CHANGELOG, tests, and CLAUDE.md.
 The umbrella adds a catalog and shared conventions; it does not flatten or rewrite members.

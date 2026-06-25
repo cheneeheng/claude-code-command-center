@@ -1,10 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "usage-dashboard"
+name = "usage-report"
 version = "0.1.0"
-description = "Local web dashboard for Claude Code token usage, cost, and rate limits."
+description = "CLI summary of Claude Code token usage and estimated cost across sessions."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["claude-usage"]
+
+[project.scripts]
+usage-report = "usage_report.cli:main"
 
 [tool.uv.sources]
 claude-usage = { path = "../../libs/claude-usage", editable = true }
@@ -15,9 +22,8 @@ dev = [
     "mypy>=1.11",
 ]
 
-# Run as scripts, not installed as a package.
-[tool.uv]
-package = false
+[tool.hatch.build.targets.wheel]
+packages = ["src/usage_report"]
 
 [tool.ruff]
 line-length = 88
@@ -25,3 +31,4 @@ target-version = "py311"
 
 [tool.mypy]
 python_version = "3.11"
+strict = true

@@ -35,9 +35,10 @@ them over time.
 
 Language footprint today: ~31 Python, ~26 JS, ~24 PowerShell, ~17 Bash, 5 HTML files.
 
-Common thread worth noting for later: **docket, scheduler, and automation all read and
-parse `~/.claude/**/*.jsonl` transcripts/logs.** That is the natural seed for a shared
-library (see Phase 4).
+Common thread (**corrected during Phase 4**): only the **dashboard** actually parses
+`~/.claude/projects/**/*.jsonl` transcripts. docket reads plan files + its own JSON registry
+(its "projects" are repos, not `~/.claude/projects`), and the scheduler is shell-based. So the
+shared parsing had one consumer until a second was built — see Phase 4.
 
 ## 3. Target top-level structure
 
@@ -58,8 +59,8 @@ claude-code-command-center/
 ├── tools/                   # utility / developer tooling & scripts
 │   ├── automation/          # was claude-automation
 │   └── scheduler/           # was claude-code-scheduler
-├── libs/                    # shared libraries (starts empty; Phase 4)
-│   └── (claude-transcript/) # extracted ~/.claude log parsing — proposed
+├── libs/                    # shared libraries (Phase 4)
+│   └── claude-usage/        # ~/.claude transcript parsing + pricing (built in Phase 4)
 ├── plugins/                 # packaged Claude Code skills/plugins (Phase 6, optional)
 ├── docs/                    # monorepo-wide docs: architecture, catalog, decisions
 └── .github/workflows/       # aggregate, path-filtered CI
@@ -106,13 +107,14 @@ Deliverable: this `SKELETON.md` + a Decision Log entry. No code moved.
   Node test path. Static/script members: lint where meaningful (shellcheck, PSScriptAnalyzer).
 - (Delegate authoring to the `ceh-ops:github-actions` agent.)
 
-### Phase 4 — Shared library (`libs/`) — the real "library" deliverable
-- Extract the common `~/.claude/**/*.jsonl` transcript/log parsing (used by docket,
-  scheduler, automation) into a small, dependency-light Python library under
-  `libs/claude-transcript/` following `ceh-python-library` invariants (src/ layout,
-  `dependencies = []` to start, strict mypy, public API in `__init__.py`).
-- Refactor at least one consumer (likely automation's dashboard or docket) to use it,
-  proving the seam. Keep it minimal — only extract what is genuinely shared.
+### Phase 4 — Shared library (`libs/`) ✅ (premise corrected)
+The original premise — docket + scheduler + dashboard all parse transcripts — was **wrong**;
+only the dashboard did. A single-consumer extraction would be a forced abstraction, so a real
+second consumer was built first: the `usage-report` CLI. With two genuine consumers, the shared
+parsing was extracted into `libs/claude-usage` (src/ layout, `dependencies = []`, strict mypy,
+public API in `__init__.py`), and the dashboard was refactored onto it (output verified byte-for-
+byte identical). Rule recorded in CLAUDE.md: a lib needs a **cohesive domain AND ≥2 consumers** —
+extract on the second consumer, not the first.
 
 ### Phase 5 — First new flagship piece
 - Pick and build one net-new member to demonstrate the repo is alive and additive.

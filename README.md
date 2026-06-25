@@ -26,6 +26,7 @@ the catalog; click into a folder for full docs.
 | [`claude-md-devcontainer-sync`](tools/claude-md-devcontainer-sync/) | Keep `CLAUDE.md` and the devcontainer `CLAUDE.md` in sync. |
 | [`settings-devcontainer-sync`](tools/settings-devcontainer-sync/) | Keep Claude settings and the devcontainer settings in sync. |
 | [`scheduled-automations`](tools/scheduled-automations/) | Unattended Claude Code automations that run on a schedule (daily/weekly summaries and lessons). |
+| [`usage-report`](tools/usage-report/) | CLI summary of token usage and estimated cost across sessions — the terminal counterpart to `usage-dashboard`. |
 
 > `statusline-hook`, `session-name-date-prefixer`, `claude-md-devcontainer-sync`,
 > `settings-devcontainer-sync`, and the `usage-dashboard` app were originally one
@@ -34,9 +35,13 @@ the catalog; click into a folder for full docs.
 
 ### `libs/` — shared libraries
 
-Empty for now. Planned: a dependency-light parser for `~/.claude/**/*.jsonl` transcripts,
-extracted from `usage-dashboard` / `multi-repo-plan-runner` / `scheduled-automations` that all
-read those logs today.
+| Library | What it does |
+|---------|--------------|
+| [`claude-usage`](libs/claude-usage/) | Dependency-free library that reads Claude Code's `~/.claude/projects/**/*.jsonl` transcripts into per-session token/cost data, plus the model pricing table. |
+
+A library earns a place here only with a **cohesive domain** and **≥2 real consumers** — not as
+a utilities junk drawer. `claude-usage` qualifies: it models one external contract (the transcript
+layout) and is consumed by both the `usage-dashboard` app and the `usage-report` CLI.
 
 ## Repository layout
 

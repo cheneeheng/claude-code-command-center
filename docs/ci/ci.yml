@@ -6,8 +6,9 @@
 #
 #     git mv docs/ci/ci.yml .github/workflows/ci.yml && git commit && git push
 #
-# Validated locally: all three Python members are ruff-clean and multi-repo-plan-runner's
-# pytest passes (194 tests, 100% coverage), so this starts green.
+# Validated locally: every Python member is ruff-clean, the claude-usage lib and usage-report
+# CLI pass strict mypy, and multi-repo-plan-runner's pytest passes (194 tests, 100% coverage),
+# so this starts green.
 name: CI
 
 on:
@@ -31,6 +32,8 @@ jobs:
           - apps/per-project-plugin-toggler
           - apps/usage-dashboard
           - tools/statusline-hook
+          - tools/usage-report
+          - libs/claude-usage
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -39,6 +42,24 @@ jobs:
       - name: ruff check
         working-directory: ${{ matrix.member }}
         run: uv run ruff check .
+
+  typecheck:
+    name: mypy (${{ matrix.member }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        member:
+          - libs/claude-usage
+          - tools/usage-report
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: mypy
+        working-directory: ${{ matrix.member }}
+        run: uv run mypy src
 
   test:
     name: pytest (multi-repo-plan-runner)

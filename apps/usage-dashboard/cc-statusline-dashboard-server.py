@@ -12,8 +12,9 @@ Usage:
     python3 cc-statusline-dashboard-server.py --claude-dir ~/.claude ~/work/.claude
 
 Module layout:
-    dashboard_config.py  - config + model pricing/family helpers
-    session_stats.py     - source 1: session transcripts -> tokens + estimated cost
+    claude-usage (lib)   - transcript parsing + pricing (load_sessions, estimated_cost)
+    dashboard_config.py  - runtime config (CLAUDE_DIRS, live-session timeout)
+    session_stats.py     - source 1: session usage (via claude-usage) -> tokens + estimated cost
     live_statusline.py   - source 2: statusline logs -> rate limits + actual cost
     merge.py             - reconcile the two sources into the /api/data payload
     dashboard_server.py  - HTTP handler (serves assets + payload)

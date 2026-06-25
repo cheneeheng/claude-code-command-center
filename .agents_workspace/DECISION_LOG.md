@@ -157,3 +157,41 @@ present and skip it otherwise.
 
 **Impact / Risk:** Low. Both new members ruff-green; dashboard imports resolve; graceful-skip
 verified. History preserved via git mv.
+
+### Entry 6
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-25T00:00:00Z
+**Task:** Phase 4 — shared library, after validating (and correcting) its premise.
+
+**Context:** User questioned whether extracting a lib would just be "a random utility lib file."
+Investigation confirmed the skeleton's premise was false: only `usage-dashboard` parses
+`~/.claude/projects/**/*.jsonl`. docket's "projects" are its own repo registry; the scheduler
+is shell-based. So a transcript-parsing lib would have had a single consumer — a forced
+abstraction.
+
+**Decision:**
+- Did NOT do a single-consumer extraction. Built a genuine **second consumer first**:
+  `tools/usage-report` (a CLI counterpart to the dashboard). With two real consumers, the
+  extraction is justified.
+- Created `libs/claude-usage` as a proper library (hatchling src/ layout, `dependencies = []`,
+  `py.typed`, strict mypy, public API + `__all__` in `__init__.py`). Domain: "read Claude Code
+  local session data" (discovery + parsing + `Session` model + pricing/estimated cost) — a
+  cohesive contract, not a utils drawer.
+- Refactored `usage-dashboard` onto the lib: `session_stats.load_sessions()` is now a thin
+  adapter (`asdict` of the lib's `Session`) so `merge.py`/server are untouched; `dashboard_config`
+  drops the pricing table and sources `CLAUDE_DIRS` from the lib. Verified output **byte-for-byte
+  identical** to a pre-refactor golden snapshot on a synthetic transcript.
+- Wiring: per-consumer `[tool.uv.sources]` path deps (editable), **not** a root uv workspace —
+  consistent with Entry 3 (independent projects), avoids entangling docket/toggler.
+- Recorded the rule in CLAUDE.md: a `libs/` member needs a cohesive domain AND ≥2 consumers.
+
+**Tradeoff accepted:** the dashboard previously ran as bare `python …py` (vendored, zero-dep);
+it now depends on `claude-usage`, so the supported run is `uv run python …py`. Justified by the
+repo-wide "all Python uses uv" mandate; READMEs/docstrings updated.
+
+**Not done (flagged):** no unit tests for the lib/CLI (contract: tests only when requested) —
+verified instead via the golden-snapshot diff. Tests are the obvious follow-up for a reusable lib.
+
+**Impact / Risk:** Low–medium. Behavior verified identical; lib+CLI ruff+strict-mypy green.
