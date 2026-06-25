@@ -1,0 +1,44 @@
+# CLAUDE.md
+
+Guidance for Claude Code when working in this repository. Each member also has its own
+`CLAUDE.md`; that member-level file wins for anything inside its folder.
+
+## What this repo is
+
+A monorepo of independent projects centered on Claude Code, grouped by category:
+
+```
+apps/      full applications you run (cross-repo-file-diff, multi-repo-plan-runner,
+           per-project-plugin-toggler)
+tools/     single-purpose utilities & scripts (statusline-cost-dashboard,
+           session-name-date-prefixer, claude-md-devcontainer-sync,
+           settings-devcontainer-sync, scheduled-automations)
+libs/      shared libraries (planned)
+plugins/   packaged Claude Code skills/plugins (planned)
+docs/      monorepo-wide docs
+```
+
+Members are **self-contained**: each keeps its own README, CHANGELOG, tests, and CLAUDE.md.
+The umbrella adds a catalog and shared conventions; it does not flatten or rewrite members.
+
+## Conventions
+
+- **License:** single root `LICENSE` (Apache-2.0) covers the whole repo. Members do not carry
+  their own license files.
+- **Python:** every Python member is managed with `uv` (`pyproject.toml` + `uv.lock`). Run code
+  with `uv run …`; never edit `uv.lock` by hand. Lint/format with `ruff` (line length 88).
+  Stdlib-only tools keep `dependencies = []` and `[tool.uv] package = false`.
+- **Naming:** member folders are descriptive (a newcomer should know what each does from the
+  name). Files inside members keep their original names.
+- **History:** relocate/rename with `git mv` to preserve history.
+
+## Scope discipline
+
+Work within the member you were asked to change. Do not retrofit conventions across unrelated
+members in a single change. Adding a new member: place it under the right category folder, give
+it a self-descriptive name, a README, and (for Python) a `uv` project.
+
+## Plan & decisions
+
+- Build plan: `.agents_workspace/planning/v1/SKELETON.md`
+- Decision log: `.agents_workspace/DECISION_LOG.md`
