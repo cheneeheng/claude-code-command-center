@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claude Code Plugin Toggler</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Hanken+Grotesk:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <!-- External <use> keeps the mark theme-reactive (page CSS vars cascade into the
+           use shadow tree); an <img> would freeze the icon.svg fallback colours. -->
+      <h1><span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16" width="18" height="18" fill="none">
+        <use href="/icon.svg#mark"/>
+      </svg></span>Skills Toggle <span id="live-indicator" class="live-dot" title="Live updates active"></span></h1>
+      <button class="btn-danger" id="btn-kill-server">Stop server</button>
+      <div class="theme-toggle">
+        <button class="theme-btn" data-theme="light">Light</button>
+        <button class="theme-btn" data-theme="dark">Dark</button>
+        <button class="theme-btn" data-theme="">System</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="project-card" id="project-card">
+    <div class="project-label">PROJECT</div>
+    <div class="project-card-row">
+      <span class="project-name" id="project-name"></span>
+      <button class="project-change-btn" id="project-change-btn">Change &#9660;</button>
+    </div>
+    <div class="project-path" id="project-path"></div>
+    <div class="project-picker-expand" id="project-picker-expand">
+      <div class="project-picker-row">
+        <input type="text" class="project-picker-input" id="project-path-input" />
+        <button id="project-apply-btn">Apply</button>
+      </div>
+      <div class="project-picker-error" id="project-picker-error"></div>
+    </div>
+  </div>
+
+  <div class="mock-notice" id="mock-notice" style="display:none">
+    &#9888; Mock data &#8212; <code>~/.claude/plugins/installed_plugins.json</code> not found.
+    <button onclick="document.getElementById('mock-notice').style.display='none'">&#10005;</button>
+  </div>
+
+  <div id="status" class="status">Loading plugins...</div>
+  <div id="error" class="error-msg" style="display:none"></div>
+
+  <div id="plugin-sections" style="display:none">
+    <div id="local-section">
+      <div class="section-title">Local plugins <span id="loading-spinner" class="loading-spinner" style="display:none" title="Loading plugins..."></span></div>
+      <div class="plugin-list" id="local-list"></div>
+    </div>
+    <div id="project-section">
+      <div class="section-title">Project plugins</div>
+      <div class="plugin-list" id="project-list"></div>
+    </div>
+    <div id="user-section">
+      <div class="section-title">User plugins</div>
+      <div class="plugin-list" id="user-list"></div>
+    </div>
+  </div>
+
+  <div class="bulk-actions" id="bulk-actions" style="display:none">
+    <div>
+      <button id="btn-enable-all">Enable all</button>
+      <button id="btn-disable-all">Disable all</button>
+    </div>
+    <button class="bulk-install-btn" id="btn-install-plugin" onclick="openInstallPanel()">+ Install/Uninstall plugin</button>
+  </div>
+
+  <div class="install-panel" id="install-panel"></div>
+
+  <!-- Classic scripts sharing the global scope; load order matters
+       (state/helpers first, main.js bootstraps last). -->
+  <script src="/js/state.js"></script>
+  <script src="/js/helpers.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/render.js"></script>
+  <script src="/js/install-panel.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/events.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

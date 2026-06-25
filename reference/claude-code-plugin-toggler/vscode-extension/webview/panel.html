@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skills Toggle</title>
+  <link rel="stylesheet" href="__STYLES_URI__" />
+  <script>
+    if (typeof acquireVsCodeApi !== "undefined") {
+      document.documentElement.setAttribute("data-context", "vscode");
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <!-- The ICON_SVG placeholder below is replaced by extension.js with the contents of webview/icon.svg;
+         inlining keeps the mark coloured by the VSCode theme vars (an <img> or external
+         <use> cannot resolve page CSS vars in a webview). -->
+    <h1><span class="mark" aria-hidden="true">__ICON_SVG__</span>Skills Toggle</h1>
+  </header>
+
+  <div class="project-card" id="project-card">
+    <div class="project-label">PROJECT</div>
+    <div class="project-card-row">
+      <span class="project-name" id="project-name"></span>
+    </div>
+    <div class="project-path" id="project-path"></div>
+  </div>
+
+  <div class="mock-notice" id="mock-notice" style="display:none">
+    &#9888; Mock data &#8212; <code>~/.claude/plugins/installed_plugins.json</code> not found.
+    <button onclick="document.getElementById('mock-notice').style.display='none'">&#10005;</button>
+  </div>
+
+  <div id="status" class="status">Loading plugins...</div>
+  <div id="error" class="error-msg" style="display:none"></div>
+
+  <div id="plugin-sections" style="display:none">
+    <div id="local-section">
+      <div class="section-title">Local plugins</div>
+      <div class="plugin-list" id="local-list"></div>
+    </div>
+    <div id="project-section">
+      <div class="section-title">Project plugins</div>
+      <div class="plugin-list" id="project-list"></div>
+    </div>
+    <div id="user-section">
+      <div class="section-title">User plugins</div>
+      <div class="plugin-list" id="user-list"></div>
+    </div>
+  </div>
+
+  <div class="bulk-actions" id="bulk-actions" style="display:none">
+    <div>
+      <button id="btn-enable-all">Enable all</button>
+      <button id="btn-disable-all">Disable all</button>
+    </div>
+    <button class="bulk-install-btn" id="btn-install-plugin" onclick="openInstallPanel()">+ Install/Uninstall plugin</button>
+  </div>
+
+  <div class="install-panel" id="install-panel"></div>
+
+  <!-- Classic scripts sharing the global scope; load order matters
+       (state/helpers first, main.js wires the static DOM last).
+       __JS_BASE__ is replaced by extension.js with the webview URI of webview/js. -->
+  <script src="__JS_BASE__/state.js"></script>
+  <script src="__JS_BASE__/helpers.js"></script>
+  <script src="__JS_BASE__/render.js"></script>
+  <script src="__JS_BASE__/install-panel.js"></script>
+  <script src="__JS_BASE__/actions.js"></script>
+  <script src="__JS_BASE__/messages.js"></script>
+  <script src="__JS_BASE__/main.js"></script>
+</body>
+</html>

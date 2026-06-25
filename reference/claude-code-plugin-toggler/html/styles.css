@@ -1,0 +1,928 @@
+/* --- Tidewater theme (ITER_18, refined ITER_19) --- */
+
+/* Foundation fonts + radius hierarchy (theme-independent); VSCode overrides the
+   fonts in the bridge. Base :root also carries the light-fallback palette
+   (mirrors [data-theme="light"]). */
+:root {
+  --font-ui:      "Hanken Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --radius-lg: 10px; --radius-md: 6px; --radius-sm: 4px;
+
+  --bg:#F0F5F3; --surface:#FFFFFF; --surface-2:#F3F8F6;
+  --fg:#143230; --fg-muted:#5F7E7A; --border:#DCEAE6; --border-strong:#C7DBD6;
+  --inherited-fg:#7A938E; --inherited-bg:#E9F0EE;
+  --accent:#CB6442; --accent-wash:#FAEDE6;
+  --secondary:#0E7E77; --secondary-hi:#14938C; --secondary-wash:#E2F1EF;
+  --on-text:#fff;
+  --shadow-sm:0 1px 2px rgba(15,50,48,.06),0 1px 3px rgba(15,50,48,.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg:#0C1F1D; --surface:#122A27; --surface-2:#163230;
+    --fg:#E7F1EE; --fg-muted:#7C9590; --border:#203F3A; --border-strong:#2D544D;
+    --inherited-fg:#6E8782; --inherited-bg:#15302D;
+    --accent:#E98A62; --accent-wash:rgba(233,138,98,.11);
+    --secondary:#2FB3A8; --secondary-hi:#45C7BC; --secondary-wash:rgba(47,179,168,.12);
+    --on-text:#06201e;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+  }
+}
+
+/* --- Explicit theme tokens (HTML standalone) --- */
+:root[data-theme="light"] {
+  --bg:#F0F5F3; --surface:#FFFFFF; --surface-2:#F3F8F6;
+  --fg:#143230; --fg-muted:#5F7E7A; --border:#DCEAE6; --border-strong:#C7DBD6;
+  --inherited-fg:#7A938E; --inherited-bg:#E9F0EE;
+  --accent:#CB6442; --accent-wash:#FAEDE6;
+  --secondary:#0E7E77; --secondary-hi:#14938C; --secondary-wash:#E2F1EF;
+  --on-text:#fff;
+  --shadow-sm:0 1px 2px rgba(15,50,48,.06),0 1px 3px rgba(15,50,48,.05);
+}
+
+:root[data-theme="dark"] {
+  --bg:#0C1F1D; --surface:#122A27; --surface-2:#163230;
+  --fg:#E7F1EE; --fg-muted:#7C9590; --border:#203F3A; --border-strong:#2D544D;
+  --inherited-fg:#6E8782; --inherited-bg:#15302D;
+  --accent:#E98A62; --accent-wash:rgba(233,138,98,.11);
+  --secondary:#2FB3A8; --secondary-hi:#45C7BC; --secondary-wash:rgba(47,179,168,.12);
+  --on-text:#06201e;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+}
+
+/* --- VSCode hybrid bridge: neutrals follow the editor, brand hardcoded --- */
+:root[data-context="vscode"] {
+  --bg:        var(--vscode-editor-background);
+  --surface:   var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --surface-2: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+  --fg:        var(--vscode-editor-foreground);
+  --fg-muted:  var(--vscode-descriptionForeground);
+  --border:        var(--vscode-panel-border, #8884);
+  --border-strong: var(--vscode-contrastBorder, var(--vscode-panel-border, #8886));
+  --inherited-fg:  var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+  --inherited-bg:  var(--vscode-input-background, var(--vscode-sideBar-background));
+
+  /* brand hardcoded — default = dark-editor shades */
+  --accent:#E98A62; --accent-wash:rgba(233,138,98,.12);
+  --secondary:#2FB3A8; --secondary-hi:#45C7BC; --secondary-wash:rgba(47,179,168,.14);
+  --on-text:#06201e;
+
+  /* native fonts — no remote load (CSP) */
+  --font-ui:      var(--vscode-font-family);
+  --font-display: var(--vscode-font-family);
+  --font-mono:    var(--vscode-editor-font-family, monospace);
+
+  /* subtle, border-led depth */
+  --shadow-sm:0 1px 2px rgba(0,0,0,.25);
+}
+
+/* light editors → use the darker (light-mode) brand shades for contrast */
+body.vscode-light {
+  --accent:#CB6442; --accent-wash:rgba(203,100,66,.12);
+  --secondary:#0E7E77; --secondary-hi:#14938C; --secondary-wash:rgba(14,126,119,.12);
+  --on-text:#fff;
+}
+
+/* high-contrast themes → defer to the theme's own accent, drop tints */
+body.vscode-high-contrast {
+  --secondary: var(--vscode-textLink-foreground);
+  --secondary-hi: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+  --accent: var(--vscode-textLink-foreground);
+  --secondary-wash: transparent;
+  --accent-wash: transparent;
+}
+
+/* --- Reset --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  padding: 1.25rem;
+  position: relative;
+}
+
+header { margin-bottom: 1.25rem; }
+
+h1 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.project-path {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-top: 0.2rem;
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+
+/* --- Logo mark (ITER_19: two-tone inline SVG, self-coloured) --- */
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+/* --- Header layout (HTML only) --- */
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* --- Theme toggle (HTML only) --- */
+.theme-toggle {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.theme-btn {
+  background: var(--surface);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.2rem 0.6rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.theme-btn:hover { color: var(--fg); border-color: var(--secondary); }
+.theme-btn.active { border-color: var(--secondary); color: var(--secondary); }
+
+/* --- Project card --- */
+.project-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--secondary);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.project-card-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.project-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+.project-name {
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.project-change-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.project-change-btn:hover {
+  color: var(--fg);
+  border-color: var(--secondary);
+}
+
+.project-picker-expand {
+  display: none;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  gap: 6px;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.project-picker-expand.is-open {
+  display: flex;
+}
+
+.project-picker-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.project-picker-input {
+  flex: 1;
+  font-size: 0.8rem;
+  font-family: monospace;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.project-picker-error {
+  font-size: 0.75rem;
+  color: #cc4444;
+  display: none;
+}
+
+.project-picker-error.visible {
+  display: block;
+}
+
+/* --- Version badge --- */
+.version-badge {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.08rem 0.35rem;
+}
+
+/* --- Mock notice --- */
+/* Retinted to the terracotta brand family; token-driven so light/dark/vscode
+   adapt from one block (replaces the former hardcoded data-theme/data-context triad). */
+.mock-notice {
+  font-size: 0.78rem;
+  background: var(--accent-wash);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: 6px 10px;
+  margin-bottom: 12px;
+  color: var(--accent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+:root[data-context="vscode"] .mock-notice {
+  color: var(--fg);
+}
+
+/* --- Status / Error --- */
+.status { color: var(--fg-muted); font-size: 0.88rem; padding: 0.75rem 0; }
+.error-msg { color: #e05c5c; font-size: 0.88rem; padding: 0.75rem 0; }
+
+/* --- Section headings --- */
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.2rem;
+  margin-top: 0.9rem;
+}
+
+.section-title:first-child { margin-top: 0; }
+
+.section-desc {
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+  margin-bottom: 0.4rem;
+}
+
+/* --- Plugin list (ITER_19: flat dense list, hairline dividers) --- */
+.plugin-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.plugin-row {
+  position: relative;   /* required for the enabled-row ::before edge */
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 10px;
+  gap: 0.4rem;
+  overflow: hidden;
+  transition: background 130ms ease-out;
+}
+
+.plugin-row:last-child { border-bottom: none; }
+
+.plugin-row:hover { background: var(--surface-2); }
+
+/* Enabled row → terracotta wash + solid left edge, driven by :has() (no JS class).
+   Wins over :hover by specificity — do not add a combined selector. */
+.plugin-row:has(.toggle:checked) {
+  background: var(--accent-wash);
+}
+
+.plugin-row:has(.toggle:checked)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+}
+
+/* Top line of a plugin row: info on the left, toggle + install/uninstall on the right */
+.plugin-row-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Muted empty-state line per scope section */
+.section-empty {
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+  padding: 0.35rem 0.1rem;
+}
+
+.plugin-row.inherited {
+  background: var(--inherited-bg);
+  opacity: 0.85;
+}
+
+.plugin-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.plugin-name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--fg);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.plugin-row.inherited .plugin-name { color: var(--inherited-fg); }
+
+.marketplace-badge {
+  font-size: 11px;
+  color: var(--fg-muted);
+  background: var(--secondary-wash);
+  border: 1px solid var(--secondary);
+  border-radius: var(--radius-sm);
+  padding: 0.08rem 0.35rem;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* Badges rendered horizontally (ITER_13 item 6) */
+.plugin-badges {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* "Not installed" marker for settings-only rows (ITER_13) */
+.not-installed-tag {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.08rem 0.35rem;
+  white-space: nowrap;
+}
+
+/* --- Toggle switch --- */
+.toggle-wrap { display: flex; align-items: center; flex-shrink: 0; }
+
+.toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 34px;
+  height: 19px;
+  background: var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.toggle::after {
+  content: "";
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  background: var(--fg);
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: left 0.15s;
+}
+
+.toggle:checked {
+  background: var(--secondary);
+}
+.toggle:checked::after { left: 18px; }
+.toggle:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.toggle:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+
+/* --- Override button (inherited rows) --- */
+.override-btn {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  flex-shrink: 0;
+}
+
+/* --- Row actions area (right side of row) --- */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* --- Bulk actions --- */
+.bulk-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0.5rem;
+}
+
+/* --- Buttons --- */
+button {
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+button:hover { background: var(--bg); border-color: var(--fg-muted); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* --- Danger button (kill server) --- */
+.btn-danger {
+  color: #e05c5c;
+  border-color: #e05c5c44;
+}
+
+.btn-danger:hover {
+  background: #e05c5c18;
+  border-color: #e05c5c;
+  color: #e05c5c;
+}
+
+/* --- SkillsDisclosure --- */
+.skills-disclosure {
+  margin-top: 6px;
+}
+
+.skills-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+/* ITER_05: max-height transition replaces display:none/block for smooth expand/collapse */
+.skills-list {
+  max-height: 0;
+  overflow: hidden;
+  margin-top: 0;
+  padding-left: 12px;
+  border-left: 2px solid transparent;
+  transition:
+    max-height 200ms ease-out,
+    margin-top 200ms ease-out,
+    border-color 200ms ease-out;
+}
+
+.skills-list.is-open {
+  max-height: 600px;
+  margin-top: 6px;
+  border-left-color: var(--border);
+  overflow-y: auto;
+}
+
+.skill-row {
+  padding: 4px 0;
+}
+
+.skill-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.skill-description {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  margin-top: 1px;
+}
+
+/* --- Hooks display (ITER_16) — read-only structured text --- */
+.hook-block {
+  padding: 4px 0;
+}
+
+.hook-block + .hook-block {
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+}
+
+.hook-event {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.hook-matcher {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--fg-muted);
+  margin-left: 6px;
+}
+
+.hook-action {
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+  padding-left: 12px;
+  margin-top: 2px;
+}
+
+.hook-type {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.hook-detail {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  word-break: break-all;
+}
+
+/* --- Live dot (ITER_06 SSE indicator) --- */
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3a8a3a;
+  margin-left: 8px;
+  vertical-align: middle;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+.live-dot.connected {
+  opacity: 1;
+}
+
+.live-dot.reconnecting {
+  background: #cc8800;
+  opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .live-dot.connected,
+  :root:not([data-theme]) .live-dot.reconnecting {
+    filter: brightness(1.3);
+  }
+}
+
+:root[data-theme="dark"] .live-dot.connected,
+:root[data-theme="dark"] .live-dot.reconnecting {
+  filter: brightness(1.3);
+}
+
+/* --- Install panel (ITER_04; ITER_19: the only shadowed element) --- */
+.install-panel {
+  display: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-top: 12px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.install-panel.is-open {
+  display: block;
+}
+
+.install-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.install-panel-title {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.install-panel-close {
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0 4px;
+}
+
+.marketplace-select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.marketplace-select-label {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.marketplace-select {
+  font-size: 0.8rem;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  flex: 1;
+  min-width: 0;
+}
+
+/* --- Marketplace plugin rows --- */
+.mp-plugin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mp-plugin-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: start;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.mp-plugin-row + .mp-plugin-row {
+  margin-top: 4px;
+}
+
+.mp-plugin-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mp-plugin-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.install-status {
+  font-size: 0.68rem;
+  color: #3a8a3a;
+  font-weight: 600;
+}
+
+:root[data-theme="dark"] .install-status,
+:root[data-context="vscode"] .install-status {
+  color: #6bcb6b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .install-status {
+    color: #6bcb6b;
+  }
+}
+
+.mp-plugin-description {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  margin-top: 2px;
+  grid-column: 1;
+}
+
+.mp-keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  grid-column: 1;
+}
+
+.mp-keyword {
+  font-size: 0.65rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  color: var(--fg-muted);
+}
+
+.mp-install-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  grid-column: 2;
+  grid-row: 1 / 4;
+}
+
+/* Per-scope install target selector (ITER_15) */
+.mp-scope-select {
+  font-size: 0.72rem;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.mp-install-btn {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid var(--secondary);
+  background: transparent;
+  color: var(--secondary);
+}
+
+.mp-install-btn:hover:not(:disabled) {
+  background: var(--secondary-hi);
+  color: var(--on-text);
+}
+
+.mp-install-btn:disabled {
+  border-color: var(--border);
+  color: var(--fg-muted);
+  cursor: default;
+}
+
+/* --- Uninstall button variant (ITER_12) --- */
+.mp-install-btn--uninstall {
+  border-color: var(--error, #c0392b);
+  color: var(--error, #c0392b);
+}
+
+.mp-install-btn--uninstall:hover:not(:disabled) {
+  background: var(--error, #c0392b);
+  color: #ffffff;
+}
+
+.mp-install-error {
+  display: none;
+  font-size: 0.72rem;
+  color: #cc4444;
+  margin-top: 4px;
+  grid-column: 1 / 3;
+}
+
+.mp-install-error.visible {
+  display: block;
+}
+
+/* --- Install log area (ITER_07) --- */
+.mp-install-log {
+  display: none;
+  grid-column: 1 / 3;
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-family: monospace;
+  color: var(--fg-muted);
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.mp-install-log.is-open {
+  display: block;
+}
+
+/* --- Marketplace refresh button (ITER_08) --- */
+.marketplace-refresh-btn {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.marketplace-refresh-btn:hover:not(:disabled) {
+  border-color: var(--secondary);
+  color: var(--secondary);
+}
+
+.marketplace-refresh-btn:disabled {
+  color: var(--fg-muted);
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* --- Loading spinner (section title) --- */
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--fg-muted);
+  border-top-color: var(--secondary);
+  border-radius: 50%;
+  animation: loading-spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+/* --- BulkActions install button --- */
+.bulk-install-btn {
+  font-size: 0.78rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--secondary);
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+}
+
+.bulk-install-btn:hover {
+  background: var(--secondary-hi);
+  color: var(--on-text);
+}
+
+/* ITER_19: no entrance choreography — the only animated things are user-caused
+   state changes (toggle thumb, disclosure expand/collapse, hover/focus colour). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

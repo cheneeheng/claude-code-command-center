@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="18" height="18" fill="none">
+  <g id="mark">
+    <rect x="2" y="3"  width="12" height="2" rx="1" fill="var(--border-strong, #C7DBD6)"/>
+    <rect x="2" y="7"  width="12" height="2" rx="1" fill="var(--border-strong, #C7DBD6)"/>
+    <rect x="2" y="11" width="12" height="2" rx="1" fill="var(--border-strong, #C7DBD6)"/>
+    <circle cx="12" cy="4"  r="2" fill="var(--accent, #CB6442)"/>
+    <circle cx="5"  cy="8"  r="2" fill="var(--secondary, #0E7E77)"/>
+    <circle cx="10" cy="12" r="2" fill="var(--secondary, #0E7E77)"/>
+  </g>
+</svg>

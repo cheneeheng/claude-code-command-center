@@ -1,0 +1,52 @@
+name: Release — package VSCode extension
+
+on:
+  release:
+    types: [released]
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-upload:
+    name: Build .vsix (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: vscode-extension/package-lock.json
+
+      - name: Install dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Sync CSS (Linux)
+        if: runner.os != 'Windows'
+        run: cp html/styles.css vscode-extension/webview/styles.css
+
+      - name: Sync CSS (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Copy-Item -Path html\styles.css -Destination vscode-extension\webview\styles.css -Force
+
+      - name: Package extension
+        working-directory: vscode-extension
+        run: |
+          mkdir -p dist
+          npx vsce package --out dist/skills-toggle.vsix
+
+      - name: Upload .vsix to release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: vscode-extension/dist/skills-toggle.vsix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

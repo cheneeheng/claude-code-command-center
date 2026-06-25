@@ -1,0 +1,18 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022
+  },
+  "plugins": ["n"],
+  "extends": ["eslint:recommended", "plugin:n/recommended"],
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-console": "off",
+    "n/no-missing-require": ["error", { "allowModules": ["vscode"] }],
+    "n/no-unpublished-require": "off"
+  },
+  "ignorePatterns": ["node_modules/", "dist/"]
+}

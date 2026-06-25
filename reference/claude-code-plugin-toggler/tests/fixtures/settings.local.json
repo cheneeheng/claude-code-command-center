@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "smoke-local@smoke-market": true
+  }
+}

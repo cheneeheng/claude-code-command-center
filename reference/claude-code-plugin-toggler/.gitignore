@@ -1,0 +1,4 @@
+.claude/settings.local.json
+vscode-extension/dist/
+*.vsix
+node_modules/
