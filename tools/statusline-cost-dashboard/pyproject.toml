@@ -18,6 +18,8 @@ package = false
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+# statusline.py is an abandoned port kept for reference only — do not lint it.
+extend-exclude = ["statusline.py"]
 
 [tool.mypy]
 python_version = "3.11"

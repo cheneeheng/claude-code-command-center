@@ -85,3 +85,42 @@ separate follow-up, kept out of the uv-adoption change.
 gitignored. Existing scripts still run unchanged via `uv run`.
 
 **Outcome:** `uv lock` resolves in both members; `uv run` confirmed working.
+
+### Entry 4
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-25T00:00:00Z
+**Task:** Phase 3 — unified CI.
+
+**Context:** Added a root GitHub Actions workflow. A ruff gate is only worth committing if it
+starts green, but two members had violations, and some members already shipped their own
+(now-inert) `.github/workflows/`.
+
+**Decision:**
+- Authored CI inline (one root `.github/workflows/ci.yml`) rather than spawning the
+  github-actions agent — the user asked to continue, not to delegate. Jobs: `ruff` across the
+  three Python members (matrix) + `pytest` for `multi-repo-plan-runner` (the only pytest suite;
+  the toggler's tests are shell smoke tests). Uses `astral-sh/setup-uv` (uv provides Python).
+- Made the two red members green by the least-invasive correct means, not by rewriting code:
+  fixed 2 genuine empty-f-string smells in the dashboard server; excluded the abandoned
+  `statusline.py` from ruff; and added `ignore = ["E701"]` to the toggler to respect its
+  deliberate aligned compact style. Did not touch the toggler's or dashboard's logic.
+- Left the members' pre-existing nested `.github/workflows/` in place. GitHub only runs
+  workflows from the repo-root `.github/`, so they are inert (no duplicate runs); reconciling
+  or removing them is a member-content follow-up, kept out of this change.
+- Kept the uv-corrected `multi-repo-plan-runner/uv.lock` (it had a stale `1.0.0`; uv set it to
+  the pyproject's `2.0.0`).
+
+**Deferred (noted, not done):** per-member path-filtering (needs a filter action or split
+workflows — not worth it at this size), SHA-pinning the actions (currently version tags),
+mypy in CI (non-strict on untyped legacy code is low-signal), and PowerShell/Bash script
+linting.
+
+**Impact / Risk:** Low. Verified locally: all three members ruff-green; plan-runner pytest
+194 passed, 100% coverage. CI starts green.
+
+**Outcome:** The code changes (ruff-clean prep) pushed fine. The workflow file itself was
+rejected on `git push` — this OAuth token lacks the `workflow` scope, so it cannot create
+`.github/workflows/`. The validated `ci.yml` is held locally and needs to be added through a
+path that has `workflow` scope (GitHub UI/API, or a token with the scope). Flagged to the user.

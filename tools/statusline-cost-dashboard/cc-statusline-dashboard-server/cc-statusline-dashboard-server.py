@@ -55,11 +55,11 @@ def main():
 
     server = HTTPServer((args.host, args.port), Handler)
     url = f"http://{args.host}:{args.port}"
-    print(f"  Claude Code Usage Dashboard")
+    print("  Claude Code Usage Dashboard")
     for d in dashboard_config.CLAUDE_DIRS:
         print(f"  Watching: {d / 'projects'}")
     print(f"  Open:     {url}")
-    print(f"  Stop:     Ctrl+C\n")
+    print("  Stop:     Ctrl+C\n")
 
     try:
         server.serve_forever()

@@ -20,5 +20,9 @@ package = false
 line-length = 88
 target-version = "py311"
 
+# server.py uses an intentional aligned compact style for the scope dispatch.
+[tool.ruff.lint]
+ignore = ["E701"]
+
 [tool.mypy]
 python_version = "3.11"
