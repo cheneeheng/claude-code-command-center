@@ -16,6 +16,7 @@ the catalog; click into a folder for full docs.
 | [`multi-repo-plan-runner`](apps/multi-repo-plan-runner/) | A command center over the Claude Code repos you work across: surface every plan and its lifecycle status, and run plans without leaving the tool. |
 | [`per-project-plugin-toggler`](apps/per-project-plugin-toggler/) | Enable/disable Claude Code plugins per project from a browser UI or inside VSCode; browse and install from known marketplaces. |
 | [`usage-dashboard`](apps/usage-dashboard/) | Local web dashboard for token usage, cost by model, rate limits, and sessions. Reads Claude Code transcripts; live rate limits come from the optional `statusline-hook` tool. |
+| [`skill-browser`](apps/skill-browser/) | Local web app to search and read every Claude Code skill installed on your machine, grouped by plugin. |
 
 ### `tools/` — single-purpose utilities & scripts
 
@@ -48,10 +49,16 @@ layout) and is consumed by both the `usage-dashboard` app and the `usage-report`
 ```
 apps/      full applications you run
 tools/     single-purpose utilities & scripts
-libs/      shared libraries (planned)
+libs/      shared libraries
 plugins/   packaged Claude Code skills/plugins (planned)
 docs/      monorepo-wide docs
 ```
+
+## Related repositories
+
+- [`cheneeheng/agent-skills`](https://github.com/cheneeheng/agent-skills) — the Claude Code
+  skills/plugins marketplace (kept as a separate repo). It's the source of many skills you'd see
+  in the `skill-browser` app here.
 
 ## License
 

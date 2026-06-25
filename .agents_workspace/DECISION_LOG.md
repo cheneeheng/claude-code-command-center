@@ -195,3 +195,31 @@ repo-wide "all Python uses uv" mandate; READMEs/docstrings updated.
 verified instead via the golden-snapshot diff. Tests are the obvious follow-up for a reusable lib.
 
 **Impact / Risk:** Low–medium. Behavior verified identical; lib+CLI ruff+strict-mypy green.
+
+### Entry 7
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-25T00:00:00Z
+**Task:** Phase 5 — flagship member + related-repo reference.
+
+**Context:** User picked the "skill/plugin browser" flagship, deferred the `cc` launcher, asked
+to reference a separate `agent-skills` repo, and required the scheduler's bundled skills stay
+scheduler-only.
+
+**Decision:**
+- Built `apps/skill-browser` (classified an **app** per the boundary: a UI you browse). Stdlib
+  web server + accessible single-page UI; reads `installed_plugins.json`, parses each plugin's
+  `skills/*/SKILL.md` frontmatter, lists/searches them grouped by plugin, shows the body on click.
+  Strict-typed; ruff + mypy green; endpoints verified (incl. 404s for bad/non-int ids).
+- Security: the body endpoint takes a **bounds-checked integer index** into the server's own
+  scan — no user-supplied paths, so no traversal; file paths are stripped from the list payload;
+  binds to `127.0.0.1`; UI uses `textContent` only (no HTML injection).
+- Did **not** move `tools/scheduled-automations/skills/` — they remain scheduler-only per the
+  user. (Also means a future Phase 6 marketplace would not use them.)
+- Referenced `cheneeheng/agent-skills` in the README "Related repositories" section — kept as a
+  separate repo. Discovered it's the marketplace source feeding the skills the browser lists.
+- Deferred the `cc` launcher candidate.
+
+**Impact / Risk:** Low. New isolated member; no changes to other members. Single consumer of the
+plugin-data parsing, so kept local (no premature lib per the libs/ rule).

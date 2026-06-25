@@ -31,6 +31,7 @@ jobs:
           - apps/multi-repo-plan-runner
           - apps/per-project-plugin-toggler
           - apps/usage-dashboard
+          - apps/skill-browser
           - tools/statusline-hook
           - tools/usage-report
           - libs/claude-usage
@@ -49,9 +50,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        member:
-          - libs/claude-usage
-          - tools/usage-report
+        include:
+          - member: libs/claude-usage
+            target: src
+          - member: tools/usage-report
+            target: src
+          - member: apps/skill-browser
+            target: server.py
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -59,7 +64,7 @@ jobs:
           enable-cache: true
       - name: mypy
         working-directory: ${{ matrix.member }}
-        run: uv run mypy src
+        run: uv run mypy ${{ matrix.target }}
 
   test:
     name: pytest (multi-repo-plan-runner)
