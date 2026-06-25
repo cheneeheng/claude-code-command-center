@@ -124,3 +124,36 @@ linting.
 rejected on `git push` — this OAuth token lacks the `workflow` scope, so it cannot create
 `.github/workflows/`. The validated `ci.yml` is held locally and needs to be added through a
 path that has `workflow` scope (GitHub UI/API, or a token with the scope). Flagged to the user.
+
+### Entry 5
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-25T00:00:00Z
+**Task:** Split statusline-cost-dashboard into a tool + an app; define the app/tool boundary.
+
+**Context:** User asked what distinguishes `apps/` from `tools/` and proposed splitting the
+statusline member. Also asked that the dashboard read the statusline JSONL export only if
+present and skip it otherwise.
+
+**Decision:**
+- Boundary recorded in root CLAUDE.md: an **app** is a destination you open and interact with
+  via a UI (web page, TUI, dashboard, editor extension); a **tool** is plumbing invoked by
+  something else (hook, scheduled task, CLI shim) with no interactive surface. Split members
+  that bundle both.
+- By that rule, split the member: hook scripts -> `tools/statusline-hook` (new minimal uv
+  project); the dashboard server -> `apps/usage-dashboard` (kept the existing uv project,
+  renamed `statusline-cost-dashboard` -> `usage-dashboard`). Folder-level `git mv` so the
+  dashboard's internal bare-name / $PSScriptRoot references stay valid; internal filenames kept
+  (per the "files keep original names" convention).
+- The two halves share only a documented file contract (`~/.claude/statusline/<project>/
+  <session>.jsonl`). Cross-linked both READMEs; flagged the schema as a future `libs/`
+  candidate. Updated the catalog (README, CLAUDE.md), the parked CI matrix, and the suite doc.
+- **Graceful skip was already implemented** end-to-end (`live_statusline._statusline_files`
+  guards on dir existence; `read_statusline` returns an `_EMPTY` shape with `available: False`;
+  `merge.build_payload` no-ops; `dashboard.js` shows "Hook not set up"). Per write-less-code I
+  added no new logic — only fixed the now-cross-member UI hint text. Verified with an empty
+  CLAUDE_DIR: payload returns `available: False`, no crash.
+
+**Impact / Risk:** Low. Both new members ruff-green; dashboard imports resolve; graceful-skip
+verified. History preserved via git mv.

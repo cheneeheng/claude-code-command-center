@@ -29,7 +29,8 @@ jobs:
         member:
           - apps/multi-repo-plan-runner
           - apps/per-project-plugin-toggler
-          - tools/statusline-cost-dashboard
+          - apps/usage-dashboard
+          - tools/statusline-hook
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

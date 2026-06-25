@@ -1,7 +1,8 @@
 [project]
-name = "statusline-cost-dashboard"
+name = "statusline-hook"
 version = "0.1.0"
-description = "Terminal statusline hook and live token/cost dashboard for Claude Code sessions."
+description = "Claude Code statusline hook (PowerShell / Bash / Python) for a colour-coded one-liner."
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
@@ -11,7 +12,7 @@ dev = [
     "mypy>=1.11",
 ]
 
-# Run as scripts, not installed as a package.
+# statusline.py is run directly by Claude Code as a hook, not installed.
 [tool.uv]
 package = false
 

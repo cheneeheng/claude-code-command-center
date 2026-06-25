@@ -8,6 +8,12 @@ install, no dependencies — just `python cc-statusline-dashboard-server.py`.
 http://localhost:8080
 ```
 
+Historical usage/cost comes from Claude Code's own `~/.claude/projects/**/*.jsonl`
+transcripts. The **live rate-limit panel** is powered by the optional
+[`statusline-hook`](../../tools/statusline-hook/) tool, which exports
+`~/.claude/statusline/<project>/<session>.jsonl`. The dashboard reads that export if present
+and silently skips it (showing "Hook not set up") if not.
+
 ---
 
 ## The one thing to understand: two data sources

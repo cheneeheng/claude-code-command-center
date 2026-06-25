@@ -6,6 +6,8 @@ Quality-of-life scripts and tooling for Claude Code on Windows. Four independent
 
 ## cc-statusline
 
+> **Now split into two members:** the hook scripts are the [`statusline-hook`](../tools/statusline-hook/) tool, and the dashboard server is the [`usage-dashboard`](../apps/usage-dashboard/) app. The table below describes the original combined module.
+
 Live token/cost dashboard and terminal statusline hook for Claude Code sessions. The statusline hook scripts live in the folder root; the dashboard server and its scheduled-task scripts live in the `cc-statusline-dashboard-server/` subfolder.
 
 | File | Description |

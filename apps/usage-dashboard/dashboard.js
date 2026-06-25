@@ -238,7 +238,7 @@ function rateLimitCard(live) {
         ${inlineTimeout()}
       </div>
       <div style="color:var(--muted);font-family:var(--mono);font-size:12px;padding:8px 0">
-        Hook not set up — see statusline.sh setup instructions
+        Hook not set up — install the statusline-hook tool to see live rate limits
       </div>
     </div>`;
   }
