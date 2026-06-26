@@ -223,3 +223,36 @@ scheduler-only.
 
 **Impact / Risk:** Low. New isolated member; no changes to other members. Single consumer of the
 plugin-data parsing, so kept local (no premature lib per the libs/ rule).
+
+### Entry 8
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-25T00:00:00Z
+**Task:** De-duplicate plugin/skill reading between skill-browser and plugin-toggler.
+
+**Context:** User noticed overlap. Investigation confirmed real duplication (SKILL.md frontmatter
+parsing + skill enumeration) and that the two parsers had already drifted (toggler handles block
+scalars, browser didn't). Scope handling was toggler-only — the browser was scope-agnostic. User
+asked to make the browser scope-aware too (so all three implementations match), chose **Option B**
+(no library), and asked to document the duplication as a cross-reference.
+
+**Decision:**
+- **No `libs/` extraction.** The toggler is deliberately stdlib/zero-dependency and ships a
+  parallel Node implementation (vscode-extension), so a Python lib would only de-dupe 2 of 3
+  copies while forcing a dependency on a zero-dep app. Shared surface is small. (If a 4th Python
+  consumer appears, revisit `libs/claude-plugins`.)
+- Made `skill-browser` **scope-aware**: ported the toggler's `normalise_path`,
+  `load_installed_plugins` (local/project/user bucketing against the launch cwd) and the robust
+  `parse_skill_frontmatter` (block + inline). Each skill now carries a `scope`; the UI shows a
+  scope badge and search matches scope. This also **de-drifts** the parser.
+- Dropped `skill-browser` to **non-strict mypy** so its copied JSON-reading logic stays parallel
+  to the toggler's rather than diverging through annotations; removed it from the strict-mypy CI
+  job (still ruff-linted).
+- Registered the duplication in `docs/shared-plugin-logic.md` (the 3 copies, why copied not
+  shared, known intentional differences) with `Cross-reference:` comments in each Python + the JS
+  copy. Recorded the "intentional duplication" convention in CLAUDE.md.
+
+**Impact / Risk:** Low. Toggler logic unchanged (only a comment added); browser verified (38
+skills, scope=user, endpoints + traversal-safety intact). Behaviour parity is now a maintained
+contract via the register, not an accident.

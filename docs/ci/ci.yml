@@ -55,8 +55,6 @@ jobs:
             target: src
           - member: tools/usage-report
             target: src
-          - member: apps/skill-browser
-            target: server.py
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

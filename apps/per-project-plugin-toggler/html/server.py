@@ -14,6 +14,9 @@ PLUGINS_BASE      = Path.home() / ".claude" / "plugins"
 MARKETPLACES_JSON = PLUGINS_BASE / "known_marketplaces.json"
 
 
+# Cross-reference: _parse_skill_frontmatter, load_installed_plugins and normalise_path
+# below are intentionally duplicated in apps/skill-browser/server.py and in this app's
+# vscode-extension/extension.js. Keep them in sync — see docs/shared-plugin-logic.md.
 def _parse_skill_frontmatter(path: Path, fallback: str = "") -> tuple[str, str]:
     """
     Returns (name, description) from YAML front matter.

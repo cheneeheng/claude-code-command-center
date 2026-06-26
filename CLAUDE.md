@@ -28,6 +28,12 @@ consumers** — never a utilities junk drawer, and never a single-consumer extra
 the second consumer, not the first. `claude-usage` (Claude Code local-data access, used by
 `usage-dashboard` and `usage-report`) is the worked example.
 
+**intentional duplication:** sometimes a library doesn't fit (e.g. a consumer is deliberately
+zero-dependency, or has a parallel non-Python implementation). When logic is copied across
+members on purpose, register it in `docs/shared-plugin-logic.md` and add a `Cross-reference:`
+comment in each copy, so the copies are kept in sync. That file is the worked example
+(plugin/skill reading, shared by `skill-browser` and `per-project-plugin-toggler`).
+
 Members are **self-contained**: each keeps its own README, CHANGELOG, tests, and CLAUDE.md.
 The umbrella adds a catalog and shared conventions; it does not flatten or rewrite members.
 
