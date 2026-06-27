@@ -11,9 +11,9 @@ implementations — pick the one for your shell:
 
 | File | Platform | Notes |
 |------|----------|-------|
-| `statusline.ps1` | Windows (PowerShell) | Forces UTF-8 output. |
-| `statusline.sh` | Linux / macOS (Bash) | Requires `jq`. |
-| `statusline.py` | Cross-platform (Python stdlib) | UTF-8-safe stdin/stdout; run with `python3 statusline.py`. Managed with `uv`. |
+| `statusline-hook.ps1` | Windows (PowerShell) | Forces UTF-8 output. |
+| `statusline-hook.sh` | Linux / macOS (Bash) | Requires `jq`. |
+| `statusline-hook.py` | Cross-platform (Python stdlib) | UTF-8-safe stdin/stdout; run with `python3 statusline-hook.py`. Managed with `uv`. |
 
 Each hook also appends the turn to `~/.claude/statusline/<project>/<session_id>.jsonl`
 (`{session_id, ts, data}`). That export is **optional** — it's what powers the live
@@ -28,7 +28,7 @@ Add the hook to `~/.claude/settings.json` (PowerShell shown; use `.sh`/`.py` ana
 {
   "statusLine": {
     "type": "command",
-    "command": "pwsh -NoProfile -File ~/.claude/statusline.ps1"
+    "command": "pwsh -NoProfile -File ~/.claude/statusline-hook.ps1"
   }
 }
 ```

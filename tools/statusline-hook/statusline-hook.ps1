@@ -1,7 +1,7 @@
 # Setup:
 # "statusLine": {
 #   "type": "command",
-#   "command": "pwsh -NoProfile -File ~/.claude/statusline.ps1",
+#   "command": "pwsh -NoProfile -File ~/.claude/statusline-hook.ps1",
 #   "padding": 2
 # }
 

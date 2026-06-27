@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code Statusline Hook (Python stdlib).
 
-Drop-in replacement for statusline.sh / statusline.ps1. Reads the JSON blob
+Drop-in replacement for statusline-hook.sh / statusline-hook.ps1. Reads the JSON blob
 Claude Code pipes to stdin, prints a single colour-coded status line to stdout,
 and appends the turn to a per-project / per-session JSONL log that the dashboard
 server reads.
@@ -11,12 +11,12 @@ stdin and stdout are forced to UTF-8 so the piped JSON and the bar/arrow glyphs
 survive on Windows consoles (the original port crashed here).
 
 Setup (one-time):
-    1. Copy this file to ~/.claude/statusline.py
+    1. Copy this file to ~/.claude/statusline-hook.py
     2. Add to ~/.claude/settings.json:
          {
            "statusLine": {
              "type": "command",
-             "command": "python3 ~/.claude/statusline.py"
+             "command": "python3 ~/.claude/statusline-hook.py"
            }
          }
 """

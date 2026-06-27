@@ -25,7 +25,7 @@ Keeping them straight is the whole point of the module layout.
 | | Source 1 — Session transcripts | Source 2 — Statusline logs |
 |---|---|---|
 | **Files** | `~/.claude/projects/**/*.jsonl` | `~/.claude/statusline/<project>/<session>.jsonl` |
-| **Written by** | Claude Code itself, every turn | The `statusline.ps1` / `.sh` hook, every prompt |
+| **Written by** | Claude Code itself, every turn | The `statusline-hook.ps1` / `.sh` hook, every prompt |
 | **Module** | `session_stats.py` | `live_statusline.py` |
 | **Gives us** | Exact token counts per session (input / output / cache) for **all** sessions, ever | Live state for **currently active** sessions: rate limits (5h / 7d), context-window %, and the model display name |
 | **Cost** | **Estimated** — token counts × the `claude-usage` pricing table | **Actual** — the real `total_cost_usd` Anthropic reported |
@@ -62,7 +62,7 @@ cc-statusline-dashboard-server.py   ← entry point (CLI, starts HTTP server)
 
 ```
         ~/.claude/projects/**/*.jsonl            ~/.claude/statusline/**/*.jsonl
-        (transcripts, written by Claude)         (written by statusline.ps1 hook)
+        (transcripts, written by Claude)         (written by statusline-hook.ps1 hook)
                   │                                          │
                   ▼                                          ▼
     ┌──────────────────────────────┐         ┌──────────────────────────────┐
