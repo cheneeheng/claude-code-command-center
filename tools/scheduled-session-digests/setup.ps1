@@ -1,4 +1,4 @@
-# setup.ps1 - interactive installer and uninstaller for claude-code-scheduler
+# setup.ps1 - interactive installer and uninstaller for scheduled-session-digests
 #
 # Run from the repo root:
 #   .\setup.ps1
@@ -29,7 +29,7 @@ function Prompt-Confirm {
 # ---- Banner -----------------------------------------------------------------
 
 Write-Host ""
-Write-Host "  claude-code-scheduler" -ForegroundColor Cyan
+Write-Host "  scheduled-session-digests" -ForegroundColor Cyan
 Write-Host "  ─────────────────────────────────────────" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  [1]  Install"
@@ -195,7 +195,7 @@ if ($mode -eq "uninstall") {
 
     # ---- Cron-based mechanism (scheduled tasks + trigger + prompt files) -----
     if (Prompt-Confirm "Remove the cron-based schedulers (scheduled tasks + trigger scripts)?") {
-        foreach ($task in @("ClaudeCode-DailySummary", "ClaudeCode-DailyLessons", "ClaudeCode-WeeklyLessons")) {
+        foreach ($task in @("SessionDigest-DailySummary", "SessionDigest-DailyLessons", "SessionDigest-WeeklyLessons")) {
             if (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue) {
                 Unregister-ScheduledTask -TaskName $task -Confirm:$false
                 Write-Host "  Removed task: $task" -ForegroundColor Green
@@ -223,7 +223,7 @@ if ($mode -eq "uninstall") {
         }
 
         foreach ($s in @("daily-summary", "daily-lessons", "weekly-lessons")) {
-            $path = Join-Path $MetaDir ".claude\skills\claude-code-scheduler-$s"
+            $path = Join-Path $MetaDir ".claude\skills\session-digest-$s"
             if (Test-Path $path) {
                 Remove-Item $path -Recurse -Force
                 Write-Host "  Removed: $path" -ForegroundColor Green

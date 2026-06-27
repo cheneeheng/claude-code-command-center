@@ -25,7 +25,7 @@ same files on the next run.
 
 The cron trigger above calls `claude --print`, which consumes programmatic credit.
 As an alternative, run the harvest from inside a Claude Code session with the
-`/claude-code-scheduler-weekly-lessons` skill (installed to
+`/session-digest-weekly-lessons` skill (installed to
 `$CLAUDE_META_DIR/.claude/skills/`). No `claude --print` is used, and — unlike the
 daily skills — no subagents: it is a single analysis pass.
 
@@ -39,7 +39,7 @@ daily skills — no subagents: it is a single analysis pass.
 Run it from a Claude Code session opened in the meta repo:
 
 ```
-/claude-code-scheduler-weekly-lessons
+/session-digest-weekly-lessons
 ```
 
 ---
@@ -69,10 +69,10 @@ Which files are installed depends on the chosen mode (`skill` / `cron` / `both`)
 | `weekly-lessons.md` | cron | `$CLAUDE_META_DIR/.claude/scripts/` |
 | `weekly-lessons-trigger.ps1` / `.sh` | cron | `$CLAUDE_META_DIR/.claude/scripts/` |
 | `weekly-lessons-prepare.ps1` / `.sh` | skill | `$CLAUDE_META_DIR/.claude/scripts/` |
-| `claude-code-scheduler-weekly-lessons/SKILL.md` | skill | `$CLAUDE_META_DIR/.claude/skills/` |
+| `session-digest-weekly-lessons/SKILL.md` | skill | `$CLAUDE_META_DIR/.claude/skills/` |
 | `git-sync.ps1` / `.sh` | both | `$CLAUDE_META_DIR/.claude/scripts/` |
 | Cursor file (written at runtime) | both | `$CLAUDE_META_DIR/.claude/weekly-lessons-cursor` |
-| Scheduled task | cron | `ClaudeCode-WeeklyLessons` (Windows) / crontab entry (Linux) |
+| Scheduled task | cron | `SessionDigest-WeeklyLessons` (Windows) / crontab entry (Linux) |
 | Git repo | both | `$CLAUDE_META_DIR` (initialised if absent) |
 | Env file (Linux only) | both | `~/.claude/claude-scheduler.env` |
 

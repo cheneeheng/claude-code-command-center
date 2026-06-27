@@ -32,7 +32,7 @@ concurrent `git-sync` conflicts on the same meta repo.
 
 The cron trigger above calls `claude --print`, which consumes programmatic credit.
 As an alternative you can run the same job from inside a Claude Code session with the
-`/claude-code-scheduler-daily-lessons` skill (installed to
+`/session-digest-daily-lessons` skill (installed to
 `$CLAUDE_META_DIR/.claude/skills/`).
 
 The skill is a coordinator and uses no `claude --print`:
@@ -48,7 +48,7 @@ The skill is a coordinator and uses no `claude --print`:
 Run it from a Claude Code session opened in the meta repo:
 
 ```
-/claude-code-scheduler-daily-lessons
+/session-digest-daily-lessons
 ```
 
 > Unlike the cron trigger, the skill does not call the `ceh-lessons-learned` marketplace
@@ -120,7 +120,7 @@ cd daily-lessons
 .\install.ps1 -Mode cron    # cron trigger only
 ```
 
-Registers a Windows Task Scheduler task (`ClaudeCode-DailyLessons`) at 03:00 daily.
+Registers a Windows Task Scheduler task (`SessionDigest-DailyLessons`) at 03:00 daily.
 Logs to `%CLAUDE_META_DIR%\logs\daily-lessons.log`.
 
 Or run the repo-root `setup.{sh,ps1}` to pick schedulers and mechanisms interactively.
@@ -160,7 +160,7 @@ Which files are installed depends on the chosen mode (`skill` / `cron` / `both`)
 | `.claude/scripts/daily-lessons.md` | cron | Claude prompt |
 | `.claude/scripts/daily-lessons-trigger.sh` / `.ps1` | cron | Trigger (`claude --print`) |
 | `.claude/scripts/daily-lessons-prepare.sh` / `.ps1` | skill | Stages inputs + manifest |
-| `.claude/skills/claude-code-scheduler-daily-lessons/SKILL.md` | skill | Interactive coordinator skill |
+| `.claude/skills/session-digest-daily-lessons/SKILL.md` | skill | Interactive coordinator skill |
 | `.claude/scripts/git-sync.sh` / `git-sync.ps1` | both | Shared commit helper |
 | `.claude/scheduler-jobs/daily-lessons/` | skill | Transient staging (gitignored) |
 | `lessons-learned/` | both | Output directory (year/month subdirs) |

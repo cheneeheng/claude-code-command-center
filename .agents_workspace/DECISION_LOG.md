@@ -374,3 +374,61 @@ existing single installs under `\ClaudeAutomation\` are orphaned by the new task
 uninstall via the old script revision or remove those tasks manually, then reinstall. Identity logic
 verified in isolation (order-independence holds; distinct pairs differ; no error on missing drives);
 both setup scripts parse-check clean. Not run end-to-end (needs Administrator + Task Scheduler).
+
+---
+
+### Entry 12
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Rename the `scheduled-automations` member to a self-descriptive name.
+
+**Context:** User found `scheduled-automations` unclear ("not clear what it is doing"). The member
+is one cohesive suite: scheduled, unattended Claude Code runs that read the user's own session
+transcripts and produce daily summaries + daily/weekly lessons into the shared `claude-meta` repo.
+
+**Decision:**
+- Renamed `tools/scheduled-automations` -> `tools/scheduled-session-digests` (user chose from
+  three candidates; noun-led form to match siblings like `cross-repo-file-diff`/`usage-report`).
+  Used `git mv` (history preserved). Updated the two catalog references (root `README.md` table row
+  + `CLAUDE.md` member list).
+- **Did not edit the DECISION_LOG entries** (9, 10, 11) that reference the old name: they are
+  past-tense audit records of work done under the old name — same frozen-record principle as
+  Entries 10/11.
+- **Did not rename the internal `claude-code-scheduler` branding** (README title, skill names
+  `claude-code-scheduler-*`, task names `ClaudeCode-*`) — out of scope for a folder rename, and
+  those names were already independent of the folder name. Flagged to the user.
+
+**Impact / Risk:** Low. Folder rename + two doc edits; no script logic touched. Existing installs
+are unaffected (they reference `CLAUDE_META_DIR` and installed copies, not the source folder path).
+
+---
+
+### Entry 13
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Align the internal `claude-code-scheduler` branding to the new folder name (follow-up to Entry 12, user said "Align please").
+
+**Context:** After the Entry 12 folder rename, the member still used `claude-code-scheduler`
+internally for its product title, the three interactive skill names/dirs, and its Windows Task
+Scheduler folder + task names.
+
+**Decision (naming scheme):**
+- Product/title `claude-code-scheduler` -> `scheduled-session-digests` (matches the folder).
+- Skill slash-commands `/claude-code-scheduler-<x>` -> `/session-digest-<x>` (dirs `git mv`'d,
+  `name:` frontmatter updated). Chose the shorter `session-digest-` stem over the full folder name
+  for usable slash commands; same recognizable stem, not a third unrelated variant.
+- Task Scheduler folder `\ClaudeCodeScheduler\` -> `\ScheduledSessionDigests\`; task names
+  `ClaudeCode-{DailySummary,DailyLessons,WeeklyLessons}` -> `SessionDigest-...`.
+- Applied via `sed` across the 15 live files (install/setup scripts `.ps1`+`.sh`, READMEs, the 3
+  `SKILL.md`). **Left `CHANGELOG.md` untouched** — its old-name references sit in dated historical
+  version entries (frozen record, same principle as the DECISION_LOG entries). A new changelog entry
+  documenting this rename should be added at the next release (flagged, not done — release flow owns it).
+
+**Impact / Risk:** Medium for existing installs. The Task Scheduler folder/name and skill names
+changed, so prior installs are orphaned under the old identifiers and must be uninstalled + reinstalled
+(consistent with the Entry 11 orphaning note). All four edited `.ps1` scripts parse-check clean; not
+run end-to-end (needs Administrator + Task Scheduler). No `.sh` shellcheck run.

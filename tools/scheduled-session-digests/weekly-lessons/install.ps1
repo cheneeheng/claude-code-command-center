@@ -7,7 +7,7 @@
 #   2. Sets CLAUDE_META_DIR as a permanent user environment variable
 #   3. Writes claude-meta\.claude\settings.json (Claude tool permissions)
 #   4. Copies weekly-lessons.md and weekly-lessons-trigger.ps1 → %USERPROFILE%\claude-meta\.claude\scripts\
-#   5. Registers the ClaudeCode-WeeklyLessons Task Scheduler task (Sunday 02:00)
+#   5. Registers the SessionDigest-WeeklyLessons Task Scheduler task (Sunday 02:00)
 
 param(
     # Mode selects which mechanism to install:
@@ -162,14 +162,14 @@ if ($WantSkill) {
     Copy-Item "$Here\weekly-lessons-prepare.ps1" -Destination "$ScriptsDir\weekly-lessons-prepare.ps1" -Force
     Write-Host "      $ScriptsDir\weekly-lessons-prepare.ps1" -ForegroundColor Green
 
-    $SkillSrc = Join-Path $Here "..\skills\claude-code-scheduler-weekly-lessons\SKILL.md"
-    $SkillDir = Join-Path $MetaDir ".claude\skills\claude-code-scheduler-weekly-lessons"
+    $SkillSrc = Join-Path $Here "..\skills\session-digest-weekly-lessons\SKILL.md"
+    $SkillDir = Join-Path $MetaDir ".claude\skills\session-digest-weekly-lessons"
     if (Test-Path $SkillSrc) {
         New-Item -ItemType Directory -Force -Path $SkillDir | Out-Null
         Copy-Item $SkillSrc -Destination "$SkillDir\SKILL.md" -Force
         Write-Host "      $SkillDir\SKILL.md" -ForegroundColor Green
     } else {
-        Write-Host "      WARNING: skill not found at $SkillSrc - /claude-code-scheduler-weekly-lessons will be unavailable." -ForegroundColor Red
+        Write-Host "      WARNING: skill not found at $SkillSrc - /session-digest-weekly-lessons will be unavailable." -ForegroundColor Red
     }
 }
 
@@ -186,8 +186,8 @@ Write-Host "      $ConfigFile" -ForegroundColor Green
 # ---------------------------------------------------------------------------
 # 5. Register Task Scheduler task
 # ---------------------------------------------------------------------------
-$TaskName   = "ClaudeCode-WeeklyLessons"
-$TaskFolder = "\ClaudeCodeScheduler\"
+$TaskName   = "SessionDigest-WeeklyLessons"
+$TaskFolder = "\ScheduledSessionDigests\"
 $Script     = "$ScriptsDir\weekly-lessons-trigger.ps1"
 
 if ($WantCron) {
@@ -237,7 +237,7 @@ if ($WantCron) {
 if ($WantSkill) {
     Write-Host ""
     Write-Host "--- Use the interactive skill ---" -ForegroundColor Yellow
-    Write-Host "     From inside Claude Code (run in $MetaDir): /claude-code-scheduler-weekly-lessons"
+    Write-Host "     From inside Claude Code (run in $MetaDir): /session-digest-weekly-lessons"
 }
 
 Write-Host ""

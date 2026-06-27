@@ -24,7 +24,7 @@ output file already exists are skipped.
 
 The cron trigger above calls `claude --print`, which consumes programmatic credit.
 As an alternative, run the same job from inside a Claude Code session with the
-`/claude-code-scheduler-daily-summary` skill (installed to
+`/session-digest-daily-summary` skill (installed to
 `$CLAUDE_META_DIR/.claude/skills/`). It is a coordinator and uses no `claude --print`:
 
 1. Runs `daily-summary-prepare.{sh,ps1}` — the same scan / filter logic as the trigger,
@@ -37,7 +37,7 @@ As an alternative, run the same job from inside a Claude Code session with the
 Run it from a Claude Code session opened in the meta repo:
 
 ```
-/claude-code-scheduler-daily-summary
+/session-digest-daily-summary
 ```
 
 ---
@@ -68,9 +68,9 @@ Which files are installed depends on the chosen mode (`skill` / `cron` / `both`)
 | `daily-summary.md` | cron | `$CLAUDE_META_DIR/.claude/scripts/` |
 | `daily-summary-trigger.ps1` / `.sh` | cron | `$CLAUDE_META_DIR/.claude/scripts/` |
 | `daily-summary-prepare.ps1` / `.sh` | skill | `$CLAUDE_META_DIR/.claude/scripts/` |
-| `claude-code-scheduler-daily-summary/SKILL.md` | skill | `$CLAUDE_META_DIR/.claude/skills/` |
+| `session-digest-daily-summary/SKILL.md` | skill | `$CLAUDE_META_DIR/.claude/skills/` |
 | `git-sync.ps1` / `.sh` | both | `$CLAUDE_META_DIR/.claude/scripts/` |
-| Scheduled task | cron | `ClaudeCode-DailySummary` (Windows) / crontab entry (Linux) |
+| Scheduled task | cron | `SessionDigest-DailySummary` (Windows) / crontab entry (Linux) |
 | Git repo | both | `$CLAUDE_META_DIR` (initialised if absent) |
 | Env file (Linux only) | both | `~/.claude/claude-scheduler.env` |
 

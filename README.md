@@ -26,7 +26,7 @@ the catalog; click into a folder for full docs.
 | [`session-name-date-prefixer`](tools/session-name-date-prefixer/) | Prefix Claude Code session names with the date. |
 | [`claude-md-sync`](tools/claude-md-sync/) | Keep two `CLAUDE.md` files in sync across two folders (newer wins). |
 | [`settings-sync`](tools/settings-sync/) | Keep two Claude `settings.json` files in sync across two folders (newer wins, excluded keys preserved). |
-| [`scheduled-automations`](tools/scheduled-automations/) | Unattended Claude Code automations that run on a schedule (daily/weekly summaries and lessons). |
+| [`scheduled-session-digests`](tools/scheduled-session-digests/) | Unattended scheduled Claude Code runs that digest your session transcripts into daily/weekly summaries and lessons. |
 | [`usage-report`](tools/usage-report/) | CLI summary of token usage and estimated cost across sessions — the terminal counterpart to `usage-dashboard`. |
 
 > `statusline-hook`, `session-name-date-prefixer`, `claude-md-sync`,

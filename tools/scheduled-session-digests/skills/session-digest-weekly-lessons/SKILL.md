@@ -1,5 +1,5 @@
 ---
-name: claude-code-scheduler-weekly-lessons
+name: session-digest-weekly-lessons
 description: Run the weekly-lessons harvest from inside an interactive Claude Code session instead of via the cron/Task Scheduler trigger (which calls `claude --print` and burns programmatic credit). Use when the user asks to "run weekly lessons", "harvest lessons", or "update the master lessons file". The prepare script collects the week's per-session lessons; you distil the project-generic ones into the master file directly, advance the cursor, then git-sync. No subagents are needed — this is a single analysis job.
 ---
 

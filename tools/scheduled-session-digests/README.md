@@ -1,4 +1,4 @@
-# claude-code-scheduler
+# scheduled-session-digests
 
 Unattended Claude Code automations that run on a schedule. Output is written to a
 shared local git repo (`claude-meta`), which can optionally be pushed to a remote.
@@ -23,7 +23,7 @@ Each scheduler (1–3 above) can be installed as either — or both — of:
 | Mechanism | How it runs | Cost |
 |-----------|-------------|------|
 | **cron** | Unattended on a schedule (cron / Task Scheduler). The trigger calls `claude --print`. | Consumes programmatic credit |
-| **skill** | On demand from inside a Claude Code session opened in the meta repo, via `/claude-code-scheduler-<name>`. A prepare script stages the work and the session fans it out to subagents. | Uses your interactive session |
+| **skill** | On demand from inside a Claude Code session opened in the meta repo, via `/session-digest-<name>`. A prepare script stages the work and the session fans it out to subagents. | Uses your interactive session |
 
 The skill mechanism exists for when programmatic (`claude --print`) usage is limited.
 The daily skills act as a coordinator — stage per-chat inputs, spawn one subagent per
@@ -42,14 +42,14 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 ```powershell
 # Windows
 git clone <this-repo>
-cd claude-code-scheduler
+cd scheduled-session-digests
 .\setup.ps1
 ```
 
 ```bash
 # Linux
 git clone <this-repo>
-cd claude-code-scheduler
+cd scheduled-session-digests
 bash setup.sh
 ```
 

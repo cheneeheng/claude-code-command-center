@@ -6,7 +6,7 @@
 #   1. Initialises %USERPROFILE%\claude-meta (git repo) with required subdirs
 #   2. Sets CLAUDE_META_DIR as a permanent user environment variable
 #   3. Copies daily-summary.md, daily-summary-trigger.ps1, git-sync.ps1 → %USERPROFILE%\claude-meta\.claude\scripts\
-#   4. Registers the ClaudeCode-DailySummary Task Scheduler task (02:00 daily)
+#   4. Registers the SessionDigest-DailySummary Task Scheduler task (02:00 daily)
 #
 # How it works:
 #   At 02:00 the trigger scans ~/.claude/projects/**/*.jsonl for new chat files,
@@ -130,14 +130,14 @@ if ($WantSkill) {
     Copy-Item "$Here\daily-summary-prepare.ps1" -Destination "$ScriptsDir\daily-summary-prepare.ps1" -Force
     Write-Host "      $ScriptsDir\daily-summary-prepare.ps1" -ForegroundColor Green
 
-    $SkillSrc = Join-Path $Here "..\skills\claude-code-scheduler-daily-summary\SKILL.md"
-    $SkillDir = Join-Path $MetaDir ".claude\skills\claude-code-scheduler-daily-summary"
+    $SkillSrc = Join-Path $Here "..\skills\session-digest-daily-summary\SKILL.md"
+    $SkillDir = Join-Path $MetaDir ".claude\skills\session-digest-daily-summary"
     if (Test-Path $SkillSrc) {
         New-Item -ItemType Directory -Force -Path $SkillDir | Out-Null
         Copy-Item $SkillSrc -Destination "$SkillDir\SKILL.md" -Force
         Write-Host "      $SkillDir\SKILL.md" -ForegroundColor Green
     } else {
-        Write-Host "      WARNING: skill not found at $SkillSrc - /claude-code-scheduler-daily-summary will be unavailable." -ForegroundColor Red
+        Write-Host "      WARNING: skill not found at $SkillSrc - /session-digest-daily-summary will be unavailable." -ForegroundColor Red
     }
 }
 
@@ -155,8 +155,8 @@ Write-Host "      $ConfigFile" -ForegroundColor Green
 # ---------------------------------------------------------------------------
 # 4. Register Task Scheduler task
 # ---------------------------------------------------------------------------
-$TaskName   = "ClaudeCode-DailySummary"
-$TaskFolder = "\ClaudeCodeScheduler\"
+$TaskName   = "SessionDigest-DailySummary"
+$TaskFolder = "\ScheduledSessionDigests\"
 $Script     = "$ScriptsDir\daily-summary-trigger.ps1"
 
 if ($WantCron) {
@@ -203,5 +203,5 @@ if ($WantCron) {
 if ($WantSkill) {
     Write-Host ""
     Write-Host "--- Use the interactive skill ---" -ForegroundColor Yellow
-    Write-Host "     From inside Claude Code (run in $MetaDir): /claude-code-scheduler-daily-summary"
+    Write-Host "     From inside Claude Code (run in $MetaDir): /session-digest-daily-summary"
 }

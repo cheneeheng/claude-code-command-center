@@ -1,5 +1,5 @@
 ---
-name: claude-code-scheduler-daily-lessons
+name: session-digest-daily-lessons
 description: Run the daily-lessons scheduler from inside an interactive Claude Code session instead of via the cron/Task Scheduler trigger (which calls `claude --print` and burns programmatic credit). Use when the user asks to "run daily lessons", "extract today's lessons", or "do the daily lessons harvest". You act as coordinator: run the prepare script to stage one input file per new chat, fan the extraction out to subagents, then git-sync the meta repo.
 ---
 

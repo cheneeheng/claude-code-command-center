@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup.sh - interactive installer and uninstaller for claude-code-scheduler (Linux)
+# setup.sh - interactive installer and uninstaller for scheduled-session-digests (Linux)
 #
 # Run from the repo root:
 #   ./setup.sh
@@ -36,7 +36,7 @@ prompt_confirm() {
 # ---- Banner -----------------------------------------------------------------
 
 echo ""
-echo "  claude-code-scheduler"
+echo "  scheduled-session-digests"
 echo "  ─────────────────────────────────────────"
 echo ""
 echo "  [1]  Install"
@@ -245,7 +245,7 @@ if [[ "$mode" == "uninstall" ]]; then
         done
 
         for s in daily-summary daily-lessons weekly-lessons; do
-            path="$META_DIR/.claude/skills/claude-code-scheduler-$s"
+            path="$META_DIR/.claude/skills/session-digest-$s"
             if [[ -d "$path" ]]; then
                 rm -rf "$path"
                 echo "  Removed: $path"

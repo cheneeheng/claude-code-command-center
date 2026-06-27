@@ -165,14 +165,14 @@ if $WANT_SKILL; then
     chmod +x "$SCRIPTS_DIR/daily-summary-prepare.sh"
     echo "      $SCRIPTS_DIR/daily-summary-prepare.sh"
 
-    SKILL_SRC="$HERE/../skills/claude-code-scheduler-daily-summary/SKILL.md"
-    SKILL_DIR="$META_DIR/.claude/skills/claude-code-scheduler-daily-summary"
+    SKILL_SRC="$HERE/../skills/session-digest-daily-summary/SKILL.md"
+    SKILL_DIR="$META_DIR/.claude/skills/session-digest-daily-summary"
     if [[ -f "$SKILL_SRC" ]]; then
         mkdir -p "$SKILL_DIR"
         cp "$SKILL_SRC" "$SKILL_DIR/SKILL.md"
         echo "      $SKILL_DIR/SKILL.md"
     else
-        echo "      WARNING: skill not found at $SKILL_SRC - /claude-code-scheduler-daily-summary will be unavailable."
+        echo "      WARNING: skill not found at $SKILL_SRC - /session-digest-daily-summary will be unavailable."
     fi
 fi
 
@@ -221,5 +221,5 @@ fi
 if $WANT_SKILL; then
     echo ""
     echo "--- Use the interactive skill ---"
-    echo "  From inside Claude Code (run in $META_DIR): /claude-code-scheduler-daily-summary"
+    echo "  From inside Claude Code (run in $META_DIR): /session-digest-daily-summary"
 fi
