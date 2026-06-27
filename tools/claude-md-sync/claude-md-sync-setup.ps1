@@ -1,32 +1,48 @@
 # Combined install/uninstall for the CLAUDE.md sync task.
 # Run as Administrator.
 # Usage:
-#   .\cc-sync-claude-md-and-claude-devcontainer-md-setup.ps1                              # install (default), 15-min interval
-#   .\cc-sync-claude-md-and-claude-devcontainer-md-setup.ps1 -Action install -IntervalMinutes 30
-#   .\cc-sync-claude-md-and-claude-devcontainer-md-setup.ps1 -Action uninstall
+#   .\claude-md-sync-setup.ps1 -FolderA <dir> -FolderB <dir>                 # install (default), 15-min interval
+#   .\claude-md-sync-setup.ps1 -FolderA <dir> -FolderB <dir> -IntervalMinutes 30
+#   .\claude-md-sync-setup.ps1 -Action uninstall
 param(
     [ValidateSet('install', 'uninstall')]
     [string]$Action = 'install',
+
+    # The two folders whose CLAUDE.md to keep in sync (required on install).
+    [string]$FolderA,
+    [string]$FolderB,
 
     [ValidateRange(1, 1439)]
     [int]$IntervalMinutes = 15
 )
 
-$vbsPath = Join-Path $PSScriptRoot "cc-sync-claude-md-and-claude-devcontainer-md-hidden.vbs"
+$vbsPath = Join-Path $PSScriptRoot "claude-md-sync-hidden.vbs"
 
 $taskFolder = "\ClaudeAutomation\"
 $taskName   = "SyncClaudeMd"
 
+# This tool syncs CLAUDE.md specifically; only the containing folders are configurable.
+$fileName = "CLAUDE.md"
+
 function Install-SyncTask {
+    if (-not $FolderA -or -not $FolderB) {
+        throw "Install requires -FolderA and -FolderB (the two folders whose $fileName to keep in sync)."
+    }
+    foreach ($f in @($FolderA, $FolderB)) {
+        if (-not (Test-Path -PathType Container $f)) { throw "Folder not found: $f" }
+    }
+    $fileA = Join-Path (Resolve-Path $FolderA).Path $fileName
+    $fileB = Join-Path (Resolve-Path $FolderB).Path $fileName
+
     # ---- CREATE HIDDEN VBS LAUNCHER ----
+    # The two file paths are resolved at install time and embedded directly.
     $vbsContent = @"
 Set shell = CreateObject("WScript.Shell")
-home = shell.ExpandEnvironmentStrings("%USERPROFILE%")
 
 scriptDir = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
-scriptPath = scriptDir & "\cc-sync-claude-md-and-claude-devcontainer-md.ps1"
-fileA = home & "\.claude\CLAUDE.md"
-fileB = home & "\.claude_devcontainer\CLAUDE.md"
+scriptPath = scriptDir & "\claude-md-sync.ps1"
+fileA = "$fileA"
+fileB = "$fileB"
 
 cmd = "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File """ & scriptPath & """ -FileA """ & fileA & """ -FileB """ & fileB & """"
 shell.Run cmd, 0, False
@@ -66,6 +82,7 @@ shell.Run cmd, 0, False
         -Force
 
     Write-Host "Task '$taskName' registered successfully (every $IntervalMinutes minute(s))."
+    Write-Host "Syncing: $fileA  <->  $fileB"
 }
 
 function Uninstall-SyncTask {

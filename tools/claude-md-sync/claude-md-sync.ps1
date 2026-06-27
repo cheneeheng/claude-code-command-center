@@ -1,9 +1,9 @@
-# cc-sync-claude-md-and-claude-devcontainer-md.ps1
+# claude-md-sync.ps1
 # Mirrors the newer CLAUDE.md to the older one (plain-text, no merge logic needed).
 
 param(
     [string]$FileA = "C:\Path\To\.claude\CLAUDE.md",
-    [string]$FileB = "C:\Path\To\.claude_devcontainer\CLAUDE.md"
+    [string]$FileB = "C:\Path\To\.claude_mirror\CLAUDE.md"
 )
 
 Set-StrictMode -Version Latest
