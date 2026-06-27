@@ -14,6 +14,7 @@ tools/     single-purpose utilities & scripts (statusline-hook,
            session-name-date-prefixer, file-sync,
            scheduled-session-digests, usage-report)
 libs/      shared libraries (claude-usage)
+setup/     unified installer for the installable tools/ members + per-machine manifest
 plugins/   packaged Claude Code skills/plugins (planned)
 docs/      monorepo-wide docs
 ```
@@ -36,6 +37,12 @@ comment in each copy, so the copies are kept in sync. That file is the worked ex
 
 Members are **self-contained**: each keeps its own README, CHANGELOG, tests, and CLAUDE.md.
 The umbrella adds a catalog and shared conventions; it does not flatten or rewrite members.
+
+**`setup/` (umbrella infra, not a member):** a single `command-center.ps1` that installs/uninstalls
+the installable `tools/` members and tracks state in a manifest under `~/.claude-command-center/`. It
+is a thin **delegator** — it calls each member's own setup script and never reimplements install logic,
+so the no-cross-member-dependency rule still holds (members stay independent; only `setup/` knows them
+all). Register a new installable tool by adding a descriptor to `setup/registry.ps1`.
 
 ## Conventions
 

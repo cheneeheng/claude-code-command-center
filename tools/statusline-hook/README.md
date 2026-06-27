@@ -24,7 +24,20 @@ present and silently skips it if not.
 
 ## Quick start
 
-Add the hook to `~/.claude/settings.json` (PowerShell shown; use `.sh`/`.py` analogously):
+Run the setup script — it copies the chosen hook into `~/.claude/` and wires up the `statusLine`
+key in `settings.json` (preserving your other settings):
+
+```powershell
+./statusline-hook-setup.ps1            # ps1 variant (default)
+./statusline-hook-setup.ps1 -Variant py
+./statusline-hook-setup.ps1 -Action uninstall
+```
+
+It honours `$CLAUDE_DIR` (or pass `-ClaudeDir`). This tool is also managed by the repo-wide
+[`setup/`](../../setup/) installer (`command-center.ps1 install -Member statusline-hook`).
+
+Or wire it up by hand — add the hook to `~/.claude/settings.json` (PowerShell shown; use
+`.sh`/`.py` analogously):
 
 ```json
 {

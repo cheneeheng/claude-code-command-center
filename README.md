@@ -43,12 +43,30 @@ A library earns a place here only with a **cohesive domain** and **≥2 real con
 a utilities junk drawer. `claude-usage` qualifies: it models one external contract (the transcript
 layout) and is consumed by both the `usage-dashboard` app and the `usage-report` CLI.
 
+## Installing the tools
+
+The installable `tools/` members (`statusline-hook`, `session-name-date-prefixer`, `file-sync`,
+`scheduled-session-digests`) can be installed, uninstalled, and tracked from one place via
+[`setup/command-center.ps1`](setup/):
+
+```powershell
+./setup/command-center.ps1 status                 # what's installed on this machine
+./setup/command-center.ps1 install -Member statusline-hook
+./setup/command-center.ps1 install -All           # reads ~/.claude-command-center/config.json
+./setup/command-center.ps1 uninstall -All
+```
+
+It delegates to each tool's own setup script and records state in a manifest under
+`~/.claude-command-center/`. See [`setup/README.md`](setup/README.md). Apps and `usage-report`
+are run on demand, not installed, so they are not managed here.
+
 ## Repository layout
 
 ```
 apps/      full applications you run
 tools/     single-purpose utilities & scripts
 libs/      shared libraries
+setup/     unified installer for the tools/ members + per-machine manifest
 plugins/   packaged Claude Code skills/plugins (planned)
 docs/      monorepo-wide docs
 ```

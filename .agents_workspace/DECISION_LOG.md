@@ -472,3 +472,42 @@ manually) then reinstall (Entry 11 precedent). Engine verified functionally on t
 newer-wins copy works; json-merge writes the newer file to the destination while preserving the
 destination's excluded `statusLine.command`. All four `.ps1` parse-check clean. Not run end-to-end
 through Task Scheduler (needs Administrator).
+
+### Entry 15
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Add a unified install/uninstall orchestrator + manifest for the installable `tools/` members.
+
+**Context:** Each installable tool shipped its own setup script with a different interface, and
+`statusline-hook` had none (manual `settings.json` edit). No single place installed everything and
+nothing recorded what was installed on a machine. User confirmed: scope = installable `tools/` only;
+write the missing/non-interactive scripts so `install -All` runs unattended; manifest in the home dir.
+
+**Decision:**
+- **New umbrella dir `setup/`, not a member.** The orchestrator spans members (it is not an app/tool/lib),
+  so it is umbrella infrastructure: `setup/command-center.ps1` (CLI) + `setup/registry.ps1` (catalog) +
+  config template, documented in the root README. Rejected making it a `tools/` member (it would import/
+  drive sibling members, which the repo's no-cross-member-dependency rule forbids for members).
+- **Thin delegator, never reimplements install logic.** Each registry descriptor's Install/Uninstall
+  blocks call the member's own setup script; the orchestrator only sequences and records. One source of
+  truth per member preserved.
+- **Manifest stores the params used**, not just a boolean — `file-sync`/digest uninstall *replay* recorded
+  params (file-sync uninstall needs the same folder pair it was installed with). State lives at
+  `~/.claude-command-center/{manifest,config}.json` (per-machine, survives repo moves; not committed).
+- **`status` verifies reality, not just the manifest** via per-member Detect probes (PATH entry,
+  `settings.json` key, scheduled tasks) — surfaces hand-installed tools (yellow) and drift (red).
+- **Config-file approach for unattended `file-sync`.** `file-sync` has no sensible default folder pair,
+  so it is the only member with `RequiredConfig`; `install -All` skips it (with a note) when config is
+  absent. `statusline-hook` (variant) and digests (metaDir/picks) have defaults, so they need no config.
+- **Per-member changes:** new `statusline-hook-setup.ps1` (copies hook + sets `statusLine` via
+  ConvertFrom/To-Json, preserving other keys); added a `-NonInteractive -MetaDir -Picks` path to the
+  digests `setup.ps1` (interactive menu stays the default). `file-sync` already non-interactive — no change.
+- **Skipped the planned `.gitignore` `setup/*.local.*` guard** (YAGNI): live config/manifest are in the
+  home dir, so no in-repo file needs ignoring.
+
+**Impact / Risk:** Low. All five `.ps1` parse-check clean; `list` and `status` run correctly and already
+detect the user's hand-installed tools against an empty manifest. Actual install/uninstall (state-changing,
+Task Scheduler, needs Administrator for some) not executed — verify with `install -Member <name>` then
+`status`.
