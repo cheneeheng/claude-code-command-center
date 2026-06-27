@@ -50,7 +50,7 @@ cd vscode-extension && vsce package   # produces .vsix; prepackage hook syncs CS
 ```json
 {
   "ceh-plugins": {
-    "installLocation": "C:\\Users\\Chen\\.claude\\plugins\\marketplaces\\ceh-plugins",
+    "installLocation": "C:\\Users\\user\\.claude\\plugins\\marketplaces\\ceh-plugins",
     "lastUpdated": "2026-05-14T14:18:52.841Z"
   }
 }

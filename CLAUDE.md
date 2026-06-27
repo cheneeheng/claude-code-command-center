@@ -11,9 +11,10 @@ A monorepo of independent projects centered on Claude Code, grouped by category:
 apps/      full applications you run (cross-repo-file-diff, multi-repo-plan-runner,
            per-project-plugin-toggler, usage-dashboard, skill-browser)
 tools/     single-purpose utilities & scripts (statusline-hook,
-           session-name-date-prefixer, claude-md-devcontainer-sync,
-           settings-devcontainer-sync, scheduled-automations, usage-report)
+           session-name-date-prefixer, file-sync,
+           scheduled-session-digests, usage-report)
 libs/      shared libraries (claude-usage)
+setup/     unified installer for the installable tools/ members + per-machine manifest
 plugins/   packaged Claude Code skills/plugins (planned)
 docs/      monorepo-wide docs
 ```
@@ -37,6 +38,12 @@ comment in each copy, so the copies are kept in sync. That file is the worked ex
 Members are **self-contained**: each keeps its own README, CHANGELOG, tests, and CLAUDE.md.
 The umbrella adds a catalog and shared conventions; it does not flatten or rewrite members.
 
+**`setup/` (umbrella infra, not a member):** a single `command-center.ps1` that installs/uninstalls
+the installable `tools/` members and tracks state in a manifest under `~/.claude-command-center/`. It
+is a thin **delegator** — it calls each member's own setup script and never reimplements install logic,
+so the no-cross-member-dependency rule still holds (members stay independent; only `setup/` knows them
+all). Register a new installable tool by adding a descriptor to `setup/registry.ps1`.
+
 ## Conventions
 
 - **License:** single root `LICENSE` (Apache-2.0) covers the whole repo. Members do not carry
@@ -46,6 +53,11 @@ The umbrella adds a catalog and shared conventions; it does not flatten or rewri
   Stdlib-only tools keep `dependencies = []` and `[tool.uv] package = false`.
 - **Naming:** member folders are descriptive (a newcomer should know what each does from the
   name). Files inside members keep their original names.
+- **Env vars:** every environment variable this repo defines and reads is prefixed `C4_`
+  (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
+  Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir
+  for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in). OS-provided
+  vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
 
 ## Scope discipline

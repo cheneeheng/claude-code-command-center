@@ -9,22 +9,22 @@ is absent.
 
 | File | Description |
 |------|-------------|
-| `CC-Inject-Date-To-Session-Name.ps1` | The PowerShell wrapper. |
-| `CC-Inject-Date-To-Session-Name-Setup.ps1` | Installer/uninstaller. Install copies the wrapper into `%LOCALAPPDATA%\…` and prepends that dir to the user `PATH`; uninstall reverses both. |
-| `cc_inject_date_to_session_name.sh` | Bash equivalent of the wrapper (Linux/macOS). |
-| `cc_inject_date_to_session_name_setup.sh` | Bash installer/uninstaller. |
+| `session-name-date-prefixer.ps1` | The PowerShell wrapper. |
+| `session-name-date-prefixer-setup.ps1` | Installer/uninstaller. Install copies the wrapper into `%LOCALAPPDATA%\…` and prepends that dir to the user `PATH`; uninstall reverses both. |
+| `session-name-date-prefixer.sh` | Bash equivalent of the wrapper (Linux/macOS). |
+| `session-name-date-prefixer-setup.sh` | Bash installer/uninstaller. |
 
 ## Quick start
 
 **Windows**
 ```powershell
-.\CC-Inject-Date-To-Session-Name-Setup.ps1                     # install
-.\CC-Inject-Date-To-Session-Name-Setup.ps1 -Action uninstall   # remove
+.\session-name-date-prefixer-setup.ps1                     # install
+.\session-name-date-prefixer-setup.ps1 -Action uninstall   # remove
 # open a new terminal — done
 ```
 
 **Linux/macOS**
 ```bash
-bash cc_inject_date_to_session_name_setup.sh             # install
-bash cc_inject_date_to_session_name_setup.sh uninstall   # remove
+bash session-name-date-prefixer-setup.sh             # install
+bash session-name-date-prefixer-setup.sh uninstall   # remove
 ```

@@ -19,3 +19,7 @@ node_modules/
 # OS / editor cruft
 .DS_Store
 Thumbs.db
+
+# file-sync: per-(file, pair) hidden launchers generated on install embed real local
+# paths — keep them out of git (the committed hidden.vbs template stays tracked).
+tools/file-sync/file-sync-*-hidden.vbs

@@ -1,0 +1,41 @@
+// Command Center install config — copy to ~/.claude-command-center/config.json
+// and remove these // comments (config.json must be strict JSON; the .jsonc here is
+// only documentation). Only members you want `install -All` to configure need an entry.
+{
+  // statusline-hook: which implementation to wire into ~/.claude/settings.json.
+  // "ps1" (Windows), "sh" (bash + jq), or "py" (python3). Optional; defaults to ps1.
+  "statusline-hook": { "variant": "ps1" },
+
+  // file-sync: one entry per folder pair to keep in sync. REQUIRED for install -All
+  // (there is no sensible default folder pair). strategy is "raw" or "json-merge";
+  // excludePaths (json-merge only) is a comma-separated list of dot-paths to preserve.
+  "file-sync": {
+    "instances": [
+      {
+        "fileName": "CLAUDE.md",
+        "folderA": "C:/Users/you/.claude",
+        "folderB": "C:/Users/you/.claude_mirror",
+        "strategy": "raw",
+        "intervalMinutes": 15
+      },
+      {
+        "fileName": "settings.json",
+        "folderA": "C:/Users/you/.claude",
+        "folderB": "C:/Users/you/.claude_mirror",
+        "strategy": "json-merge",
+        "excludePaths": "statusLine.command",
+        "intervalMinutes": 15
+      }
+    ]
+  },
+
+  // scheduled-session-digests: optional. metaDir defaults to ~/claude-meta and
+  // picks defaults to skill-based daily-summary, daily-lessons, weekly-lessons.
+  // pick tokens: <ds|dl|wl>-<skill|cron|both>.
+  "scheduled-session-digests": {
+    "metaDir": "C:/Users/you/claude-meta",
+    "picks": ["ds-skill", "dl-skill", "wl-skill"]
+  }
+
+  // session-name-date-prefixer needs no config.
+}

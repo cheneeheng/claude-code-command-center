@@ -77,7 +77,7 @@ without it, and only the VSCode buttons depend on it.
 ### Root-path entry + Open in VSCode
 
 - A small **Set root path** affordance in the brand header opens a text input where the
-  user types/pastes the absolute projects-root path once (e.g. `/Users/eeheng/projects`);
+  user types/pastes the absolute projects-root path once (e.g. `/Users/you/projects`);
   saved via `Persist.saveRootPath`, loaded on every subsequent open. Optional, labelled as
   needed only for opening repos in VSCode.
 - On each **ExpandedCard**, the **Open in VSCode** button is **disabled** (tooltip "Set

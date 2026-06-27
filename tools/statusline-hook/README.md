@@ -11,26 +11,60 @@ implementations — pick the one for your shell:
 
 | File | Platform | Notes |
 |------|----------|-------|
-| `statusline.ps1` | Windows (PowerShell) | Forces UTF-8 output. |
-| `statusline.sh` | Linux / macOS (Bash) | Requires `jq`. |
-| `statusline.py` | Cross-platform (Python stdlib) | UTF-8-safe stdin/stdout; run with `python3 statusline.py`. Managed with `uv`. |
+| `statusline-hook.ps1` | Windows (PowerShell) | Forces UTF-8 output. |
+| `statusline-hook.sh` | Linux / macOS (Bash) | Requires `jq`. |
+| `statusline-hook.py` | Cross-platform (Python stdlib) | UTF-8-safe stdin/stdout; run with `python3 statusline-hook.py`. Managed with `uv`. |
 
-Each hook also appends the turn to `~/.claude/statusline/<project>/<session_id>.jsonl`
-(`{session_id, ts, data}`). That export is **optional** — it's what powers the live
-rate-limit panel in the [`usage-dashboard`](../../apps/usage-dashboard/) app. The dashboard
-reads it if present and silently skips it if not.
+Each hook can also append the turn to `~/.claude/statusline/<project>/<session_id>.jsonl`
+(`{session_id, ts, data}`) — the data that powers the live rate-limit panel in the
+[`usage-dashboard`](../../apps/usage-dashboard/) app. This export is **opt-in**: it is off by
+default and only runs when you set `C4_STATUSLINE_EXPORT` to `1` (or `true`/`yes`). Leave it unset
+and the hook just prints the status line and writes nothing. The dashboard reads the export if
+present and silently skips it if not.
 
 ## Quick start
 
-Add the hook to `~/.claude/settings.json` (PowerShell shown; use `.sh`/`.py` analogously):
+Run the setup script — it copies the chosen hook into `~/.claude/` and wires up the `statusLine`
+key in `settings.json` (preserving your other settings):
+
+```powershell
+./statusline-hook-setup.ps1            # ps1 variant (default)
+./statusline-hook-setup.ps1 -Variant py
+./statusline-hook-setup.ps1 -Action uninstall
+```
+
+It honours `$C4_CLAUDE_DIR` (or pass `-ClaudeDir`). This tool is also managed by the repo-wide
+[`setup/`](../../setup/) installer (`command-center.ps1 install -Member statusline-hook`).
+
+Or wire it up by hand — add the hook to `~/.claude/settings.json` (PowerShell shown; use
+`.sh`/`.py` analogously):
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "pwsh -NoProfile -File ~/.claude/statusline.ps1"
+    "command": "pwsh -NoProfile -File ~/.claude/statusline-hook.ps1"
   }
 }
 ```
 
-The base config dir defaults to `~/.claude`; set `$CLAUDE_DIR` (pathsep-separated) to override.
+The base config dir defaults to `~/.claude`; set `$C4_CLAUDE_DIR` (pathsep-separated) to override.
+To enable the JSONL export, set `C4_STATUSLINE_EXPORT=1` in the environment Claude Code runs the
+hook in.
+
+## Why the `pyproject.toml`?
+
+The hook is **not** an installable package — all three scripts run directly, and the Python
+version uses only the standard library (`dependencies = []`, `[tool.uv] package = false`). The
+`pyproject.toml` exists solely to follow the monorepo rule that every Python member is a `uv`
+project: it pins the Python version and holds the shared `ruff`/`mypy` config. The `dev`
+dependency group brings in `ruff` and `mypy` for linting and type-checking the `.py` script.
+
+So nothing is required to *run* the hook beyond the script itself. `uv sync` is only needed if
+you want to lint or type-check the Python implementation:
+
+```bash
+uv sync          # installs the dev tools (ruff, mypy) into .venv
+uv run ruff check .
+uv run mypy statusline-hook.py
+```

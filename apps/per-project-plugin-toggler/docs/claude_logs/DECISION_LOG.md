@@ -163,7 +163,7 @@
 
 **Context:** The ITER_08 spec shows `"url": "https://github.com/<your-org>/skills-toggle"`. The actual repo URL is not specified in the plan.
 
-**Decision / Action:** Used `https://github.com/cheneeheng/skills-toggle` based on the git user name `EeHeng Chen` (handle `cheneeheng`) visible in git config. The `publisher` field is set to `ceh-plugins` as specified.
+**Decision / Action:** Used `https://github.com/cheneeheng/skills-toggle` based on the git user handle `cheneeheng` visible in git config. The `publisher` field is set to `ceh-plugins` as specified.
 
 **Rationale:** The plan uses `<your-org>` as a placeholder; `cheneeheng` is the most reasonable inference from the repo context. This is not load-bearing for local `.vsix` installs — `vsce package` only validates the field is non-empty.
 

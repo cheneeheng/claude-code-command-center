@@ -24,13 +24,12 @@ the catalog; click into a folder for full docs.
 |------|--------------|
 | [`statusline-hook`](tools/statusline-hook/) | Claude Code `StatusLine` hook (PowerShell/Bash/Python) printing a colour-coded one-liner; optionally exports JSONL for the `usage-dashboard` app. |
 | [`session-name-date-prefixer`](tools/session-name-date-prefixer/) | Prefix Claude Code session names with the date. |
-| [`claude-md-devcontainer-sync`](tools/claude-md-devcontainer-sync/) | Keep `CLAUDE.md` and the devcontainer `CLAUDE.md` in sync. |
-| [`settings-devcontainer-sync`](tools/settings-devcontainer-sync/) | Keep Claude settings and the devcontainer settings in sync. |
-| [`scheduled-automations`](tools/scheduled-automations/) | Unattended Claude Code automations that run on a schedule (daily/weekly summaries and lessons). |
+| [`file-sync`](tools/file-sync/) | Keep a named file in sync across two folders (newer wins): `CLAUDE.md` (raw copy) and `settings.json` (JSON merge, excluded keys preserved), via one generic engine. |
+| [`scheduled-session-digests`](tools/scheduled-session-digests/) | Unattended scheduled Claude Code runs that digest your session transcripts into daily/weekly summaries and lessons. |
 | [`usage-report`](tools/usage-report/) | CLI summary of token usage and estimated cost across sessions — the terminal counterpart to `usage-dashboard`. |
 
-> `statusline-hook`, `session-name-date-prefixer`, `claude-md-devcontainer-sync`,
-> `settings-devcontainer-sync`, and the `usage-dashboard` app were originally one
+> `statusline-hook`, `session-name-date-prefixer`, `claude-md-sync`,
+> `settings-sync`, and the `usage-dashboard` app were originally one
 > `claude-automation` suite; see [`docs/automation-suite.md`](docs/automation-suite.md)
 > for the combined overview.
 
@@ -44,12 +43,43 @@ A library earns a place here only with a **cohesive domain** and **≥2 real con
 a utilities junk drawer. `claude-usage` qualifies: it models one external contract (the transcript
 layout) and is consumed by both the `usage-dashboard` app and the `usage-report` CLI.
 
+## Installing the tools
+
+The installable `tools/` members (`statusline-hook`, `session-name-date-prefixer`, `file-sync`,
+`scheduled-session-digests`) can be installed, uninstalled, and tracked from one place via
+[`setup/command-center.ps1`](setup/):
+
+```powershell
+./setup/command-center.ps1 status                 # what's installed on this machine
+./setup/command-center.ps1 install -Member statusline-hook
+./setup/command-center.ps1 install -All           # reads ~/.claude-command-center/config.json
+./setup/command-center.ps1 uninstall -All
+```
+
+It delegates to each tool's own setup script and records state in a manifest under
+`~/.claude-command-center/`. See [`setup/README.md`](setup/README.md). Apps and `usage-report`
+are run on demand, not installed, so they are not managed here.
+
+## Environment variables
+
+Every environment variable this repo defines is prefixed `C4_` (the repo's own namespace) so it
+never collides with Claude Code's or the OS's variables:
+
+| Variable | Used by | Purpose |
+|----------|---------|---------|
+| `C4_CLAUDE_DIR` | `statusline-hook`, `usage-report`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. |
+| `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). |
+| `C4_STATUSLINE_EXPORT` | `statusline-hook` | Opt-in to the JSONL export when set to `1`/`true`/`yes`. |
+
+OS-provided variables (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
+
 ## Repository layout
 
 ```
 apps/      full applications you run
 tools/     single-purpose utilities & scripts
 libs/      shared libraries
+setup/     unified installer for the tools/ members + per-machine manifest
 plugins/   packaged Claude Code skills/plugins (planned)
 docs/      monorepo-wide docs
 ```

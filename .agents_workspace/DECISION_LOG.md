@@ -256,3 +256,277 @@ asked to make the browser scope-aware too (so all three implementations match), 
 **Impact / Risk:** Low. Toggler logic unchanged (only a comment added); browser verified (38
 skills, scope=user, endpoints + traversal-safety intact). Behaviour parity is now a maintained
 contract via the register, not an accident.
+
+### Entry 9
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Refactor tools — generic devcontainer-sync setup, file renames, personal-data scan.
+
+**Context:** User asked to (1) scan the repo for accidental personal details, (2) make
+`claude-md-devcontainer-sync` and (3) `settings-devcontainer-sync` generic so the two folders to
+sync are passed as setup arguments, and (4) rename files in every tool except `usage-report` and
+`scheduled-automations` to follow the tool's folder name.
+
+**Decision:**
+- Renamed files in `claude-md-devcontainer-sync`, `settings-devcontainer-sync`,
+  `session-name-date-prefixer`, and `statusline-hook` to `<folder-name>[-suffix].<ext>` via
+  `git mv` (history preserved). Updated internal references (setup -> core script, self-reference
+  comments, per-tool READMEs).
+- Made both sync setups take `-FolderA`/`-FolderB` (required on install); the generated VBS now
+  embeds the resolved `<Folder>\<fixed-filename>` paths (`CLAUDE.md` / `settings.json`) instead of
+  hard-coding `~/.claude` and `~/.claude_devcontainer`.
+- **Left `docs/automation-suite.md` and `docs/automation-suite-decision-log.md` untouched.** They
+  are an explicit historical snapshot of the original combined `claude-automation` suite (linked
+  from the root README as "the combined overview" of the pre-split structure); rewriting filenames
+  there would falsify the snapshot. Updated only live docs (per-tool READMEs + one accurate
+  cross-reference in `usage-dashboard/README.md`).
+- **Personal-data scan:** the tools are clean (they use `%USERPROFILE%`/`$HOME` or `C:\Path\To`
+  placeholders). Real personal details exist elsewhere and were NOT auto-edited (out of the tools
+  scope; reported to the user instead): real username paths `C:\Users\Chen\...` in
+  `apps/per-project-plugin-toggler` (README + planning/decision docs) and `/Users/eeheng/...` plus
+  "EeHeng" in `apps/cross-repo-file-diff/docs/planning`. The `cheneeheng` GitHub handle is a public
+  intentional reference (per Entry 7), not accidental leakage.
+
+**Impact / Risk:** Low-medium. Renames could break a user's existing install that points at old
+script paths (sync tools regenerate their VBS on next install/uninstall; statusline users must
+re-point their settings.json). No behavior change beyond the new required setup args.
+
+---
+
+### Entry 10
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Scrub personal-data leaks; drop "devcontainer" from the two sync tools' names.
+
+**Context:** Follow-up to Entry 9. User asked to (1) fix the personal-data leaks that the Entry 9
+scan reported but did not auto-edit, and (2) rename the sync tools so they no longer use
+"devcontainer".
+
+**Decision:**
+- **Personal data:** replaced real-username local paths and the real name in committed/deliverable
+  docs with placeholders — `C:\Users\Chen\...` -> `C:\Users\user\...` (ASCII-box alignment
+  preserved by matching the 4-char width), `/Users/eeheng/...` -> `/Users/you/...`, "EeHeng's
+  requirement" -> "the user's requirement", and the git user name `EeHeng Chen` -> the public
+  handle `cheneeheng` alone in `per-project-plugin-toggler/docs/claude_logs/DECISION_LOG.md`.
+  Touched: `per-project-plugin-toggler` README + `docs/planning/ITER_03.md` + that member log, and
+  `cross-repo-file-diff/docs/planning/ITER_02_v2.md`, `ITER_02_v3.md`, `ITER_04_v3.md`.
+- **Left the `cheneeheng` GitHub handle** everywhere it appears (READMEs, CHANGELOG links,
+  package.json, schema `$id`) — intentional public reference per Entry 7, not leakage.
+- **Left this `.agents_workspace/DECISION_LOG.md`'s Entry 9 finding text untouched** even though it
+  quotes the leaked strings: it is the agent audit trail documenting the finding in past tense;
+  editing it to remove the very example it records would falsify the log (same frozen-record
+  principle applied to the automation-suite snapshot in Entry 9). Flagged to the user.
+- **Sync-tool rename:** user chose to drop the qualifier entirely (over `folder-sync`/`mirror`).
+  `claude-md-devcontainer-sync` -> `claude-md-sync`, `settings-devcontainer-sync` -> `settings-sync`,
+  with the same drop applied to every script/VBS filename inside. README/setup example paths
+  `.claude_devcontainer` -> `.claude_mirror` so the docs no longer reference devcontainer at all.
+  Updated the umbrella catalog (root `README.md` + `CLAUDE.md`). `git mv` for the tracked READMEs;
+  the three scripts per folder were already-untracked Entry 9 renames, moved with plain `mv`.
+- **Scope:** left `.claude_devcontainer` references in `scheduled-automations` and `usage-dashboard`
+  alone — there it is a real second Claude data directory those tools scan/serve, not a reference
+  to the renamed sync tools (scope discipline: do not retrofit unrelated members).
+
+**Impact / Risk:** Low. Doc/placeholder edits and a name change. Existing sync installs pointing at
+the old folder/script paths must be reinstalled (they regenerate their VBS on next install).
+PowerShell parse-check passes on all four renamed `.ps1` scripts.
+
+---
+
+### Entry 11
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Parameterize the sync tools' Task Scheduler folder/name so multiple syncs run in parallel.
+
+**Context:** Both sync setups hardcoded `$taskFolder = "\ClaudeAutomation\"` and a single
+`$taskName` (`SyncClaudeMd` / `SyncClaudeSettings`), plus a single fixed VBS launcher filename. That
+caps each tool at one install — a second install overwrites the task and the launcher. User wants
+the task folder derived from the tool folder name and the task name derived from the input args, to
+sync several folder pairs at once.
+
+**Decision:**
+- **Task folder = tool folder name** via `Split-Path -Leaf $PSScriptRoot` (`\claude-md-sync\` /
+  `\settings-sync\`). Register-ScheduledTask auto-creates the folder, same as the old hardcode.
+- **Task name = stable identity derived from the folder pair**: `<leafA>-<leafB>-<8-char md5>` of
+  the two resolved file paths. Chose readable leaf slugs + a hash (not leaves alone) because two
+  different pairs can share leaf names (e.g. both `.claude`) and would otherwise collide. The
+  launcher VBS is renamed the same way (`<tool>-<hash>-hidden.vbs`) — **required**, not cosmetic:
+  parallel tasks each need their own launcher with their own embedded paths, or the last install
+  clobbers the rest.
+- **Order-independent identity:** sort the pair before hashing so `(A,B)` and `(B,A)` map to one
+  task (sync is symmetric/newer-wins, so a reversed reinstall should not create a duplicate).
+- **Uninstall now also requires `-FolderA`/`-FolderB`** — it must recompute the same identity to
+  find the right task + launcher. Documented in usage + READMEs.
+- **`[IO.Path]::Combine` + `GetFullPath`, not `Join-Path`/`Resolve-Path`:** identity must be
+  computable on uninstall even if a folder/drive is gone; `Join-Path` and `Resolve-Path` hit the PS
+  provider and throw on a missing drive. Combine/GetFullPath are pure-string .NET.
+- **Gitignored the generated `*-<hash>-hidden.vbs` launchers** (they embed real local paths — the
+  same leak class addressed in Entry 10) while keeping the committed `*-hidden.vbs` template (safe
+  `C:\Path\To` placeholders, doc only); fixed the template header to say so.
+
+**Impact / Risk:** Low-medium. Behavior change: uninstall signature now needs the folder pair, and
+existing single installs under `\ClaudeAutomation\` are orphaned by the new task path — users should
+uninstall via the old script revision or remove those tasks manually, then reinstall. Identity logic
+verified in isolation (order-independence holds; distinct pairs differ; no error on missing drives);
+both setup scripts parse-check clean. Not run end-to-end (needs Administrator + Task Scheduler).
+
+---
+
+### Entry 12
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Rename the `scheduled-automations` member to a self-descriptive name.
+
+**Context:** User found `scheduled-automations` unclear ("not clear what it is doing"). The member
+is one cohesive suite: scheduled, unattended Claude Code runs that read the user's own session
+transcripts and produce daily summaries + daily/weekly lessons into the shared `claude-meta` repo.
+
+**Decision:**
+- Renamed `tools/scheduled-automations` -> `tools/scheduled-session-digests` (user chose from
+  three candidates; noun-led form to match siblings like `cross-repo-file-diff`/`usage-report`).
+  Used `git mv` (history preserved). Updated the two catalog references (root `README.md` table row
+  + `CLAUDE.md` member list).
+- **Did not edit the DECISION_LOG entries** (9, 10, 11) that reference the old name: they are
+  past-tense audit records of work done under the old name — same frozen-record principle as
+  Entries 10/11.
+- **Did not rename the internal `claude-code-scheduler` branding** (README title, skill names
+  `claude-code-scheduler-*`, task names `ClaudeCode-*`) — out of scope for a folder rename, and
+  those names were already independent of the folder name. Flagged to the user.
+
+**Impact / Risk:** Low. Folder rename + two doc edits; no script logic touched. Existing installs
+are unaffected (they reference `CLAUDE_META_DIR` and installed copies, not the source folder path).
+
+---
+
+### Entry 13
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Align the internal `claude-code-scheduler` branding to the new folder name (follow-up to Entry 12, user said "Align please").
+
+**Context:** After the Entry 12 folder rename, the member still used `claude-code-scheduler`
+internally for its product title, the three interactive skill names/dirs, and its Windows Task
+Scheduler folder + task names.
+
+**Decision (naming scheme):**
+- Product/title `claude-code-scheduler` -> `scheduled-session-digests` (matches the folder).
+- Skill slash-commands `/claude-code-scheduler-<x>` -> `/session-digest-<x>` (dirs `git mv`'d,
+  `name:` frontmatter updated). Chose the shorter `session-digest-` stem over the full folder name
+  for usable slash commands; same recognizable stem, not a third unrelated variant.
+- Task Scheduler folder `\ClaudeCodeScheduler\` -> `\ScheduledSessionDigests\`; task names
+  `ClaudeCode-{DailySummary,DailyLessons,WeeklyLessons}` -> `SessionDigest-...`.
+- Applied via `sed` across the 15 live files (install/setup scripts `.ps1`+`.sh`, READMEs, the 3
+  `SKILL.md`). **Left `CHANGELOG.md` untouched** — its old-name references sit in dated historical
+  version entries (frozen record, same principle as the DECISION_LOG entries). A new changelog entry
+  documenting this rename should be added at the next release (flagged, not done — release flow owns it).
+
+**Impact / Risk:** Medium for existing installs. The Task Scheduler folder/name and skill names
+changed, so prior installs are orphaned under the old identifiers and must be uninstalled + reinstalled
+(consistent with the Entry 11 orphaning note). All four edited `.ps1` scripts parse-check clean; not
+run end-to-end (needs Administrator + Task Scheduler). No `.sh` shellcheck run.
+
+---
+
+### Entry 14
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Merge `claude-md-sync` + `settings-sync` into one `file-sync` member (user approved the spec).
+
+**Context:** The two members' `*-setup.ps1` were byte-identical except the filename and the launched
+script name; the two sync scripts differed only in the apply step (raw copy vs JSON-merge-with-excludes).
+User pictured "a generic sync + 2 tools that inherit from it."
+
+**Decision:**
+- **One self-contained member, not two members + a shared base.** PowerShell has no inheritance, and
+  this repo forbids cross-member dependencies (the same rule that kept the digests suite together).
+  So "base + 2 subclasses" is realized as one `file-sync/` member: a generic engine + two thin
+  wrapper entry scripts (composition, not inheritance). Rejected (a) two members importing a third
+  base (cross-member dep) and (b) intentional duplication via `shared-plugin-logic.md` (preserves the
+  duplication the merge removes).
+- **Base = `sync-engine.ps1`** (`-Strategy raw|json-merge`, newer-wins selection shared, apply step
+  branches) + **`sync-setup.ps1`** (generic Task Scheduler install, adds `-FileName`/`-Strategy`/
+  `-ExcludePaths`). **Subclasses = `claude-md-sync-setup.ps1`** (raw, CLAUDE.md) and
+  **`settings-sync-setup.ps1`** (json-merge, settings.json) — familiar command names preserved.
+- **`-ExcludePaths` is now a comma-separated string** (was `[string[]]`) so it embeds cleanly in the
+  generated VBS command line.
+- **Task-identity (Entry 11) kept**, now under one `\file-sync\` task folder; added the file stem to
+  the human slug so two files sharing a folder pair stay legible (hash already disambiguated them).
+- **History:** `git mv settings-sync -> file-sync` (richer JSON logic = better base), renamed files in
+  place, `git rm` the redundant `claude-md-sync` (its raw copy became the engine's `raw` branch).
+  Updated root README + CLAUDE.md catalog (two rows -> one) and the `.gitignore` launcher pattern.
+  Left the README "originally one claude-automation suite" note (past tense, accurate history).
+
+**Impact / Risk:** Medium for existing installs — old tasks under `\claude-md-sync\` / `\settings-sync\`
+are orphaned by the new `\file-sync\` task folder; users uninstall via the old scripts (or remove tasks
+manually) then reinstall (Entry 11 precedent). Engine verified functionally on throwaway files: raw
+newer-wins copy works; json-merge writes the newer file to the destination while preserving the
+destination's excluded `statusLine.command`. All four `.ps1` parse-check clean. Not run end-to-end
+through Task Scheduler (needs Administrator).
+
+### Entry 15
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Add a unified install/uninstall orchestrator + manifest for the installable `tools/` members.
+
+**Context:** Each installable tool shipped its own setup script with a different interface, and
+`statusline-hook` had none (manual `settings.json` edit). No single place installed everything and
+nothing recorded what was installed on a machine. User confirmed: scope = installable `tools/` only;
+write the missing/non-interactive scripts so `install -All` runs unattended; manifest in the home dir.
+
+**Decision:**
+- **New umbrella dir `setup/`, not a member.** The orchestrator spans members (it is not an app/tool/lib),
+  so it is umbrella infrastructure: `setup/command-center.ps1` (CLI) + `setup/registry.ps1` (catalog) +
+  config template, documented in the root README. Rejected making it a `tools/` member (it would import/
+  drive sibling members, which the repo's no-cross-member-dependency rule forbids for members).
+- **Thin delegator, never reimplements install logic.** Each registry descriptor's Install/Uninstall
+  blocks call the member's own setup script; the orchestrator only sequences and records. One source of
+  truth per member preserved.
+- **Manifest stores the params used**, not just a boolean — `file-sync`/digest uninstall *replay* recorded
+  params (file-sync uninstall needs the same folder pair it was installed with). State lives at
+  `~/.claude-command-center/{manifest,config}.json` (per-machine, survives repo moves; not committed).
+- **`status` verifies reality, not just the manifest** via per-member Detect probes (PATH entry,
+  `settings.json` key, scheduled tasks) — surfaces hand-installed tools (yellow) and drift (red).
+- **Config-file approach for unattended `file-sync`.** `file-sync` has no sensible default folder pair,
+  so it is the only member with `RequiredConfig`; `install -All` skips it (with a note) when config is
+  absent. `statusline-hook` (variant) and digests (metaDir/picks) have defaults, so they need no config.
+- **Per-member changes:** new `statusline-hook-setup.ps1` (copies hook + sets `statusLine` via
+  ConvertFrom/To-Json, preserving other keys); added a `-NonInteractive -MetaDir -Picks` path to the
+  digests `setup.ps1` (interactive menu stays the default). `file-sync` already non-interactive — no change.
+- **Skipped the planned `.gitignore` `setup/*.local.*` guard** (YAGNI): live config/manifest are in the
+  home dir, so no in-repo file needs ignoring.
+
+**Impact / Risk:** Low. All five `.ps1` parse-check clean; `list` and `status` run correctly and already
+detect the user's hand-installed tools against an empty manifest. Actual install/uninstall (state-changing,
+Task Scheduler, needs Administrator for some) not executed — verify with `install -Member <name>` then
+`status`.
+### Entry 16
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27
+**Task:** Prefix repo-owned env vars with C4_ across tools/ and setup/.
+
+**Context:** Two matched files were historical records — `scheduled-session-digests/CHANGELOG.md`
+and `docs/claude_logs/DECISION_LOG.md`. Renaming the env-var tokens inside them would rewrite
+history. The user asked to update tools/setup code + CLAUDE.md + README, not history.
+**Decision:** Excluded both historical files from the rename; renamed only live code, docs
+(SKILL.md/README.md/.md task defs), and config across tools/ and setup/. Vars: CLAUDE_DIR ->
+C4_CLAUDE_DIR, CLAUDE_META_DIR -> C4_CLAUDE_META_DIR, STATUSLINE_EXPORT -> C4_STATUSLINE_EXPORT
+(prefix-the-full-name style, per user). OS vars (USERPROFILE/LOCALAPPDATA/PATH) left untouched.
+**Impact / Risk:** Breaking change for existing installs that set the old var names; existing
+persisted user env vars / scheduler.env entries must be re-set. No backward-compat shim added
+(per contract). Other categories (apps/, libs/) intentionally not touched yet.
+**Outcome:** All edited PowerShell/Bash/Python files pass parse/syntax checks; no bare tokens or
+double-prefixes remain outside the two historical files.

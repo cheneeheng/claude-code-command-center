@@ -35,7 +35,7 @@ the **board highlight derivation**. No persisted entities added.
 
 ### Resolved: what "selected repo" means
 
-Per EeHeng's requirement 3, "the repo has been selected" is interpreted as the
+Per the user's requirement 3, "the repo has been selected" is interpreted as the
 **expanded/active card** (`.is-active`) — the repo you're currently drilling into — since
 the model has no separate repo-pick action. "Repos where one or more files are selected
 for comparison" maps to **compare-source** (`.is-compare-a/-b`). These are two distinct

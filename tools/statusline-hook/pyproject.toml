@@ -12,7 +12,7 @@ dev = [
     "mypy>=1.11",
 ]
 
-# statusline.py is run directly by Claude Code as a hook, not installed.
+# statusline-hook.py is run directly by Claude Code as a hook, not installed.
 [tool.uv]
 package = false
 
