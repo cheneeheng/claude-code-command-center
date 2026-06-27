@@ -1,9 +1,9 @@
 #!/usr/bin/env pwsh
 # Combined install/uninstall for the claude session-name wrapper.
 # Usage:
-#   .\CC-Inject-Date-To-Session-Name-Setup.ps1            # install (default)
-#   .\CC-Inject-Date-To-Session-Name-Setup.ps1 -Action install
-#   .\CC-Inject-Date-To-Session-Name-Setup.ps1 -Action uninstall
+#   .\session-name-date-prefixer-setup.ps1            # install (default)
+#   .\session-name-date-prefixer-setup.ps1 -Action install
+#   .\session-name-date-prefixer-setup.ps1 -Action uninstall
 
 param(
     [ValidateSet('install', 'uninstall')]
@@ -12,7 +12,7 @@ param(
 
 $binDir  = "$env:LOCALAPPDATA\claude-automation\cc-inject-date-to-session-name"
 $wrapper = "$binDir\claude.ps1"
-$source  = Join-Path $PSScriptRoot "CC-Inject-Date-To-Session-Name.ps1"
+$source  = Join-Path $PSScriptRoot "session-name-date-prefixer.ps1"
 
 function Install-Wrapper {
     # 1. Create bin dir

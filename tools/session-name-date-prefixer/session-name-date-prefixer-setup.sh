@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Combined install/uninstall for the claude session-name wrapper.
 # Usage:
-#   bash cc_inject_date_to_session_name_setup.sh            # install (default)
-#   bash cc_inject_date_to_session_name_setup.sh install
-#   bash cc_inject_date_to_session_name_setup.sh uninstall
+#   bash session-name-date-prefixer-setup.sh            # install (default)
+#   bash session-name-date-prefixer-setup.sh install
+#   bash session-name-date-prefixer-setup.sh uninstall
 
 set -euo pipefail
 
@@ -11,7 +11,7 @@ ACTION="${1:-install}"
 
 BIN_DIR="$HOME/.local/bin"
 WRAPPER="$BIN_DIR/claude"
-SOURCE="$(dirname "$(realpath "$0")")/cc_inject_date_to_session_name.sh"
+SOURCE="$(dirname "$(realpath "$0")")/session-name-date-prefixer.sh"
 
 install_wrapper() {
     # 1. Create bin dir
