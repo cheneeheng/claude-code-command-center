@@ -1,28 +1,30 @@
-# settings-sync.ps1
-# Mirrors the newer of two JSON files to the older one,
-# preserving excluded key paths in the destination file.
+# sync-engine.ps1
+# Generic newer-wins sync of a single file between two paths.
 #
-# $ExcludePaths accepts dot-notation paths, e.g.:
-#   "userId"                  -> top-level key
-#   "settings.local.theme"    -> nested key
+# Strategy:
+#   raw         Copy the newer file over the older verbatim (plain text, no parsing).
+#   json-merge  Copy the newer JSON over the older, but preserve $ExcludePaths keys
+#               (dot-notation) from the destination — for machine-specific settings.
+#
+# $ExcludePaths is comma-separated (json-merge only), e.g.:
+#   "statusLine.command,userId,settings.local.theme"
 
 param(
-    [string]$FileA = "C:\Path\To\first.json",
-    [string]$FileB = "C:\Path\To\second.json",
+    [Parameter(Mandatory)][string]$FileA,
+    [Parameter(Mandatory)][string]$FileB,
 
-    [string[]]$ExcludePaths = @(
-        "statusLine.command"
-        #"userId",
-        #"deviceId",
-        #"settings.local.theme"
-        # add more paths here
-    )
+    [ValidateSet('raw', 'json-merge')]
+    [string]$Strategy = 'raw',
+
+    # Comma-separated dot-notation key paths to preserve in the destination (json-merge only).
+    # A single string (not string[]) so it round-trips cleanly through the VBS command line.
+    [string]$ExcludePaths = ''
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# --- helpers ---
+# --- json-merge helpers ---
 
 function Get-NestedValue {
     param($obj, [string[]]$keys)
@@ -62,7 +64,7 @@ function Remove-NestedKey {
     }
 }
 
-# --- main ---
+# --- pick newer (shared by every strategy) ---
 
 if (-not (Test-Path $FileA)) { throw "FileA not found: $FileA" }
 if (-not (Test-Path $FileB)) { throw "FileB not found: $FileB" }
@@ -80,11 +82,21 @@ if ($a.LastWriteTime -gt $b.LastWriteTime) {
     $dstPath = $FileA
 }
 
+# --- apply (the only part that differs per strategy) ---
+
+if ($Strategy -eq 'raw') {
+    Copy-Item -Path $srcPath -Destination $dstPath -Force
+    exit 0
+}
+
+# json-merge
 $src = Get-Content $srcPath -Raw | ConvertFrom-Json
 $dst = Get-Content $dstPath -Raw | ConvertFrom-Json
 
-# Parse exclude paths once
-$parsedPaths = $ExcludePaths | ForEach-Object { ,($_ -split '\.') }
+# Parse exclude paths once (skip blanks from empty / trailing-comma input)
+$parsedPaths = $ExcludePaths -split ',' |
+    Where-Object { $_.Trim() } |
+    ForEach-Object { ,($_.Trim() -split '\.') }
 
 # Snapshot excluded values from destination
 $snapshots = @{}

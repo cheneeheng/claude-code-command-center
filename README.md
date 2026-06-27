@@ -24,8 +24,7 @@ the catalog; click into a folder for full docs.
 |------|--------------|
 | [`statusline-hook`](tools/statusline-hook/) | Claude Code `StatusLine` hook (PowerShell/Bash/Python) printing a colour-coded one-liner; optionally exports JSONL for the `usage-dashboard` app. |
 | [`session-name-date-prefixer`](tools/session-name-date-prefixer/) | Prefix Claude Code session names with the date. |
-| [`claude-md-sync`](tools/claude-md-sync/) | Keep two `CLAUDE.md` files in sync across two folders (newer wins). |
-| [`settings-sync`](tools/settings-sync/) | Keep two Claude `settings.json` files in sync across two folders (newer wins, excluded keys preserved). |
+| [`file-sync`](tools/file-sync/) | Keep a named file in sync across two folders (newer wins): `CLAUDE.md` (raw copy) and `settings.json` (JSON merge, excluded keys preserved), via one generic engine. |
 | [`scheduled-session-digests`](tools/scheduled-session-digests/) | Unattended scheduled Claude Code runs that digest your session transcripts into daily/weekly summaries and lessons. |
 | [`usage-report`](tools/usage-report/) | CLI summary of token usage and estimated cost across sessions — the terminal counterpart to `usage-dashboard`. |
 

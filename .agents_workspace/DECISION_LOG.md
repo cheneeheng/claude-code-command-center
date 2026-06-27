@@ -432,3 +432,43 @@ Scheduler folder + task names.
 changed, so prior installs are orphaned under the old identifiers and must be uninstalled + reinstalled
 (consistent with the Entry 11 orphaning note). All four edited `.ps1` scripts parse-check clean; not
 run end-to-end (needs Administrator + Task Scheduler). No `.sh` shellcheck run.
+
+---
+
+### Entry 14
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Merge `claude-md-sync` + `settings-sync` into one `file-sync` member (user approved the spec).
+
+**Context:** The two members' `*-setup.ps1` were byte-identical except the filename and the launched
+script name; the two sync scripts differed only in the apply step (raw copy vs JSON-merge-with-excludes).
+User pictured "a generic sync + 2 tools that inherit from it."
+
+**Decision:**
+- **One self-contained member, not two members + a shared base.** PowerShell has no inheritance, and
+  this repo forbids cross-member dependencies (the same rule that kept the digests suite together).
+  So "base + 2 subclasses" is realized as one `file-sync/` member: a generic engine + two thin
+  wrapper entry scripts (composition, not inheritance). Rejected (a) two members importing a third
+  base (cross-member dep) and (b) intentional duplication via `shared-plugin-logic.md` (preserves the
+  duplication the merge removes).
+- **Base = `sync-engine.ps1`** (`-Strategy raw|json-merge`, newer-wins selection shared, apply step
+  branches) + **`sync-setup.ps1`** (generic Task Scheduler install, adds `-FileName`/`-Strategy`/
+  `-ExcludePaths`). **Subclasses = `claude-md-sync-setup.ps1`** (raw, CLAUDE.md) and
+  **`settings-sync-setup.ps1`** (json-merge, settings.json) — familiar command names preserved.
+- **`-ExcludePaths` is now a comma-separated string** (was `[string[]]`) so it embeds cleanly in the
+  generated VBS command line.
+- **Task-identity (Entry 11) kept**, now under one `\file-sync\` task folder; added the file stem to
+  the human slug so two files sharing a folder pair stay legible (hash already disambiguated them).
+- **History:** `git mv settings-sync -> file-sync` (richer JSON logic = better base), renamed files in
+  place, `git rm` the redundant `claude-md-sync` (its raw copy became the engine's `raw` branch).
+  Updated root README + CLAUDE.md catalog (two rows -> one) and the `.gitignore` launcher pattern.
+  Left the README "originally one claude-automation suite" note (past tense, accurate history).
+
+**Impact / Risk:** Medium for existing installs — old tasks under `\claude-md-sync\` / `\settings-sync\`
+are orphaned by the new `\file-sync\` task folder; users uninstall via the old scripts (or remove tasks
+manually) then reinstall (Entry 11 precedent). Engine verified functionally on throwaway files: raw
+newer-wins copy works; json-merge writes the newer file to the destination while preserving the
+destination's excluded `statusLine.command`. All four `.ps1` parse-check clean. Not run end-to-end
+through Task Scheduler (needs Administrator).

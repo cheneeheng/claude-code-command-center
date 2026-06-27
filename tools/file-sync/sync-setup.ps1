@@ -1,45 +1,56 @@
-# Combined install/uninstall for the CLAUDE.md sync task.
-# Run as Administrator.
-# Usage:
-#   .\claude-md-sync-setup.ps1 -FolderA <dir> -FolderB <dir>                 # install (default), 15-min interval
-#   .\claude-md-sync-setup.ps1 -FolderA <dir> -FolderB <dir> -IntervalMinutes 30
-#   .\claude-md-sync-setup.ps1 -Action uninstall -FolderA <dir> -FolderB <dir>
+# Generic install/uninstall for a file-sync task. Run as Administrator.
+#
+# Normally invoked through a thin wrapper that fixes -FileName/-Strategy
+# (claude-md-sync-setup.ps1, settings-sync-setup.ps1). Call directly to sync any file:
+#   .\sync-setup.ps1 -FileName CLAUDE.md -Strategy raw -FolderA <dir> -FolderB <dir>
+#   .\sync-setup.ps1 -FileName settings.json -Strategy json-merge -ExcludePaths "statusLine.command" -FolderA <dir> -FolderB <dir>
+#   .\sync-setup.ps1 -Action uninstall -FileName CLAUDE.md -FolderA <dir> -FolderB <dir>
 param(
     [ValidateSet('install', 'uninstall')]
     [string]$Action = 'install',
 
-    # The two folders whose CLAUDE.md to keep in sync (required for both actions).
+    # The file name to keep in sync (e.g. CLAUDE.md, settings.json).
+    [Parameter(Mandatory)]
+    [string]$FileName,
+
+    # The two folders that each contain $FileName (required for both actions).
     [string]$FolderA,
     [string]$FolderB,
+
+    [ValidateSet('raw', 'json-merge')]
+    [string]$Strategy = 'raw',
+
+    # Comma-separated dot-notation key paths to preserve in the destination (json-merge only).
+    [string]$ExcludePaths = '',
 
     [ValidateRange(1, 1439)]
     [int]$IntervalMinutes = 15
 )
 
-# This tool syncs CLAUDE.md specifically; only the containing folders are configurable.
-$fileName = "CLAUDE.md"
-
-# Task folder mirrors this tool's folder name, so every install of this tool is grouped
-# under one Task Scheduler folder, kept separate from other sync tools' tasks.
+# Task folder mirrors this tool's folder name (\file-sync\), so every install of this
+# tool is grouped under one Task Scheduler folder, separate from other tools' tasks.
 $toolName   = Split-Path -Leaf $PSScriptRoot
 $taskFolder = "\$toolName\"
 
 function Get-SyncIdentity {
-    # Map the folder pair to a stable identity (task name + launcher path) derived from
-    # the input args, so different pairs install as independent parallel tasks and
+    # Map the (file, folder pair) to a stable identity (task name + launcher path) derived
+    # from the input args, so different files/pairs install as independent parallel tasks and
     # install/uninstall always agree. Order-independent: (A,B) and (B,A) match.
     if (-not $FolderA -or -not $FolderB) {
-        throw "-FolderA and -FolderB are required (the two folders whose $fileName to keep in sync)."
+        throw "-FolderA and -FolderB are required (the two folders whose $FileName to keep in sync)."
     }
     $pair  = @(
-        [System.IO.Path]::Combine([System.IO.Path]::GetFullPath($FolderA), $fileName)
-        [System.IO.Path]::Combine([System.IO.Path]::GetFullPath($FolderB), $fileName)
+        [System.IO.Path]::Combine([System.IO.Path]::GetFullPath($FolderA), $FileName)
+        [System.IO.Path]::Combine([System.IO.Path]::GetFullPath($FolderB), $FileName)
     ) | Sort-Object
     $key   = ($pair -join '|').ToLowerInvariant()
     $bytes = [System.Security.Cryptography.MD5]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($key))
     $short = ([BitConverter]::ToString($bytes) -replace '-', '').Substring(0, 8).ToLower()
     $leaf  = { param($p) (Split-Path -Leaf (Split-Path -Parent $p)) -replace '[^A-Za-z0-9]', '' }
-    $slug  = "$(& $leaf $pair[0])-$(& $leaf $pair[1])"
+    # File stem in the slug keeps tasks legible when two files share one folder pair
+    # (e.g. CLAUDE.md and settings.json both in .claude <-> .claude_mirror).
+    $stem  = [System.IO.Path]::GetFileNameWithoutExtension($FileName) -replace '[^A-Za-z0-9]', ''
+    $slug  = "$stem-$(& $leaf $pair[0])-$(& $leaf $pair[1])"
     [pscustomobject]@{
         FileA    = $pair[0]
         FileB    = $pair[1]
@@ -57,16 +68,16 @@ function Install-SyncTask {
     $fileB = $id.FileB
 
     # ---- CREATE HIDDEN VBS LAUNCHER ----
-    # The two file paths are resolved at install time and embedded directly.
+    # The two file paths, strategy and excludes are resolved at install time and embedded.
     $vbsContent = @"
 Set shell = CreateObject("WScript.Shell")
 
 scriptDir = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
-scriptPath = scriptDir & "\claude-md-sync.ps1"
+scriptPath = scriptDir & "\sync-engine.ps1"
 fileA = "$fileA"
 fileB = "$fileB"
 
-cmd = "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File """ & scriptPath & """ -FileA """ & fileA & """ -FileB """ & fileB & """"
+cmd = "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File """ & scriptPath & """ -FileA """ & fileA & """ -FileB """ & fileB & """ -Strategy $Strategy -ExcludePaths """ & "$ExcludePaths" & """"
 shell.Run cmd, 0, False
 "@
     Set-Content -Path $id.VbsPath -Value $vbsContent -Encoding ASCII
@@ -104,7 +115,7 @@ shell.Run cmd, 0, False
         -Force
 
     Write-Host "Task '$taskFolder$($id.TaskName)' registered successfully (every $IntervalMinutes minute(s))."
-    Write-Host "Syncing: $fileA  <->  $fileB"
+    Write-Host "Syncing ($Strategy): $fileA  <->  $fileB"
 }
 
 function Uninstall-SyncTask {
