@@ -24,13 +24,13 @@ the catalog; click into a folder for full docs.
 |------|--------------|
 | [`statusline-hook`](tools/statusline-hook/) | Claude Code `StatusLine` hook (PowerShell/Bash/Python) printing a colour-coded one-liner; optionally exports JSONL for the `usage-dashboard` app. |
 | [`session-name-date-prefixer`](tools/session-name-date-prefixer/) | Prefix Claude Code session names with the date. |
-| [`claude-md-devcontainer-sync`](tools/claude-md-devcontainer-sync/) | Keep `CLAUDE.md` and the devcontainer `CLAUDE.md` in sync. |
-| [`settings-devcontainer-sync`](tools/settings-devcontainer-sync/) | Keep Claude settings and the devcontainer settings in sync. |
+| [`claude-md-sync`](tools/claude-md-sync/) | Keep two `CLAUDE.md` files in sync across two folders (newer wins). |
+| [`settings-sync`](tools/settings-sync/) | Keep two Claude `settings.json` files in sync across two folders (newer wins, excluded keys preserved). |
 | [`scheduled-automations`](tools/scheduled-automations/) | Unattended Claude Code automations that run on a schedule (daily/weekly summaries and lessons). |
 | [`usage-report`](tools/usage-report/) | CLI summary of token usage and estimated cost across sessions — the terminal counterpart to `usage-dashboard`. |
 
-> `statusline-hook`, `session-name-date-prefixer`, `claude-md-devcontainer-sync`,
-> `settings-devcontainer-sync`, and the `usage-dashboard` app were originally one
+> `statusline-hook`, `session-name-date-prefixer`, `claude-md-sync`,
+> `settings-sync`, and the `usage-dashboard` app were originally one
 > `claude-automation` suite; see [`docs/automation-suite.md`](docs/automation-suite.md)
 > for the combined overview.
 

@@ -11,8 +11,8 @@ A monorepo of independent projects centered on Claude Code, grouped by category:
 apps/      full applications you run (cross-repo-file-diff, multi-repo-plan-runner,
            per-project-plugin-toggler, usage-dashboard, skill-browser)
 tools/     single-purpose utilities & scripts (statusline-hook,
-           session-name-date-prefixer, claude-md-devcontainer-sync,
-           settings-devcontainer-sync, scheduled-automations, usage-report)
+           session-name-date-prefixer, claude-md-sync,
+           settings-sync, scheduled-automations, usage-report)
 libs/      shared libraries (claude-usage)
 plugins/   packaged Claude Code skills/plugins (planned)
 docs/      monorepo-wide docs
