@@ -19,3 +19,8 @@ node_modules/
 # OS / editor cruft
 .DS_Store
 Thumbs.db
+
+# Sync tools: per-pair hidden launchers generated on install embed real local
+# paths — keep them out of git (the committed *-hidden.vbs template stays tracked).
+tools/claude-md-sync/claude-md-sync-*-hidden.vbs
+tools/settings-sync/settings-sync-*-hidden.vbs

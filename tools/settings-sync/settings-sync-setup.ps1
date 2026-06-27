@@ -3,12 +3,12 @@
 # Usage:
 #   .\settings-sync-setup.ps1 -FolderA <dir> -FolderB <dir>                 # install (default), 15-min interval
 #   .\settings-sync-setup.ps1 -FolderA <dir> -FolderB <dir> -IntervalMinutes 30
-#   .\settings-sync-setup.ps1 -Action uninstall
+#   .\settings-sync-setup.ps1 -Action uninstall -FolderA <dir> -FolderB <dir>
 param(
     [ValidateSet('install', 'uninstall')]
     [string]$Action = 'install',
 
-    # The two folders whose settings.json to keep in sync (required on install).
+    # The two folders whose settings.json to keep in sync (required for both actions).
     [string]$FolderA,
     [string]$FolderB,
 
@@ -16,23 +16,45 @@ param(
     [int]$IntervalMinutes = 15
 )
 
-$vbsPath = Join-Path $PSScriptRoot "settings-sync-hidden.vbs"
-
-$taskFolder = "\ClaudeAutomation\"
-$taskName   = "SyncClaudeSettings"
-
 # This tool syncs settings.json specifically; only the containing folders are configurable.
 $fileName = "settings.json"
 
-function Install-SyncTask {
+# Task folder mirrors this tool's folder name, so every install of this tool is grouped
+# under one Task Scheduler folder, kept separate from other sync tools' tasks.
+$toolName   = Split-Path -Leaf $PSScriptRoot
+$taskFolder = "\$toolName\"
+
+function Get-SyncIdentity {
+    # Map the folder pair to a stable identity (task name + launcher path) derived from
+    # the input args, so different pairs install as independent parallel tasks and
+    # install/uninstall always agree. Order-independent: (A,B) and (B,A) match.
     if (-not $FolderA -or -not $FolderB) {
-        throw "Install requires -FolderA and -FolderB (the two folders whose $fileName to keep in sync)."
+        throw "-FolderA and -FolderB are required (the two folders whose $fileName to keep in sync)."
     }
+    $pair  = @(
+        [System.IO.Path]::Combine([System.IO.Path]::GetFullPath($FolderA), $fileName)
+        [System.IO.Path]::Combine([System.IO.Path]::GetFullPath($FolderB), $fileName)
+    ) | Sort-Object
+    $key   = ($pair -join '|').ToLowerInvariant()
+    $bytes = [System.Security.Cryptography.MD5]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($key))
+    $short = ([BitConverter]::ToString($bytes) -replace '-', '').Substring(0, 8).ToLower()
+    $leaf  = { param($p) (Split-Path -Leaf (Split-Path -Parent $p)) -replace '[^A-Za-z0-9]', '' }
+    $slug  = "$(& $leaf $pair[0])-$(& $leaf $pair[1])"
+    [pscustomobject]@{
+        FileA    = $pair[0]
+        FileB    = $pair[1]
+        TaskName = "$slug-$short"
+        VbsPath  = Join-Path $PSScriptRoot "$toolName-$short-hidden.vbs"
+    }
+}
+
+function Install-SyncTask {
+    $id = Get-SyncIdentity
     foreach ($f in @($FolderA, $FolderB)) {
         if (-not (Test-Path -PathType Container $f)) { throw "Folder not found: $f" }
     }
-    $fileA = Join-Path (Resolve-Path $FolderA).Path $fileName
-    $fileB = Join-Path (Resolve-Path $FolderB).Path $fileName
+    $fileA = $id.FileA
+    $fileB = $id.FileB
 
     # ---- CREATE HIDDEN VBS LAUNCHER ----
     # The two file paths are resolved at install time and embedded directly.
@@ -47,12 +69,12 @@ fileB = "$fileB"
 cmd = "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File """ & scriptPath & """ -FileA """ & fileA & """ -FileB """ & fileB & """"
 shell.Run cmd, 0, False
 "@
-    Set-Content -Path $vbsPath -Value $vbsContent -Encoding ASCII
+    Set-Content -Path $id.VbsPath -Value $vbsContent -Encoding ASCII
 
     # ---- ACTION ----
     $action = New-ScheduledTaskAction `
         -Execute "wscript.exe" `
-        -Argument "`"$vbsPath`""
+        -Argument "`"$($id.VbsPath)`""
 
     # ---- TRIGGER: every $IntervalMinutes minutes, every day, forever ----
     # Daily anchor re-arms each day (so it never "expires"); attach the repetition
@@ -74,31 +96,32 @@ shell.Run cmd, 0, False
 
     # ---- REGISTER TASK ----
     Register-ScheduledTask `
-        -TaskName   $taskName `
+        -TaskName   $id.TaskName `
         -TaskPath   $taskFolder `
         -Action     $action `
         -Trigger    $trigger `
         -Settings   $settings `
         -Force
 
-    Write-Host "Task '$taskName' registered successfully (every $IntervalMinutes minute(s))."
+    Write-Host "Task '$taskFolder$($id.TaskName)' registered successfully (every $IntervalMinutes minute(s))."
     Write-Host "Syncing: $fileA  <->  $fileB"
 }
 
 function Uninstall-SyncTask {
-    $existing = Get-ScheduledTask -TaskName $taskName -TaskPath $taskFolder -ErrorAction SilentlyContinue
+    $id = Get-SyncIdentity
+    $existing = Get-ScheduledTask -TaskName $id.TaskName -TaskPath $taskFolder -ErrorAction SilentlyContinue
     if ($existing) {
-        Unregister-ScheduledTask -TaskName $taskName -TaskPath $taskFolder -Confirm:$false
-        Write-Host "Task '$taskName' unregistered."
+        Unregister-ScheduledTask -TaskName $id.TaskName -TaskPath $taskFolder -Confirm:$false
+        Write-Host "Task '$($id.TaskName)' unregistered."
     } else {
-        Write-Host "Task '$taskName' not found — skipped."
+        Write-Host "Task '$($id.TaskName)' not found — skipped."
     }
 
-    if (Test-Path $vbsPath) {
-        Remove-Item -Force $vbsPath
-        Write-Host "Removed hidden launcher $vbsPath"
+    if (Test-Path $id.VbsPath) {
+        Remove-Item -Force $id.VbsPath
+        Write-Host "Removed hidden launcher $($id.VbsPath)"
     } else {
-        Write-Host "Hidden launcher not found at $vbsPath — skipped."
+        Write-Host "Hidden launcher not found at $($id.VbsPath) — skipped."
     }
 }
 

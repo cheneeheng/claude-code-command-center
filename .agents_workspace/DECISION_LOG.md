@@ -333,3 +333,44 @@ scan reported but did not auto-edit, and (2) rename the sync tools so they no lo
 **Impact / Risk:** Low. Doc/placeholder edits and a name change. Existing sync installs pointing at
 the old folder/script paths must be reinstalled (they regenerate their VBS on next install).
 PowerShell parse-check passes on all four renamed `.ps1` scripts.
+
+---
+
+### Entry 11
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27T00:00:00Z
+**Task:** Parameterize the sync tools' Task Scheduler folder/name so multiple syncs run in parallel.
+
+**Context:** Both sync setups hardcoded `$taskFolder = "\ClaudeAutomation\"` and a single
+`$taskName` (`SyncClaudeMd` / `SyncClaudeSettings`), plus a single fixed VBS launcher filename. That
+caps each tool at one install — a second install overwrites the task and the launcher. User wants
+the task folder derived from the tool folder name and the task name derived from the input args, to
+sync several folder pairs at once.
+
+**Decision:**
+- **Task folder = tool folder name** via `Split-Path -Leaf $PSScriptRoot` (`\claude-md-sync\` /
+  `\settings-sync\`). Register-ScheduledTask auto-creates the folder, same as the old hardcode.
+- **Task name = stable identity derived from the folder pair**: `<leafA>-<leafB>-<8-char md5>` of
+  the two resolved file paths. Chose readable leaf slugs + a hash (not leaves alone) because two
+  different pairs can share leaf names (e.g. both `.claude`) and would otherwise collide. The
+  launcher VBS is renamed the same way (`<tool>-<hash>-hidden.vbs`) — **required**, not cosmetic:
+  parallel tasks each need their own launcher with their own embedded paths, or the last install
+  clobbers the rest.
+- **Order-independent identity:** sort the pair before hashing so `(A,B)` and `(B,A)` map to one
+  task (sync is symmetric/newer-wins, so a reversed reinstall should not create a duplicate).
+- **Uninstall now also requires `-FolderA`/`-FolderB`** — it must recompute the same identity to
+  find the right task + launcher. Documented in usage + READMEs.
+- **`[IO.Path]::Combine` + `GetFullPath`, not `Join-Path`/`Resolve-Path`:** identity must be
+  computable on uninstall even if a folder/drive is gone; `Join-Path` and `Resolve-Path` hit the PS
+  provider and throw on a missing drive. Combine/GetFullPath are pure-string .NET.
+- **Gitignored the generated `*-<hash>-hidden.vbs` launchers** (they embed real local paths — the
+  same leak class addressed in Entry 10) while keeping the committed `*-hidden.vbs` template (safe
+  `C:\Path\To` placeholders, doc only); fixed the template header to say so.
+
+**Impact / Risk:** Low-medium. Behavior change: uninstall signature now needs the folder pair, and
+existing single installs under `\ClaudeAutomation\` are orphaned by the new task path — users should
+uninstall via the old script revision or remove those tasks manually, then reinstall. Identity logic
+verified in isolation (order-independence holds; distinct pairs differ; no error on missing drives);
+both setup scripts parse-check clean. Not run end-to-end (needs Administrator + Task Scheduler).
