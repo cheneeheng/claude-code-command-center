@@ -15,10 +15,12 @@ implementations — pick the one for your shell:
 | `statusline-hook.sh` | Linux / macOS (Bash) | Requires `jq`. |
 | `statusline-hook.py` | Cross-platform (Python stdlib) | UTF-8-safe stdin/stdout; run with `python3 statusline-hook.py`. Managed with `uv`. |
 
-Each hook also appends the turn to `~/.claude/statusline/<project>/<session_id>.jsonl`
-(`{session_id, ts, data}`). That export is **optional** — it's what powers the live
-rate-limit panel in the [`usage-dashboard`](../../apps/usage-dashboard/) app. The dashboard
-reads it if present and silently skips it if not.
+Each hook can also append the turn to `~/.claude/statusline/<project>/<session_id>.jsonl`
+(`{session_id, ts, data}`) — the data that powers the live rate-limit panel in the
+[`usage-dashboard`](../../apps/usage-dashboard/) app. This export is **opt-in**: it is off by
+default and only runs when you set `STATUSLINE_EXPORT` to `1` (or `true`/`yes`). Leave it unset
+and the hook just prints the status line and writes nothing. The dashboard reads the export if
+present and silently skips it if not.
 
 ## Quick start
 
@@ -34,6 +36,8 @@ Add the hook to `~/.claude/settings.json` (PowerShell shown; use `.sh`/`.py` ana
 ```
 
 The base config dir defaults to `~/.claude`; set `$CLAUDE_DIR` (pathsep-separated) to override.
+To enable the JSONL export, set `STATUSLINE_EXPORT=1` in the environment Claude Code runs the
+hook in.
 
 ## Why the `pyproject.toml`?
 

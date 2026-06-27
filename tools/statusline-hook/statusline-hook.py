@@ -83,6 +83,10 @@ def format_reset_time(unix_ts: float, include_day: bool = False) -> str:
     except (OSError, OverflowError, ValueError):
         return "---" if include_day else "--:--"
 
+def export_enabled() -> bool:
+    """The JSONL export is opt-in via STATUSLINE_EXPORT (1/true/yes)."""
+    return os.environ.get("STATUSLINE_EXPORT", "").strip().lower() in {"1", "true", "yes"}
+
 def claude_base() -> Path:
     """Return the Claude config dir, honouring the first $CLAUDE_DIR entry."""
     raw = os.environ.get("CLAUDE_DIR")
@@ -146,7 +150,9 @@ def main() -> None:
 
     print(" | ".join(parts), flush=True)
 
-    # --- Log to <claude>/statusline/<project>/<session_id>.jsonl ---
+    # --- Log to <claude>/statusline/<project>/<session_id>.jsonl (opt-in) ---
+    if not export_enabled():
+        return
     try:
         session_id = data.get("session_id") or "__unknown__"
         cwd = data.get("cwd") or ""
