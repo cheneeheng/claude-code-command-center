@@ -22,7 +22,7 @@ By model:
 ```
 
 Cost is **estimated** (token counts × list price), not the amount Anthropic billed.
-Honours `$CLAUDE_DIR`. Run with `uv run usage-report` (or install the package and run
+Honours `$C4_CLAUDE_DIR`. Run with `uv run usage-report` (or install the package and run
 `usage-report`).
 
 ## Setup

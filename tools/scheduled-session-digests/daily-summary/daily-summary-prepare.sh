@@ -8,15 +8,15 @@
 # fans the summarisation out to subagents and commits afterwards.
 #
 # Stages:
-#   $CLAUDE_META_DIR/.claude/scheduler-jobs/daily-summary/<uuid>.md   (input)
-#   $CLAUDE_META_DIR/.claude/scheduler-jobs/daily-summary/manifest.json
+#   $C4_CLAUDE_META_DIR/.claude/scheduler-jobs/daily-summary/<uuid>.md   (input)
+#   $C4_CLAUDE_META_DIR/.claude/scheduler-jobs/daily-summary/manifest.json
 # Each manifest entry records the input path and the final output path the
 # subagent must write to: daily-summaries/YYYY/MM/<date>_<uuid>[_<title>].md
 #
 # Dependencies: bash 4+, jq, git
 #
 # Usage (normally invoked by the /daily-summary skill):
-#   CLAUDE_META_DIR=/path/to/claude-meta ./daily-summary-prepare.sh [--full-scan]
+#   C4_CLAUDE_META_DIR=/path/to/claude-meta ./daily-summary-prepare.sh [--full-scan]
 
 set -euo pipefail
 
@@ -33,16 +33,16 @@ for arg in "$@"; do
     esac
 done
 
-# Source env file if CLAUDE_META_DIR is not already set
+# Source env file if C4_CLAUDE_META_DIR is not already set
 ENV_FILE="$HOME/.claude/claude-scheduler.env"
-if [[ -z "${CLAUDE_META_DIR:-}" ]] && [[ -f "$ENV_FILE" ]]; then
+if [[ -z "${C4_CLAUDE_META_DIR:-}" ]] && [[ -f "$ENV_FILE" ]]; then
     # shellcheck source=/dev/null
     source "$ENV_FILE"
 fi
 
-META_DIR="${CLAUDE_META_DIR:-}"
+META_DIR="${C4_CLAUDE_META_DIR:-}"
 if [[ -z "$META_DIR" ]]; then
-    log "[daily-summary-prepare] CLAUDE_META_DIR is not set - aborting."
+    log "[daily-summary-prepare] C4_CLAUDE_META_DIR is not set - aborting."
     exit 1
 fi
 

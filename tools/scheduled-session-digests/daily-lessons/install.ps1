@@ -4,7 +4,7 @@
 #
 # What it does:
 #   1. Initialises %USERPROFILE%\claude-meta (git repo) with required subdirs
-#   2. Sets CLAUDE_META_DIR as a permanent user environment variable
+#   2. Sets C4_CLAUDE_META_DIR as a permanent user environment variable
 #   3. Gitignores docs\claude_logs\ (transient staging area)
 #   4. Copies daily-lessons.md, daily-lessons-trigger.ps1, git-sync.ps1 → %USERPROFILE%\claude-meta\.claude\scripts\
 #   5. Registers the SessionDigest-DailyLessons Task Scheduler task (03:00 daily,
@@ -39,7 +39,7 @@ function Prompt-Input {
     return $raw
 }
 
-$MetaDir    = if ($env:CLAUDE_META_DIR) { $env:CLAUDE_META_DIR } else { Join-Path $env:USERPROFILE "claude-meta" }
+$MetaDir    = if ($env:C4_CLAUDE_META_DIR) { $env:C4_CLAUDE_META_DIR } else { Join-Path $env:USERPROFILE "claude-meta" }
 $ScriptsDir = Join-Path $MetaDir ".claude\scripts"
 
 Write-Host ""
@@ -85,15 +85,15 @@ if (-not (Test-Path (Join-Path $MetaDir ".git"))) {
 }
 
 # ---------------------------------------------------------------------------
-# 2. Set CLAUDE_META_DIR env var
+# 2. Set C4_CLAUDE_META_DIR env var
 # ---------------------------------------------------------------------------
-Step "Setting CLAUDE_META_DIR environment variable..."
+Step "Setting C4_CLAUDE_META_DIR environment variable..."
 
-$existing = [System.Environment]::GetEnvironmentVariable("CLAUDE_META_DIR", "User")
+$existing = [System.Environment]::GetEnvironmentVariable("C4_CLAUDE_META_DIR", "User")
 if ($existing -ne $MetaDir) {
-    [System.Environment]::SetEnvironmentVariable("CLAUDE_META_DIR", $MetaDir, "User")
-    $env:CLAUDE_META_DIR = $MetaDir
-    Write-Host "      Set CLAUDE_META_DIR = $MetaDir" -ForegroundColor Green
+    [System.Environment]::SetEnvironmentVariable("C4_CLAUDE_META_DIR", $MetaDir, "User")
+    $env:C4_CLAUDE_META_DIR = $MetaDir
+    Write-Host "      Set C4_CLAUDE_META_DIR = $MetaDir" -ForegroundColor Green
 } else {
     Write-Host "      Already set - skipping." -ForegroundColor Gray
 }
@@ -207,7 +207,7 @@ $LogFile = Join-Path $MetaDir "logs\daily-lessons.log"
 Write-Host ""
 Write-Host "=== Install complete ===" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Open a new terminal for CLAUDE_META_DIR to take effect."
+Write-Host "Open a new terminal for C4_CLAUDE_META_DIR to take effect."
 
 if ($WantCron) {
     Write-Host "Logs: $LogFile"

@@ -9,7 +9,7 @@ deduplication, and writing.
 
 ## Step 1 — Read the collected lessons
 
-Read `$CLAUDE_META_DIR/.claude/scripts/weekly-lessons-input.md`.
+Read `$C4_CLAUDE_META_DIR/.claude/scripts/weekly-lessons-input.md`.
 
 This file contains one section per session, each starting with `## Source: <path>`,
 followed by a `Date:` field and the full content of that session's lessons file (written
@@ -22,7 +22,7 @@ Set `$RunDate` to that date.
 
 ## Step 2 — Read the existing master lessons file
 
-Set `$MasterFile` = `$CLAUDE_META_DIR/master-lessons/MASTER_LESSONS_LEARNED.md`.
+Set `$MasterFile` = `$C4_CLAUDE_META_DIR/master-lessons/MASTER_LESSONS_LEARNED.md`.
 
 If it exists, read it in full. Note all lesson titles already present (`### ` headings)
 to use for deduplication in Step 3.

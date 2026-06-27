@@ -30,7 +30,7 @@ The daily skills act as a coordinator — stage per-chat inputs, spawn one subag
 chat, then `git-sync`. The weekly skill harvests the collected lessons in a single pass.
 
 Install presents a split list so you can pick any combination, e.g. skills for daily,
-cron for weekly. Skills are installed to `$CLAUDE_META_DIR/.claude/skills/` and are
+cron for weekly. Skills are installed to `$C4_CLAUDE_META_DIR/.claude/skills/` and are
 discoverable when you run Claude Code with the meta repo as the working directory.
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.

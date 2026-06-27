@@ -2,11 +2,11 @@
 # weekly-lessons-trigger.sh
 #
 # Triggered by cron every Sunday at 02:00.
-# Scans $CLAUDE_META_DIR/lessons-learned/**/*.md for files written since the
+# Scans $C4_CLAUDE_META_DIR/lessons-learned/**/*.md for files written since the
 # last harvest, skips stub files, and passes the collected content to Claude
 # for analysis and master-file update.
 #
-# Time filtering: a cursor file ($CLAUDE_META_DIR/.claude/weekly-lessons-cursor)
+# Time filtering: a cursor file ($C4_CLAUDE_META_DIR/.claude/weekly-lessons-cursor)
 # records the mtime (Unix epoch) of the newest lessons file processed on the
 # last successful run. Only files newer than the cursor are processed.
 # The cursor is updated only after Claude exits successfully, so a crash causes
@@ -33,16 +33,16 @@ for arg in "$@"; do
     esac
 done
 
-# Source env file if CLAUDE_META_DIR is not already set (needed for cron)
+# Source env file if C4_CLAUDE_META_DIR is not already set (needed for cron)
 ENV_FILE="$HOME/.claude/claude-scheduler.env"
-if [[ -z "${CLAUDE_META_DIR:-}" ]] && [[ -f "$ENV_FILE" ]]; then
+if [[ -z "${C4_CLAUDE_META_DIR:-}" ]] && [[ -f "$ENV_FILE" ]]; then
     # shellcheck source=/dev/null
     source "$ENV_FILE"
 fi
 
-META_DIR="${CLAUDE_META_DIR:-}"
+META_DIR="${C4_CLAUDE_META_DIR:-}"
 if [[ -z "$META_DIR" ]]; then
-    log "[weekly-lessons] CLAUDE_META_DIR is not set - aborting."
+    log "[weekly-lessons] C4_CLAUDE_META_DIR is not set - aborting."
     exit 1
 fi
 

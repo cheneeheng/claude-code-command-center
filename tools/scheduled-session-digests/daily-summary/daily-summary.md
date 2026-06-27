@@ -7,7 +7,7 @@ specified in the input file header.
 
 ## Step 1 — Read the input file
 
-Read `$CLAUDE_META_DIR/.claude/scripts/chat-input.md`.
+Read `$C4_CLAUDE_META_DIR/.claude/scripts/chat-input.md`.
 
 Parse the header fields:
 - `UUID` — session identifier

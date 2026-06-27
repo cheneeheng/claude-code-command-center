@@ -1,11 +1,11 @@
 # weekly-lessons-trigger.ps1
 #
 # Triggered by Windows Task Scheduler every Sunday at 02:00.
-# Scans $CLAUDE_META_DIR/lessons-learned/**/*.md for files written since the
+# Scans $C4_CLAUDE_META_DIR/lessons-learned/**/*.md for files written since the
 # last harvest, skips stub files, and passes the collected content to Claude
 # for analysis and master-file update.
 #
-# Time filtering: a cursor file ($CLAUDE_META_DIR/.claude/weekly-lessons-cursor)
+# Time filtering: a cursor file ($C4_CLAUDE_META_DIR/.claude/weekly-lessons-cursor)
 # records the mtime (Unix epoch) of the newest lessons file processed on the
 # last successful run. Only files newer than the cursor are processed.
 # The cursor is updated only after Claude exits successfully, so a crash causes
@@ -30,9 +30,9 @@ function Log {
     if ($script:LogFile) { Add-Content -Path $script:LogFile -Value $line -Encoding UTF8 }
 }
 
-$MetaDir = $env:CLAUDE_META_DIR
+$MetaDir = $env:C4_CLAUDE_META_DIR
 if (-not $MetaDir) {
-    Log "[weekly-lessons] CLAUDE_META_DIR is not set - aborting."
+    Log "[weekly-lessons] C4_CLAUDE_META_DIR is not set - aborting."
     exit 1
 }
 

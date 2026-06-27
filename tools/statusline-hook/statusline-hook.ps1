@@ -82,12 +82,12 @@ $color7d = Get-RateColor $rate7d
 Write-Output "$model | ${ctxColor}${bar} ${pct}%${Reset} | $runtime | $costFmt | ${color5h}5H: $rate5h% ($resetSym $reset5hFmt)${Reset} | ${color7d}7D: $rate7d% ($resetSym $reset7dFmt)${Reset}"
 
 # --- Log to per-project statusline/project_name/$session_id.jsonl (opt-in) ---
-# Export is off unless STATUSLINE_EXPORT is 1/true/yes.
-if ($env:STATUSLINE_EXPORT -notmatch '^(?i:1|true|yes)$') { return }
+# Export is off unless C4_STATUSLINE_EXPORT is 1/true/yes.
+if ($env:C4_STATUSLINE_EXPORT -notmatch '^(?i:1|true|yes)$') { return }
 
-$claudeDir = if ($env:CLAUDE_DIR) {
+$claudeDir = if ($env:C4_CLAUDE_DIR) {
     # Use the first dir if multiple are specified (pathsep-separated)
-    ($env:CLAUDE_DIR -split [System.IO.Path]::PathSeparator)[0].Trim()
+    ($env:C4_CLAUDE_DIR -split [System.IO.Path]::PathSeparator)[0].Trim()
 } else {
     Join-Path $env:USERPROFILE ".claude"
 }

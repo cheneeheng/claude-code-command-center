@@ -60,6 +60,19 @@ It delegates to each tool's own setup script and records state in a manifest und
 `~/.claude-command-center/`. See [`setup/README.md`](setup/README.md). Apps and `usage-report`
 are run on demand, not installed, so they are not managed here.
 
+## Environment variables
+
+Every environment variable this repo defines is prefixed `C4_` (the repo's own namespace) so it
+never collides with Claude Code's or the OS's variables:
+
+| Variable | Used by | Purpose |
+|----------|---------|---------|
+| `C4_CLAUDE_DIR` | `statusline-hook`, `usage-report`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. |
+| `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). |
+| `C4_STATUSLINE_EXPORT` | `statusline-hook` | Opt-in to the JSONL export when set to `1`/`true`/`yes`. |
+
+OS-provided variables (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
+
 ## Repository layout
 
 ```

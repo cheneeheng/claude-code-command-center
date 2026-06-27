@@ -73,7 +73,7 @@ if [[ "$mode" == "install" ]]; then
     echo ""
 
     # ---- Claude meta directory ----------------------------------------------
-    default_meta="${CLAUDE_META_DIR:-$HOME/claude-meta}"
+    default_meta="${C4_CLAUDE_META_DIR:-$HOME/claude-meta}"
     META_DIR=$(prompt_input "Claude meta directory" "$default_meta")
 
     # ---- Validate / initialise git repo -------------------------------------
@@ -102,17 +102,17 @@ if [[ "$mode" == "install" ]]; then
         fi
     fi
 
-    # ---- Persist CLAUDE_META_DIR --------------------------------------------
-    export CLAUDE_META_DIR="$META_DIR"
+    # ---- Persist C4_CLAUDE_META_DIR --------------------------------------------
+    export C4_CLAUDE_META_DIR="$META_DIR"
 
     ENV_FILE="$HOME/.claude/claude-scheduler.env"
     mkdir -p "$HOME/.claude"
-    if ! grep -q "CLAUDE_META_DIR" "$ENV_FILE" 2>/dev/null; then
-        echo "export CLAUDE_META_DIR=\"$META_DIR\"" >> "$ENV_FILE"
+    if ! grep -q "C4_CLAUDE_META_DIR" "$ENV_FILE" 2>/dev/null; then
+        echo "export C4_CLAUDE_META_DIR=\"$META_DIR\"" >> "$ENV_FILE"
     else
-        sed -i "s|^export CLAUDE_META_DIR=.*|export CLAUDE_META_DIR=\"$META_DIR\"|" "$ENV_FILE"
+        sed -i "s|^export C4_CLAUDE_META_DIR=.*|export C4_CLAUDE_META_DIR=\"$META_DIR\"|" "$ENV_FILE"
     fi
-    echo "  Set CLAUDE_META_DIR = $META_DIR"
+    echo "  Set C4_CLAUDE_META_DIR = $META_DIR"
 
     # ---- Which schedulers and mechanisms? -----------------------------------
     echo ""
@@ -186,7 +186,7 @@ if [[ "$mode" == "install" ]]; then
 
     echo "  ── Done ───────────────────────────────────────────────"
     echo ""
-    echo "  Open a new shell for CLAUDE_META_DIR to take effect."
+    echo "  Open a new shell for C4_CLAUDE_META_DIR to take effect."
     if [[ -n "$wl_mode" ]]; then
         echo "  Edit '$META_DIR/.claude/scheduled-repos.json' to add your repos."
     fi
@@ -198,7 +198,7 @@ fi
 # =============================================================================
 if [[ "$mode" == "uninstall" ]]; then
 
-    META_DIR="${CLAUDE_META_DIR:-}"
+    META_DIR="${C4_CLAUDE_META_DIR:-}"
     if [[ -z "$META_DIR" ]]; then
         META_DIR=$(prompt_input "claude-meta directory" "$HOME/claude-meta")
     fi

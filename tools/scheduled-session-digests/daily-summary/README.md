@@ -25,11 +25,11 @@ output file already exists are skipped.
 The cron trigger above calls `claude --print`, which consumes programmatic credit.
 As an alternative, run the same job from inside a Claude Code session with the
 `/session-digest-daily-summary` skill (installed to
-`$CLAUDE_META_DIR/.claude/skills/`). It is a coordinator and uses no `claude --print`:
+`$C4_CLAUDE_META_DIR/.claude/skills/`). It is a coordinator and uses no `claude --print`:
 
 1. Runs `daily-summary-prepare.{sh,ps1}` — the same scan / filter logic as the trigger,
    but instead of calling Claude it stages one input file per new chat plus a
-   `manifest.json` under `$CLAUDE_META_DIR/.claude/scheduler-jobs/daily-summary/`
+   `manifest.json` under `$C4_CLAUDE_META_DIR/.claude/scheduler-jobs/daily-summary/`
    (gitignored).
 2. Spawns one subagent per chat (in batches) to write each summary file directly.
 3. Runs `git-sync` once at the end.
@@ -56,7 +56,7 @@ cd daily-summary
 bash install.sh
 ```
 
-Open a new terminal afterwards so `CLAUDE_META_DIR` is live in your shell. Or run the
+Open a new terminal afterwards so `C4_CLAUDE_META_DIR` is live in your shell. Or run the
 repo-root `setup.{sh,ps1}` to pick schedulers and mechanisms interactively.
 
 ### What gets installed
@@ -65,13 +65,13 @@ Which files are installed depends on the chosen mode (`skill` / `cron` / `both`)
 
 | File | Mechanism | Destination |
 |------|-----------|-------------|
-| `daily-summary.md` | cron | `$CLAUDE_META_DIR/.claude/scripts/` |
-| `daily-summary-trigger.ps1` / `.sh` | cron | `$CLAUDE_META_DIR/.claude/scripts/` |
-| `daily-summary-prepare.ps1` / `.sh` | skill | `$CLAUDE_META_DIR/.claude/scripts/` |
-| `session-digest-daily-summary/SKILL.md` | skill | `$CLAUDE_META_DIR/.claude/skills/` |
-| `git-sync.ps1` / `.sh` | both | `$CLAUDE_META_DIR/.claude/scripts/` |
+| `daily-summary.md` | cron | `$C4_CLAUDE_META_DIR/.claude/scripts/` |
+| `daily-summary-trigger.ps1` / `.sh` | cron | `$C4_CLAUDE_META_DIR/.claude/scripts/` |
+| `daily-summary-prepare.ps1` / `.sh` | skill | `$C4_CLAUDE_META_DIR/.claude/scripts/` |
+| `session-digest-daily-summary/SKILL.md` | skill | `$C4_CLAUDE_META_DIR/.claude/skills/` |
+| `git-sync.ps1` / `.sh` | both | `$C4_CLAUDE_META_DIR/.claude/scripts/` |
 | Scheduled task | cron | `SessionDigest-DailySummary` (Windows) / crontab entry (Linux) |
-| Git repo | both | `$CLAUDE_META_DIR` (initialised if absent) |
+| Git repo | both | `$C4_CLAUDE_META_DIR` (initialised if absent) |
 | Env file (Linux only) | both | `~/.claude/claude-scheduler.env` |
 
 ---
@@ -81,7 +81,7 @@ Which files are installed depends on the chosen mode (`skill` / `cron` / `both`)
 One `.md` file per summarised chat session, organised by year and month:
 
 ```
-$CLAUDE_META_DIR/
+$C4_CLAUDE_META_DIR/
   daily-summaries/
     2026/
       04/
@@ -118,16 +118,16 @@ Sections with no content are omitted. Very short sessions get a single
 
 ```powershell
 # Windows — process only new sessions (default)
-& "$env:CLAUDE_META_DIR\.claude\scripts\daily-summary-trigger.ps1"
+& "$env:C4_CLAUDE_META_DIR\.claude\scripts\daily-summary-trigger.ps1"
 
 # Windows — reprocess all sessions from the beginning
-& "$env:CLAUDE_META_DIR\.claude\scripts\daily-summary-trigger.ps1" -FullScan
+& "$env:C4_CLAUDE_META_DIR\.claude\scripts\daily-summary-trigger.ps1" -FullScan
 ```
 
 ```bash
 # Linux — process only new sessions (default)
-bash "$CLAUDE_META_DIR/.claude/scripts/daily-summary-trigger.sh"
+bash "$C4_CLAUDE_META_DIR/.claude/scripts/daily-summary-trigger.sh"
 
 # Linux — reprocess all sessions from the beginning
-bash "$CLAUDE_META_DIR/.claude/scripts/daily-summary-trigger.sh" --full-scan
+bash "$C4_CLAUDE_META_DIR/.claude/scripts/daily-summary-trigger.sh" --full-scan
 ```

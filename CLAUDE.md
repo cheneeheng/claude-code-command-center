@@ -53,6 +53,11 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   Stdlib-only tools keep `dependencies = []` and `[tool.uv] package = false`.
 - **Naming:** member folders are descriptive (a newcomer should know what each does from the
   name). Files inside members keep their original names.
+- **Env vars:** every environment variable this repo defines and reads is prefixed `C4_`
+  (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
+  Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir
+  for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in). OS-provided
+  vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
 
 ## Scope discipline

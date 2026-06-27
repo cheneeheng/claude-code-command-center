@@ -18,7 +18,7 @@ implementations — pick the one for your shell:
 Each hook can also append the turn to `~/.claude/statusline/<project>/<session_id>.jsonl`
 (`{session_id, ts, data}`) — the data that powers the live rate-limit panel in the
 [`usage-dashboard`](../../apps/usage-dashboard/) app. This export is **opt-in**: it is off by
-default and only runs when you set `STATUSLINE_EXPORT` to `1` (or `true`/`yes`). Leave it unset
+default and only runs when you set `C4_STATUSLINE_EXPORT` to `1` (or `true`/`yes`). Leave it unset
 and the hook just prints the status line and writes nothing. The dashboard reads the export if
 present and silently skips it if not.
 
@@ -33,7 +33,7 @@ key in `settings.json` (preserving your other settings):
 ./statusline-hook-setup.ps1 -Action uninstall
 ```
 
-It honours `$CLAUDE_DIR` (or pass `-ClaudeDir`). This tool is also managed by the repo-wide
+It honours `$C4_CLAUDE_DIR` (or pass `-ClaudeDir`). This tool is also managed by the repo-wide
 [`setup/`](../../setup/) installer (`command-center.ps1 install -Member statusline-hook`).
 
 Or wire it up by hand — add the hook to `~/.claude/settings.json` (PowerShell shown; use
@@ -48,8 +48,8 @@ Or wire it up by hand — add the hook to `~/.claude/settings.json` (PowerShell 
 }
 ```
 
-The base config dir defaults to `~/.claude`; set `$CLAUDE_DIR` (pathsep-separated) to override.
-To enable the JSONL export, set `STATUSLINE_EXPORT=1` in the environment Claude Code runs the
+The base config dir defaults to `~/.claude`; set `$C4_CLAUDE_DIR` (pathsep-separated) to override.
+To enable the JSONL export, set `C4_STATUSLINE_EXPORT=1` in the environment Claude Code runs the
 hook in.
 
 ## Why the `pyproject.toml`?

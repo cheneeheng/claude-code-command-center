@@ -65,7 +65,7 @@ function Get-CommandCenterRegistry {
         Uninstall      = { param($SetupScript, $Entry) & $SetupScript -Action uninstall | Out-Null }
         Detect         = {
             param($Entry)
-            $dir = if ($env:CLAUDE_DIR) { ($env:CLAUDE_DIR -split [IO.Path]::PathSeparator)[0] }
+            $dir = if ($env:C4_CLAUDE_DIR) { ($env:C4_CLAUDE_DIR -split [IO.Path]::PathSeparator)[0] }
                    else { Join-Path $env:USERPROFILE '.claude' }
             $settings = Join-Path $dir 'settings.json'
             if (Test-Path $settings) {
@@ -149,7 +149,7 @@ function Get-CommandCenterRegistry {
         }
         Uninstall      = {
             param($SetupScript, $Entry)
-            $meta = if ($Entry -and $Entry.metaDir) { $Entry.metaDir } else { $env:CLAUDE_META_DIR }
+            $meta = if ($Entry -and $Entry.metaDir) { $Entry.metaDir } else { $env:C4_CLAUDE_META_DIR }
             if ($meta) { & $SetupScript -NonInteractive -Action uninstall -MetaDir $meta | Out-Null }
             else       { & $SetupScript -NonInteractive -Action uninstall | Out-Null }
         }
@@ -158,7 +158,7 @@ function Get-CommandCenterRegistry {
             foreach ($task in 'SessionDigest-DailySummary', 'SessionDigest-DailyLessons', 'SessionDigest-WeeklyLessons') {
                 if (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue) { return $true }
             }
-            $meta = $env:CLAUDE_META_DIR
+            $meta = $env:C4_CLAUDE_META_DIR
             if (-not $meta -and $Entry) { $meta = $Entry.metaDir }
             if ($meta) {
                 $scripts = Join-Path $meta '.claude\scripts'

@@ -5,8 +5,8 @@
 #
 # What it does:
 #   1. Checks dependencies (jq, git, claude)
-#   2. Initialises $CLAUDE_META_DIR (git repo) with required subdirs
-#   3. Sets CLAUDE_META_DIR in ~/.claude/claude-scheduler.env (sourced by triggers)
+#   2. Initialises $C4_CLAUDE_META_DIR (git repo) with required subdirs
+#   3. Sets C4_CLAUDE_META_DIR in ~/.claude/claude-scheduler.env (sourced by triggers)
 #   4. Gitignores docs/claude_logs/ (transient staging area)
 #   5. Copies daily-lessons.md, daily-lessons-trigger.sh, git-sync.sh to scripts dir
 #   6. Registers a cron job (03:00 daily, staggered from daily-summary at 02:00)
@@ -19,7 +19,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-META_DIR="${CLAUDE_META_DIR:-$HOME/claude-meta}"
+META_DIR="${C4_CLAUDE_META_DIR:-$HOME/claude-meta}"
 SCRIPTS_DIR="$META_DIR/.claude/scripts"
 ENV_FILE="$HOME/.claude/claude-scheduler.env"
 
@@ -115,19 +115,19 @@ fi
 step "Writing env file..."
 
 mkdir -p "$HOME/.claude"
-if ! grep -q "CLAUDE_META_DIR" "$ENV_FILE" 2>/dev/null; then
-    echo "export CLAUDE_META_DIR=\"$META_DIR\"" >> "$ENV_FILE"
+if ! grep -q "C4_CLAUDE_META_DIR" "$ENV_FILE" 2>/dev/null; then
+    echo "export C4_CLAUDE_META_DIR=\"$META_DIR\"" >> "$ENV_FILE"
     echo "      Written: $ENV_FILE"
 else
-    sed -i "s|^export CLAUDE_META_DIR=.*|export CLAUDE_META_DIR=\"$META_DIR\"|" "$ENV_FILE"
+    sed -i "s|^export C4_CLAUDE_META_DIR=.*|export C4_CLAUDE_META_DIR=\"$META_DIR\"|" "$ENV_FILE"
     echo "      Updated: $ENV_FILE"
 fi
 
 # Also add to ~/.bashrc for interactive shells if not already there
 for rc in "$HOME/.bashrc" "$HOME/.bash_profile"; do
-    if [[ -f "$rc" ]] && ! grep -q "CLAUDE_META_DIR" "$rc"; then
-        echo "export CLAUDE_META_DIR=\"$META_DIR\"" >> "$rc"
-        echo "      Added CLAUDE_META_DIR to $rc"
+    if [[ -f "$rc" ]] && ! grep -q "C4_CLAUDE_META_DIR" "$rc"; then
+        echo "export C4_CLAUDE_META_DIR=\"$META_DIR\"" >> "$rc"
+        echo "      Added C4_CLAUDE_META_DIR to $rc"
     fi
 done
 
@@ -221,7 +221,7 @@ fi
 echo ""
 echo "=== Install complete ==="
 echo ""
-echo "Open a new shell for CLAUDE_META_DIR to take effect."
+echo "Open a new shell for C4_CLAUDE_META_DIR to take effect."
 
 if $WANT_CRON; then
     echo "Logs: $META_DIR/logs/daily-lessons.log"

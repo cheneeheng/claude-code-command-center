@@ -15,10 +15,10 @@ log() {
 }
 
 LABEL="${1:-auto}"
-META_DIR="${CLAUDE_META_DIR:-}"
+META_DIR="${C4_CLAUDE_META_DIR:-}"
 
 if [[ -z "$META_DIR" ]]; then
-    log "[git-sync] CLAUDE_META_DIR is not set - skipping."
+    log "[git-sync] C4_CLAUDE_META_DIR is not set - skipping."
     exit 0
 fi
 

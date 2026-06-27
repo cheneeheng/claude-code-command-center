@@ -22,10 +22,10 @@ function Log {
     if ($script:LogFile) { Add-Content -Path $script:LogFile -Value $line -Encoding UTF8 }
 }
 
-$MetaDir = $env:CLAUDE_META_DIR
+$MetaDir = $env:C4_CLAUDE_META_DIR
 
 if (-not $MetaDir) {
-    Log "[git-sync] CLAUDE_META_DIR is not set - skipping."
+    Log "[git-sync] C4_CLAUDE_META_DIR is not set - skipping."
     return
 }
 

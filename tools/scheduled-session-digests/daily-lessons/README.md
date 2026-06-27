@@ -33,13 +33,13 @@ concurrent `git-sync` conflicts on the same meta repo.
 The cron trigger above calls `claude --print`, which consumes programmatic credit.
 As an alternative you can run the same job from inside a Claude Code session with the
 `/session-digest-daily-lessons` skill (installed to
-`$CLAUDE_META_DIR/.claude/skills/`).
+`$C4_CLAUDE_META_DIR/.claude/skills/`).
 
 The skill is a coordinator and uses no `claude --print`:
 
 1. Runs `daily-lessons-prepare.{sh,ps1}` — the same scan / filter logic as the trigger,
    but instead of calling Claude it stages one input file per new chat plus a
-   `manifest.json` under `$CLAUDE_META_DIR/.claude/scheduler-jobs/daily-lessons/`
+   `manifest.json` under `$C4_CLAUDE_META_DIR/.claude/scheduler-jobs/daily-lessons/`
    (gitignored).
 2. Spawns one subagent per chat (in batches) to extract lessons and write each output
    file (or a stub if none) directly.
@@ -109,7 +109,7 @@ bash install.sh skill    # interactive skill only (no cron, no claude -p)
 bash install.sh cron     # cron trigger only
 ```
 
-Registers a cron job at 03:00 daily. Logs to `$CLAUDE_META_DIR/logs/daily-lessons.log`.
+Registers a cron job at 03:00 daily. Logs to `$C4_CLAUDE_META_DIR/logs/daily-lessons.log`.
 
 ### Windows
 
@@ -121,7 +121,7 @@ cd daily-lessons
 ```
 
 Registers a Windows Task Scheduler task (`SessionDigest-DailyLessons`) at 03:00 daily.
-Logs to `%CLAUDE_META_DIR%\logs\daily-lessons.log`.
+Logs to `%C4_CLAUDE_META_DIR%\logs\daily-lessons.log`.
 
 Or run the repo-root `setup.{sh,ps1}` to pick schedulers and mechanisms interactively.
 
@@ -135,18 +135,18 @@ Or run the repo-root `setup.{sh,ps1}` to pick schedulers and mechanisms interact
 
 ```bash
 # Process only new sessions (default)
-bash "$CLAUDE_META_DIR/.claude/scripts/daily-lessons-trigger.sh"
+bash "$C4_CLAUDE_META_DIR/.claude/scripts/daily-lessons-trigger.sh"
 
 # Reprocess all sessions from the beginning
-bash "$CLAUDE_META_DIR/.claude/scripts/daily-lessons-trigger.sh" --full-scan
+bash "$C4_CLAUDE_META_DIR/.claude/scripts/daily-lessons-trigger.sh" --full-scan
 ```
 
 ```powershell
 # Process only new sessions (default)
-& "$env:CLAUDE_META_DIR\.claude\scripts\daily-lessons-trigger.ps1"
+& "$env:C4_CLAUDE_META_DIR\.claude\scripts\daily-lessons-trigger.ps1"
 
 # Reprocess all sessions from the beginning
-& "$env:CLAUDE_META_DIR\.claude\scripts\daily-lessons-trigger.ps1" -FullScan
+& "$env:C4_CLAUDE_META_DIR\.claude\scripts\daily-lessons-trigger.ps1" -FullScan
 ```
 
 ---

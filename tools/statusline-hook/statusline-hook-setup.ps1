@@ -16,13 +16,13 @@ param(
     [ValidateSet('ps1', 'sh', 'py')]
     [string]$Variant = 'ps1',
 
-    # Claude config dir (defaults to ~/.claude, honouring $CLAUDE_DIR's first entry).
+    # Claude config dir (defaults to ~/.claude, honouring $C4_CLAUDE_DIR's first entry).
     [string]$ClaudeDir
 )
 
-# Resolve the config dir: explicit arg > first entry of $CLAUDE_DIR > ~/.claude.
+# Resolve the config dir: explicit arg > first entry of $C4_CLAUDE_DIR > ~/.claude.
 if (-not $ClaudeDir) {
-    $ClaudeDir = if ($env:CLAUDE_DIR) { ($env:CLAUDE_DIR -split [IO.Path]::PathSeparator)[0] }
+    $ClaudeDir = if ($env:C4_CLAUDE_DIR) { ($env:C4_CLAUDE_DIR -split [IO.Path]::PathSeparator)[0] }
                  else { Join-Path $env:USERPROFILE ".claude" }
 }
 $settingsPath = Join-Path $ClaudeDir "settings.json"

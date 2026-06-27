@@ -511,3 +511,22 @@ write the missing/non-interactive scripts so `install -All` runs unattended; man
 detect the user's hand-installed tools against an empty manifest. Actual install/uninstall (state-changing,
 Task Scheduler, needs Administrator for some) not executed — verify with `install -Member <name>` then
 `status`.
+### Entry 16
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-27
+**Task:** Prefix repo-owned env vars with C4_ across tools/ and setup/.
+
+**Context:** Two matched files were historical records — `scheduled-session-digests/CHANGELOG.md`
+and `docs/claude_logs/DECISION_LOG.md`. Renaming the env-var tokens inside them would rewrite
+history. The user asked to update tools/setup code + CLAUDE.md + README, not history.
+**Decision:** Excluded both historical files from the rename; renamed only live code, docs
+(SKILL.md/README.md/.md task defs), and config across tools/ and setup/. Vars: CLAUDE_DIR ->
+C4_CLAUDE_DIR, CLAUDE_META_DIR -> C4_CLAUDE_META_DIR, STATUSLINE_EXPORT -> C4_STATUSLINE_EXPORT
+(prefix-the-full-name style, per user). OS vars (USERPROFILE/LOCALAPPDATA/PATH) left untouched.
+**Impact / Risk:** Breaking change for existing installs that set the old var names; existing
+persisted user env vars / scheduler.env entries must be re-set. No backward-compat shim added
+(per contract). Other categories (apps/, libs/) intentionally not touched yet.
+**Outcome:** All edited PowerShell/Bash/Python files pass parse/syntax checks; no bare tokens or
+double-prefixes remain outside the two historical files.

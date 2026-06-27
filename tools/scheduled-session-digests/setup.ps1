@@ -74,7 +74,7 @@ if ($NonInteractive) {
 if ($mode -eq "install") {
 
     # ---- Claude meta directory ----------------------------------------------
-    $defaultMeta = if ($env:CLAUDE_META_DIR) { $env:CLAUDE_META_DIR } `
+    $defaultMeta = if ($env:C4_CLAUDE_META_DIR) { $env:C4_CLAUDE_META_DIR } `
                    else { Join-Path $env:USERPROFILE "claude-meta" }
 
     if (-not $NonInteractive) {
@@ -115,12 +115,12 @@ if ($mode -eq "install") {
         }
     }
 
-    # ---- Persist CLAUDE_META_DIR --------------------------------------------
-    $env:CLAUDE_META_DIR = $MetaDir
-    $existing = [System.Environment]::GetEnvironmentVariable("CLAUDE_META_DIR", "User")
+    # ---- Persist C4_CLAUDE_META_DIR --------------------------------------------
+    $env:C4_CLAUDE_META_DIR = $MetaDir
+    $existing = [System.Environment]::GetEnvironmentVariable("C4_CLAUDE_META_DIR", "User")
     if ($existing -ne $MetaDir) {
-        [System.Environment]::SetEnvironmentVariable("CLAUDE_META_DIR", $MetaDir, "User")
-        Write-Host "  Set CLAUDE_META_DIR = $MetaDir" -ForegroundColor Green
+        [System.Environment]::SetEnvironmentVariable("C4_CLAUDE_META_DIR", $MetaDir, "User")
+        Write-Host "  Set C4_CLAUDE_META_DIR = $MetaDir" -ForegroundColor Green
     }
 
     # skill+cron -> both; otherwise the single chosen mechanism, or $null.
@@ -207,7 +207,7 @@ if ($mode -eq "install") {
 
     Write-Host "  ── Done ───────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  Open a new terminal for CLAUDE_META_DIR to take effect."
+    Write-Host "  Open a new terminal for C4_CLAUDE_META_DIR to take effect."
     if ($wlMode) {
         Write-Host "  Edit '$MetaDir\.claude\scheduled-repos.json' to add your repos."
     }
@@ -219,7 +219,7 @@ if ($mode -eq "install") {
 # =============================================================================
 if ($mode -eq "uninstall") {
 
-    if (-not $MetaDir) { $MetaDir = $env:CLAUDE_META_DIR }
+    if (-not $MetaDir) { $MetaDir = $env:C4_CLAUDE_META_DIR }
     if (-not $MetaDir) {
         if ($NonInteractive) {
             $MetaDir = Join-Path $env:USERPROFILE "claude-meta"

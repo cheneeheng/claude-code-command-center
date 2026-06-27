@@ -31,7 +31,7 @@ bash install.sh
 ## Add a remote
 
 ```bash
-cd "$CLAUDE_META_DIR"
+cd "$C4_CLAUDE_META_DIR"
 git remote add origin <your-remote-url>
 git push -u origin main
 ```
@@ -40,7 +40,7 @@ git push -u origin main
 
 ## claude-meta structure
 
-All schedulers write to `$CLAUDE_META_DIR` (default: `~/claude-meta`):
+All schedulers write to `$C4_CLAUDE_META_DIR` (default: `~/claude-meta`):
 
 ```
 claude-meta/

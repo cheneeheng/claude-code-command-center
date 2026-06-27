@@ -7,13 +7,13 @@
 # fans the summarisation out to subagents and commits afterwards.
 #
 # Stages:
-#   $CLAUDE_META_DIR\.claude\scheduler-jobs\daily-summary\<uuid>.md   (input)
-#   $CLAUDE_META_DIR\.claude\scheduler-jobs\daily-summary\manifest.json
+#   $C4_CLAUDE_META_DIR\.claude\scheduler-jobs\daily-summary\<uuid>.md   (input)
+#   $C4_CLAUDE_META_DIR\.claude\scheduler-jobs\daily-summary\manifest.json
 # Each manifest entry records the input path and the final output path the
 # subagent must write to: daily-summaries\YYYY\MM\<date>_<uuid>[_<title>].md
 #
 # Usage (normally invoked by the /daily-summary skill):
-#   $env:CLAUDE_META_DIR="C:\path\to\claude-meta"; .\daily-summary-prepare.ps1 [-FullScan]
+#   $env:C4_CLAUDE_META_DIR="C:\path\to\claude-meta"; .\daily-summary-prepare.ps1 [-FullScan]
 
 param(
     [switch]$FullScan
@@ -30,9 +30,9 @@ function Log {
     if ($script:LogFile) { Add-Content -Path $script:LogFile -Value $line -Encoding UTF8 }
 }
 
-$MetaDir = $env:CLAUDE_META_DIR
+$MetaDir = $env:C4_CLAUDE_META_DIR
 if (-not $MetaDir) {
-    Log "[daily-summary-prepare] CLAUDE_META_DIR is not set - aborting."
+    Log "[daily-summary-prepare] C4_CLAUDE_META_DIR is not set - aborting."
     exit 1
 }
 

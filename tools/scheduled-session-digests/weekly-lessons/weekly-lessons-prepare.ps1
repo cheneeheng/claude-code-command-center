@@ -15,7 +15,7 @@
 #   MASTER=<master lessons file path>
 #
 # Usage (normally invoked by the /weekly-lessons skill):
-#   $env:CLAUDE_META_DIR="C:\path\to\claude-meta"; .\weekly-lessons-prepare.ps1 [-FullScan]
+#   $env:C4_CLAUDE_META_DIR="C:\path\to\claude-meta"; .\weekly-lessons-prepare.ps1 [-FullScan]
 
 param(
     [switch]$FullScan
@@ -32,9 +32,9 @@ function Log {
     if ($script:LogFile) { Add-Content -Path $script:LogFile -Value $line -Encoding UTF8 }
 }
 
-$MetaDir = $env:CLAUDE_META_DIR
+$MetaDir = $env:C4_CLAUDE_META_DIR
 if (-not $MetaDir) {
-    Log "[weekly-lessons-prepare] CLAUDE_META_DIR is not set - aborting."
+    Log "[weekly-lessons-prepare] C4_CLAUDE_META_DIR is not set - aborting."
     exit 1
 }
 

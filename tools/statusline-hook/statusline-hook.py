@@ -84,12 +84,12 @@ def format_reset_time(unix_ts: float, include_day: bool = False) -> str:
         return "---" if include_day else "--:--"
 
 def export_enabled() -> bool:
-    """The JSONL export is opt-in via STATUSLINE_EXPORT (1/true/yes)."""
-    return os.environ.get("STATUSLINE_EXPORT", "").strip().lower() in {"1", "true", "yes"}
+    """The JSONL export is opt-in via C4_STATUSLINE_EXPORT (1/true/yes)."""
+    return os.environ.get("C4_STATUSLINE_EXPORT", "").strip().lower() in {"1", "true", "yes"}
 
 def claude_base() -> Path:
-    """Return the Claude config dir, honouring the first $CLAUDE_DIR entry."""
-    raw = os.environ.get("CLAUDE_DIR")
+    """Return the Claude config dir, honouring the first $C4_CLAUDE_DIR entry."""
+    raw = os.environ.get("C4_CLAUDE_DIR")
     if raw:
         first = raw.split(os.pathsep)[0].strip()
         if first:

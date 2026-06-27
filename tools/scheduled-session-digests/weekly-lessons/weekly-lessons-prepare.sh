@@ -18,7 +18,7 @@
 # Dependencies: bash 4+, git
 #
 # Usage (normally invoked by the /weekly-lessons skill):
-#   CLAUDE_META_DIR=/path/to/claude-meta ./weekly-lessons-prepare.sh [--full-scan]
+#   C4_CLAUDE_META_DIR=/path/to/claude-meta ./weekly-lessons-prepare.sh [--full-scan]
 
 set -euo pipefail
 
@@ -35,16 +35,16 @@ for arg in "$@"; do
     esac
 done
 
-# Source env file if CLAUDE_META_DIR is not already set
+# Source env file if C4_CLAUDE_META_DIR is not already set
 ENV_FILE="$HOME/.claude/claude-scheduler.env"
-if [[ -z "${CLAUDE_META_DIR:-}" ]] && [[ -f "$ENV_FILE" ]]; then
+if [[ -z "${C4_CLAUDE_META_DIR:-}" ]] && [[ -f "$ENV_FILE" ]]; then
     # shellcheck source=/dev/null
     source "$ENV_FILE"
 fi
 
-META_DIR="${CLAUDE_META_DIR:-}"
+META_DIR="${C4_CLAUDE_META_DIR:-}"
 if [[ -z "$META_DIR" ]]; then
-    log "[weekly-lessons-prepare] CLAUDE_META_DIR is not set - aborting."
+    log "[weekly-lessons-prepare] C4_CLAUDE_META_DIR is not set - aborting."
     exit 1
 fi
 

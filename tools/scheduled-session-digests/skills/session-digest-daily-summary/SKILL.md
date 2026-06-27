@@ -11,17 +11,17 @@ summary; then you commit the results. No `claude --print` is used anywhere.
 
 ## Step 1 — Run the prepare script
 
-`CLAUDE_META_DIR` must be set in the environment (the scheduler's
+`C4_CLAUDE_META_DIR` must be set in the environment (the scheduler's
 `~/.claude/claude-scheduler.env` sets it; the prepare script also sources that
 file). The prepare and git-sync scripts are installed at
-`$CLAUDE_META_DIR/.claude/scripts/`.
+`$C4_CLAUDE_META_DIR/.claude/scripts/`.
 
 Run the script for the current OS and capture stdout:
 
 - Windows (PowerShell tool):
-  `& "$env:CLAUDE_META_DIR\.claude\scripts\daily-summary-prepare.ps1"`
+  `& "$env:C4_CLAUDE_META_DIR\.claude\scripts\daily-summary-prepare.ps1"`
 - macOS / Linux (Bash tool):
-  `bash "$CLAUDE_META_DIR/.claude/scripts/daily-summary-prepare.sh"`
+  `bash "$C4_CLAUDE_META_DIR/.claude/scripts/daily-summary-prepare.sh"`
 
 Pass `--full-scan` / `-FullScan` only if the user explicitly asks to reprocess
 all history.
@@ -85,12 +85,12 @@ reprocessed next run.
 
 After all subagents finish, run git-sync from the meta repo:
 
-- Windows: `& "$env:CLAUDE_META_DIR\.claude\scripts\git-sync.ps1" -Label "daily-summary"`
-- macOS / Linux: `bash "$CLAUDE_META_DIR/.claude/scripts/git-sync.sh" "daily-summary"`
+- Windows: `& "$env:C4_CLAUDE_META_DIR\.claude\scripts\git-sync.ps1" -Label "daily-summary"`
+- macOS / Linux: `bash "$C4_CLAUDE_META_DIR/.claude/scripts/git-sync.sh" "daily-summary"`
 
 git-sync writes its own run log under `logs/` *after* it commits, so that log is left
 uncommitted. Make one trailing commit to capture it (a plain commit creates no new log,
-so it terminates): in `$CLAUDE_META_DIR` run `git add -A`, and if anything is staged,
+so it terminates): in `$C4_CLAUDE_META_DIR` run `git add -A`, and if anything is staged,
 `git commit -m "daily-summary: git-sync log"` then `git push` if a remote is configured.
 
 ## Step 6 — Report

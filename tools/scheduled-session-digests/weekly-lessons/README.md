@@ -1,6 +1,6 @@
 # weekly-lessons
 
-Runs at 02:00 every Sunday. Scans `$CLAUDE_META_DIR/lessons-learned/**/*.md` — the
+Runs at 02:00 every Sunday. Scans `$C4_CLAUDE_META_DIR/lessons-learned/**/*.md` — the
 per-session files written by `daily-lessons` — for files newer than the last harvest.
 Stub files (sessions that produced no lessons) are skipped automatically.
 
@@ -14,7 +14,7 @@ All collected content is passed to Claude via `claude --print <prompt>`. Claude:
 After Claude finishes, the input file is deleted and `git-sync` is called.
 
 **Time filtering**: after each successful run a cursor file
-(`$CLAUDE_META_DIR/.claude/weekly-lessons-cursor`) records the mtime of the newest
+(`$C4_CLAUDE_META_DIR/.claude/weekly-lessons-cursor`) records the mtime of the newest
 session file processed. Only files newer than the cursor are picked up next time.
 The cursor is written only after Claude exits successfully, so a crash retries the
 same files on the next run.
@@ -26,12 +26,12 @@ same files on the next run.
 The cron trigger above calls `claude --print`, which consumes programmatic credit.
 As an alternative, run the harvest from inside a Claude Code session with the
 `/session-digest-weekly-lessons` skill (installed to
-`$CLAUDE_META_DIR/.claude/skills/`). No `claude --print` is used, and — unlike the
+`$C4_CLAUDE_META_DIR/.claude/skills/`). No `claude --print` is used, and — unlike the
 daily skills — no subagents: it is a single analysis pass.
 
 1. Runs `weekly-lessons-prepare.{sh,ps1}` — the same cursor / stub-skip logic as the
    trigger; it collects the new session lessons into one input file under
-   `$CLAUDE_META_DIR/.claude/scheduler-jobs/weekly-lessons/` (gitignored) and prints the
+   `$C4_CLAUDE_META_DIR/.claude/scheduler-jobs/weekly-lessons/` (gitignored) and prints the
    input path, cursor path, master path, and the epoch to advance the cursor to.
 2. The session reads the input and the master file, distils the project-generic lessons
    into the master, writes the cursor, then runs `git-sync`.
@@ -66,14 +66,14 @@ Which files are installed depends on the chosen mode (`skill` / `cron` / `both`)
 
 | File | Mechanism | Destination |
 |------|-----------|-------------|
-| `weekly-lessons.md` | cron | `$CLAUDE_META_DIR/.claude/scripts/` |
-| `weekly-lessons-trigger.ps1` / `.sh` | cron | `$CLAUDE_META_DIR/.claude/scripts/` |
-| `weekly-lessons-prepare.ps1` / `.sh` | skill | `$CLAUDE_META_DIR/.claude/scripts/` |
-| `session-digest-weekly-lessons/SKILL.md` | skill | `$CLAUDE_META_DIR/.claude/skills/` |
-| `git-sync.ps1` / `.sh` | both | `$CLAUDE_META_DIR/.claude/scripts/` |
-| Cursor file (written at runtime) | both | `$CLAUDE_META_DIR/.claude/weekly-lessons-cursor` |
+| `weekly-lessons.md` | cron | `$C4_CLAUDE_META_DIR/.claude/scripts/` |
+| `weekly-lessons-trigger.ps1` / `.sh` | cron | `$C4_CLAUDE_META_DIR/.claude/scripts/` |
+| `weekly-lessons-prepare.ps1` / `.sh` | skill | `$C4_CLAUDE_META_DIR/.claude/scripts/` |
+| `session-digest-weekly-lessons/SKILL.md` | skill | `$C4_CLAUDE_META_DIR/.claude/skills/` |
+| `git-sync.ps1` / `.sh` | both | `$C4_CLAUDE_META_DIR/.claude/scripts/` |
+| Cursor file (written at runtime) | both | `$C4_CLAUDE_META_DIR/.claude/weekly-lessons-cursor` |
 | Scheduled task | cron | `SessionDigest-WeeklyLessons` (Windows) / crontab entry (Linux) |
-| Git repo | both | `$CLAUDE_META_DIR` (initialised if absent) |
+| Git repo | both | `$C4_CLAUDE_META_DIR` (initialised if absent) |
 | Env file (Linux only) | both | `~/.claude/claude-scheduler.env` |
 
 ---
@@ -83,7 +83,7 @@ Which files are installed depends on the chosen mode (`skill` / `cron` / `both`)
 A single cumulative file, appended to on each Sunday run:
 
 ```
-$CLAUDE_META_DIR/
+$C4_CLAUDE_META_DIR/
   master-lessons/
     MASTER_LESSONS_LEARNED.md
 ```
@@ -106,16 +106,16 @@ Each entry:
 
 ```powershell
 # Windows — process only new sessions (default)
-& "$env:CLAUDE_META_DIR\.claude\scripts\weekly-lessons-trigger.ps1"
+& "$env:C4_CLAUDE_META_DIR\.claude\scripts\weekly-lessons-trigger.ps1"
 
 # Windows — reprocess all session lessons from the beginning
-& "$env:CLAUDE_META_DIR\.claude\scripts\weekly-lessons-trigger.ps1" -FullScan
+& "$env:C4_CLAUDE_META_DIR\.claude\scripts\weekly-lessons-trigger.ps1" -FullScan
 ```
 
 ```bash
 # Linux — process only new sessions (default)
-bash "$CLAUDE_META_DIR/.claude/scripts/weekly-lessons-trigger.sh"
+bash "$C4_CLAUDE_META_DIR/.claude/scripts/weekly-lessons-trigger.sh"
 
 # Linux — reprocess all session lessons from the beginning
-bash "$CLAUDE_META_DIR/.claude/scripts/weekly-lessons-trigger.sh" --full-scan
+bash "$C4_CLAUDE_META_DIR/.claude/scripts/weekly-lessons-trigger.sh" --full-scan
 ```

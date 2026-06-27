@@ -91,14 +91,14 @@ COLOR_7D=$(rate_color "$RATE_7D")
 printf "${MODEL} | ${CTX_COLOR}${BAR} ${PCT}%%${RESET_COLOR} | ${RUNTIME} | ${COST_FMT} | ${COLOR_5H}5H: ${RATE_5H}%% (↺ ${RESET_5H_FMT})${RESET_COLOR} | ${COLOR_7D}7D: ${RATE_7D}%% (↺ ${RESET_7D_FMT})${RESET_COLOR}\n"
 
 # --- Log to per-project statusline/project_name/$session_id.jsonl (opt-in) ---
-# Export is off unless STATUSLINE_EXPORT is 1/true/yes.
-case "$(echo "${STATUSLINE_EXPORT:-}" | tr '[:upper:]' '[:lower:]')" in
+# Export is off unless C4_STATUSLINE_EXPORT is 1/true/yes.
+case "$(echo "${C4_STATUSLINE_EXPORT:-}" | tr '[:upper:]' '[:lower:]')" in
   1|true|yes) ;;
   *) exit 0 ;;
 esac
 
-if [ -n "$CLAUDE_DIR" ]; then
-  CLAUDE_BASE=$(echo "$CLAUDE_DIR" | cut -d: -f1)
+if [ -n "$C4_CLAUDE_DIR" ]; then
+  CLAUDE_BASE=$(echo "$C4_CLAUDE_DIR" | cut -d: -f1)
 else
   CLAUDE_BASE="$HOME/.claude"
 fi
