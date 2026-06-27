@@ -49,7 +49,7 @@ works fully without it; only the VSCode buttons depend on it.
 
 A small settings affordance in the brand header (e.g. a "Set root path" control) opens a
 text input where the user types/pastes the absolute path of the projects root once
-(e.g. `/Users/eeheng/projects`). On save it is written via `Persist.saveRootPath` and
+(e.g. `/Users/you/projects`). On save it is written via `Persist.saveRootPath` and
 loaded on every subsequent open. The field is optional and clearly labelled as needed
 only for opening repos in VSCode.
 
