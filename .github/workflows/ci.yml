@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: ruff (${{ matrix.member }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        member:
+          - apps/multi-repo-plan-runner
+          - apps/per-project-plugin-toggler
+          - apps/usage-dashboard
+          - apps/skill-browser
+          - tools/statusline-hook
+          - tools/usage-report
+          - libs/claude-usage
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: ruff check
+        working-directory: ${{ matrix.member }}
+        run: uv run ruff check .
+
+  typecheck:
+    name: mypy (${{ matrix.member }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - member: libs/claude-usage
+            target: src
+          - member: tools/usage-report
+            target: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: mypy
+        working-directory: ${{ matrix.member }}
+        run: uv run mypy ${{ matrix.target }}
+
+  test:
+    name: pytest (multi-repo-plan-runner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: pytest
+        working-directory: apps/multi-repo-plan-runner
+        run: uv run pytest

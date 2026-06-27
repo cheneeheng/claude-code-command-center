@@ -1,0 +1,26 @@
+[project]
+name = "skill-browser"
+version = "0.1.0"
+description = "Local web browser for the Claude Code skills installed on this machine."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15",
+    "mypy>=1.11",
+]
+
+# Run directly (uv run python server.py); not installed as a package.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+# Non-strict: server.py deliberately mirrors the plugin-toggler's JSON-reading
+# logic (see docs/shared-plugin-logic.md), which is dict/Any-heavy by nature.
+[tool.mypy]
+python_version = "3.11"

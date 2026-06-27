@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "usage-report"
+version = "0.1.0"
+description = "CLI summary of Claude Code token usage and estimated cost across sessions."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["claude-usage"]
+
+[project.scripts]
+usage-report = "usage_report.cli:main"
+
+[tool.uv.sources]
+claude-usage = { path = "../../libs/claude-usage", editable = true }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15",
+    "mypy>=1.11",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/usage_report"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

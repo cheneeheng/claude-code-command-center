@@ -1,0 +1,24 @@
+[project]
+name = "statusline-hook"
+version = "0.1.0"
+description = "Claude Code statusline hook (PowerShell / Bash / Python) for a colour-coded one-liner."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15",
+    "mypy>=1.11",
+]
+
+# statusline.py is run directly by Claude Code as a hook, not installed.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"

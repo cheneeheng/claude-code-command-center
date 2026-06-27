@@ -1,0 +1,28 @@
+[project]
+name = "per-project-plugin-toggler"
+version = "0.9.1"
+description = "Enable/disable Claude Code plugins per project from a browser UI or VSCode."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15",
+    "mypy>=1.11",
+]
+
+# The Python server is run directly; the installable surface is the VSCode extension.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+# server.py uses an intentional aligned compact style for the scope dispatch.
+[tool.ruff.lint]
+ignore = ["E701"]
+
+[tool.mypy]
+python_version = "3.11"
