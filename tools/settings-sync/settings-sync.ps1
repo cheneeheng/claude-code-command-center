@@ -1,4 +1,4 @@
-# cc-sync-claude-settings-and-claude-devcontainer-settings.ps1
+# settings-sync.ps1
 # Mirrors the newer of two JSON files to the older one,
 # preserving excluded key paths in the destination file.
 #
