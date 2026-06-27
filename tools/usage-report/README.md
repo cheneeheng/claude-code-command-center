@@ -24,3 +24,22 @@ By model:
 Cost is **estimated** (token counts × list price), not the amount Anthropic billed.
 Honours `$CLAUDE_DIR`. Run with `uv run usage-report` (or install the package and run
 `usage-report`).
+
+## Setup
+
+Unlike the stdlib-only `tools/` scripts, this is a real installable package: it has a
+`[build-system]`, a `usage-report` console entry point, and a runtime dependency on the local
+[`claude-usage`](../../libs/claude-usage/) library (wired as an editable path source). So you
+must sync the environment before first use:
+
+```bash
+uv sync                  # creates .venv with claude-usage + dev tools
+uv run usage-report --top 5
+```
+
+`uv sync` also installs the `dev` group (`ruff`, `mypy`) for linting and type-checking:
+
+```bash
+uv run ruff check .
+uv run mypy src
+```

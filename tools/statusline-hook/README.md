@@ -34,3 +34,20 @@ Add the hook to `~/.claude/settings.json` (PowerShell shown; use `.sh`/`.py` ana
 ```
 
 The base config dir defaults to `~/.claude`; set `$CLAUDE_DIR` (pathsep-separated) to override.
+
+## Why the `pyproject.toml`?
+
+The hook is **not** an installable package — all three scripts run directly, and the Python
+version uses only the standard library (`dependencies = []`, `[tool.uv] package = false`). The
+`pyproject.toml` exists solely to follow the monorepo rule that every Python member is a `uv`
+project: it pins the Python version and holds the shared `ruff`/`mypy` config. The `dev`
+dependency group brings in `ruff` and `mypy` for linting and type-checking the `.py` script.
+
+So nothing is required to *run* the hook beyond the script itself. `uv sync` is only needed if
+you want to lint or type-check the Python implementation:
+
+```bash
+uv sync          # installs the dev tools (ruff, mypy) into .venv
+uv run ruff check .
+uv run mypy statusline-hook.py
+```
