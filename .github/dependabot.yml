@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /vscode-extension
+    directory: /apps/per-project-plugin-toggler/vscode-extension
     schedule:
       interval: weekly
       day: monday
