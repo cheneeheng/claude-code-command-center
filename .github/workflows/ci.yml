@@ -61,11 +61,118 @@ jobs:
   test:
     name: pytest (multi-repo-plan-runner)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/multi-repo-plan-runner
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: pytest
-        working-directory: apps/multi-repo-plan-runner
-        run: uv run pytest
+      - name: ruff format check
+        run: uv run ruff format --check .
+      - name: pytest (100% coverage gate)
+        run: uv run pytest --cov-fail-under=100
+      # Packaging smoke test: exercises importlib.resources resolution of the shipped
+      # schema end to end (the $schema pointer in a fresh config) without needing `claude`.
+      - name: packaging smoke test
+        run: uv run docket init --dry-run
+
+  # --- per-project-plugin-toggler (HTML server + VSCode extension) ---
+
+  pppt-python-syntax:
+    name: pppt — Python syntax check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/per-project-plugin-toggler
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Check syntax
+        run: python3 -m py_compile html/server.py
+
+  pppt-css-sync:
+    name: pppt — CSS sync check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/per-project-plugin-toggler
+    steps:
+      - uses: actions/checkout@v6
+      - name: Sync CSS
+        run: cp html/styles.css vscode-extension/webview/styles.css
+      - name: Assert no diff
+        run: |
+          git diff --exit-code vscode-extension/webview/styles.css || {
+            echo "ERROR: vscode-extension/webview/styles.css is out of sync with html/styles.css"
+            echo "Run: make sync-css"
+            exit 1
+          }
+
+  pppt-lint-extension:
+    name: pppt — ESLint (extension.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/per-project-plugin-toggler/vscode-extension
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/per-project-plugin-toggler/vscode-extension/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+
+  pppt-package-check:
+    name: pppt — vsce package check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/per-project-plugin-toggler
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/per-project-plugin-toggler/vscode-extension/package-lock.json
+      - name: Install dependencies
+        working-directory: apps/per-project-plugin-toggler/vscode-extension
+        run: npm ci
+      - name: Sync CSS
+        run: cp html/styles.css vscode-extension/webview/styles.css
+      - name: Package
+        working-directory: apps/per-project-plugin-toggler/vscode-extension
+        run: |
+          mkdir -p dist
+          npx vsce package --out dist/skills-toggle.vsix
+
+  pppt-smoke-test:
+    name: pppt — Smoke test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
+    defaults:
+      run:
+        working-directory: apps/per-project-plugin-toggler
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Run smoke test (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: bash tests/smoke.sh
+      - name: Run smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tests/smoke.ps1

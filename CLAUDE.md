@@ -38,7 +38,7 @@ plugin/skill/agent/hook reader is the `claude-plugins` library, consumed by
 toggler's VSCode **Node** port left as
 a deliberate copy a Python library can't serve.
 
-Members are **self-contained**: each keeps its own README, CHANGELOG, tests, and CLAUDE.md.
+Members are **self-contained**: each keeps its own README, tests, and CLAUDE.md.
 The umbrella adds a catalog and shared conventions; it does not flatten or rewrite members.
 
 **`setup/` (umbrella infra, not a member):** a single `command-center.ps1` that installs/uninstalls
@@ -63,13 +63,17 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
-- **Docs:** exactly **one `README.md` per member** (apps/tools/libs/setup) plus the root README,
+- **Docs:** **one `README.md` per member** (apps/tools/libs/setup) plus the root README,
   which is the catalog. Deeper end-user docs live under a member's `docs/` (e.g.
   `multi-repo-plan-runner/docs/guide/`, `per-project-plugin-toggler/docs/user-guide-*.md`) and the
-  README links into them — do not split a member into multiple READMEs. The one sanctioned second
-  README is `per-project-plugin-toggler/vscode-extension/README.md`, which ships with the VSIX and
-  is rendered on the VSCode marketplace page. No per-member planning docs and no per-member
-  decision logs: build planning is ephemeral, and agent decisions go in the active
+  README links into them — do not split a member into multiple READMEs. Two sanctioned exceptions:
+  `per-project-plugin-toggler/vscode-extension/README.md`, which ships with the VSIX and is
+  rendered on the VSCode marketplace page; and `scheduled-session-digests`, whose four
+  independently installable digests (`daily-summary`, `daily-lessons`, `weekly-lessons`,
+  `git-sync`) each keep their own README under their sub-folder, linked from the member's top
+  README. Members do not carry their own `CHANGELOG.md`; release history will live in a single
+  root changelog once the repo cuts its first release. No per-member planning docs and no
+  per-member decision logs: build planning is ephemeral, and agent decisions go in the active
   `.agents_workspace/DECISION_LOG.md` (historical per-member logs are frozen in
   `.agents_workspace/archive/decision-log.md`).
 

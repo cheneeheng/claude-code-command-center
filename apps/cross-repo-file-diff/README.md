@@ -61,5 +61,3 @@ browser. The split is one concern per file, wired by classic `<link>`/`<script>`
 **order in `index.html` is the dependency contract** (`scripts/namespace.js` first, `app.js`
 last); cross-file sharing is via the `window.Vantage` namespace, not ES modules. The design and
 constraints are documented in `CLAUDE.md`.
-
-See [CHANGELOG.md](CHANGELOG.md) for release history.
