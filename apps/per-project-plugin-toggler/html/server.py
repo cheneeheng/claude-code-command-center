@@ -1,7 +1,6 @@
 import json
 import os
 import queue
-import re
 import subprocess
 import sys
 import threading
@@ -9,46 +8,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from socketserver import ThreadingMixIn
 
+import claude_plugins
+
 # ── Constants ──────────────────────────────────────────────────────────────
 PLUGINS_BASE      = Path.home() / ".claude" / "plugins"
 MARKETPLACES_JSON = PLUGINS_BASE / "known_marketplaces.json"
-
-
-# Cross-reference: _parse_skill_frontmatter, load_installed_plugins and normalise_path
-# below are intentionally duplicated in apps/skill-browser/server.py and in this app's
-# vscode-extension/extension.js. Keep them in sync — see docs/shared-plugin-logic.md.
-def _parse_skill_frontmatter(path: Path, fallback: str = "") -> tuple[str, str]:
-    """
-    Returns (name, description) from YAML front matter.
-    Uses regex — no PyYAML dependency.
-    fallback: used when name key is absent. Defaults to path.parent.name (skill folder name).
-    Pass path.stem explicitly for agent .md files so the stem not the parent dir is used.
-    """
-    if not fallback:
-        fallback = path.parent.name
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        m = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
-        if not m:
-            return fallback, ""
-        fm = m.group(1)
-
-        name_match = re.search(r"^name:\s*(.+)$", fm, re.MULTILINE)
-        name = name_match.group(1).strip() if name_match else fallback
-
-        block_match = re.search(
-            r"^description:\s*(?:>-|>|[|][-]?)\s*\n((?:[ \t].+\n?)*)", fm, re.MULTILINE
-        )
-        if block_match:
-            raw = block_match.group(1)
-            description = " ".join(line.strip() for line in raw.splitlines() if line.strip())
-        else:
-            inline_match = re.search(r"^description:\s*(.+)$", fm, re.MULTILINE)
-            description = inline_match.group(1).strip() if inline_match else ""
-
-        return name, description
-    except Exception:
-        return fallback, ""
 
 
 def _mock_plugins() -> dict:
@@ -64,138 +28,16 @@ def _mock_plugins() -> dict:
     }
 
 
-def normalise_path(p: str) -> str:
-    """
-    Normalise a filesystem path for reliable comparison across platforms.
-    On Windows: lowercases the drive letter and resolves separators.
-    On all platforms: resolves symlinks, removes trailing slashes.
-    Returns empty string for empty/None input.
-    UNC paths (\\server\share\...) are handled by the platform resolver.
-    """
-    if not p:
-        return ""
-    try:
-        resolved = Path(p).resolve()
-        s = str(resolved)
-        # Windows only: lowercase drive letter to normalise "C:\..." vs "c:\..."
-        if len(s) >= 2 and s[1] == ":":
-            s = s[0].lower() + s[1:]
-        return s
-    except Exception:
-        return str(p)
-
-
 def load_installed_plugins(project_root: Path) -> dict:
+    """Bucket installed plugins by scope (local/project/user) for project_root.
+
+    Thin wrapper over claude_plugins.load_installed_plugins that preserves this
+    app's dev aid: when installed_plugins.json is absent, return mock data
+    (includes "mock": True). See docs/shared-plugin-logic.md.
     """
-    Returns { "local": [...], "project": [...], "user": [...] }
-    Each entry: { "id", "version", "installPath" }
-
-    Bucketing by each install entry's scope (installed_plugins.json schema:
-    { "version": 2, "plugins": { id: [entries] } }, each entry carrying
-    scope ∈ local/project/user, optional projectPath, installPath, version):
-      - scope=="local"   → local bucket   iff projectPath matches project_root
-      - scope=="project" → project bucket iff projectPath matches project_root
-      - scope=="user"    → user bucket    (no projectPath constraint)
-    Entries for other projects' local/project installs are skipped.
-
-    A plugin may appear in more than one bucket (one entry per scope).
-
-    If installed_plugins.json is missing, returns mock data (includes "mock": True).
-    """
-    installed_path = PLUGINS_BASE / "installed_plugins.json"
-    if not installed_path.exists():
+    if not (PLUGINS_BASE / "installed_plugins.json").exists():
         return _mock_plugins()
-
-    raw = json.loads(installed_path.read_text(encoding="utf-8"))['plugins']
-    norm_project = normalise_path(str(project_root))
-
-    buckets: dict[str, list[dict]] = {"local": [], "project": [], "user": []}
-
-    for plugin_id, entries in raw.items():
-        for entry in entries:
-            scope = entry.get("scope")
-            if scope not in buckets:
-                continue
-            if scope in ("local", "project"):
-                entry_project = entry.get("projectPath", "")
-                if not entry_project or normalise_path(entry_project) != norm_project:
-                    continue  # belongs to a different project
-            buckets[scope].append({
-                "id": plugin_id,
-                "version": entry.get("version", ""),
-                "installPath": entry.get("installPath", ""),
-                "scope": scope,
-            })
-
-    return buckets
-
-
-def load_plugin_skills(install_path: str) -> list[dict]:
-    """Reads all skill folders under <install_path>/skills/."""
-    if not install_path:
-        return []
-    skills_dir = Path(install_path) / "skills"
-    if not skills_dir.is_dir():
-        return []
-
-    skills = []
-    for skill_folder in sorted(skills_dir.iterdir()):
-        if not skill_folder.is_dir():
-            continue
-        skill_md = skill_folder / "SKILL.md"
-        if not skill_md.exists():
-            continue
-        name, description = _parse_skill_frontmatter(skill_md)
-        skills.append({"name": name, "description": description})
-    return skills
-
-
-def load_plugin_agents(install_path: str) -> list[dict]:
-    """Reads all .md files directly under <install_path>/agents/."""
-    if not install_path:
-        return []
-    agents_dir = Path(install_path) / "agents"
-    if not agents_dir.is_dir():
-        return []
-
-    agents = []
-    for md_file in sorted(agents_dir.glob("*.md")):
-        name, description = _parse_skill_frontmatter(md_file, fallback=md_file.stem)
-        agents.append({"name": name, "description": description})
-    return agents
-
-
-def _hook_detail(h: dict) -> str:
-    # 'command' is the common case (and the documented example); render its command string.
-    if h.get("type") == "command":
-        return h.get("command", "")
-    # http / mcp_tool / prompt / agent: field names vary — show a compact dump of the
-    # non-type fields rather than inventing key names. Refine when real examples appear.
-    return json.dumps({k: v for k, v in h.items() if k != "type"}, ensure_ascii=False)
-
-
-def load_plugin_hooks(install_path: str) -> list[dict]:
-    """Reads <install_path>/hooks/hooks.json.
-    Returns [] if missing/unparseable. Each item:
-      { "event": str, "matcher": str, "actions": [ { "type": str, "detail": str } ] }"""
-    if not install_path:
-        return []
-    path = Path(install_path) / "hooks" / "hooks.json"
-    if not path.exists():
-        return []
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
-        return []
-    result = []
-    for event, groups in (data.get("hooks") or {}).items():
-        for group in groups or []:
-            actions = [
-                {"type": h.get("type", ""), "detail": _hook_detail(h)}
-                for h in group.get("hooks", [])
-            ]
-            result.append({"event": event, "matcher": group.get("matcher", ""), "actions": actions})
-    return result
+    return claude_plugins.load_installed_plugins(project_root)
 
 
 def load_settings_local(project_root: Path) -> dict:
@@ -272,18 +114,21 @@ def build_sections(raw: dict, settings: dict) -> dict:
             name, marketplace = pid.split("@", 1) if "@" in pid else (pid, "")
             entry = installed_entries.get(pid)
             installed = entry is not None
-            install_path = entry.get("installPath", "") if installed else ""
+            install_path = entry.get("installPath", "") if entry is not None else ""
             rows.append({
                 "id": pid,
                 "name": name,
                 "marketplace": marketplace,
-                "version": entry.get("version", "") if installed else "",
+                "version": entry.get("version", "") if entry is not None else "",
                 "scope": scope,
                 "enabled": enabled_map.get(pid, True),  # default: enabled
                 "installed": installed,
-                "skills": load_plugin_skills(install_path) if installed else [],
-                "agents": load_plugin_agents(install_path) if installed else [],
-                "hooks":  load_plugin_hooks(install_path) if installed else [],
+                "skills": [{"name": m.name, "description": m.description}
+                           for m in claude_plugins.load_plugin_skills(install_path)] if installed else [],
+                "agents": [{"name": m.name, "description": m.description}
+                           for m in claude_plugins.load_plugin_agents(install_path)] if installed else [],
+                "hooks":  [{"event": h.event, "matcher": h.matcher, "actions": h.actions}
+                           for h in claude_plugins.load_plugin_hooks(install_path)] if installed else [],
             })
         return rows
     return {s: section(s) for s in ("local", "project", "user")}

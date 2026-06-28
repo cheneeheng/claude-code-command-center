@@ -530,3 +530,15 @@ persisted user env vars / scheduler.env entries must be re-set. No backward-comp
 (per contract). Other categories (apps/, libs/) intentionally not touched yet.
 **Outcome:** All edited PowerShell/Bash/Python files pass parse/syntax checks; no bare tokens or
 double-prefixes remain outside the two historical files.
+
+### Entry 17
+
+**Type:** Decision
+**Mode:** Interactive (user-confirmed)
+**Timestamp:** 2026-06-28
+**Task:** Refactor apps: share the skills/agents/hooks parser between skill-browser and per-project-plugin-toggler; extend skill-browser to browse agents and hooks.
+
+**Context:** skill-browser only read skills; the agents/hooks readers already existed (by intentional copy) in plugin-toggler. Adding agents+hooks to skill-browser triggers the register's documented "logic grows materially" / "2nd Python consumer" condition for extracting a library. Sharing model was a high-stakes fork (extract lib vs. expand duplication).
+**Decision:** User chose extraction. Created libs/claude-plugins (stdlib-only, strict mypy) with normalise_path, plugins_base, load_installed_plugins, parse_frontmatter, load_plugin_skills/agents/hooks (skills/agents -> PluginMember incl. server-side path; hooks -> PluginHook). skill-browser and plugin-toggler/html import it; the VSCode extension.js stays a registered Node copy. Kept CLAUDE_DIR (not C4_) env var to match claude-usage and per Entry 16 (apps/libs left un-prefixed).
+**Impact / Risk:** plugin-toggler/html gains an editable workspace dependency (no longer a single copy-paste file) and now: (a) returns empty buckets instead of raising on a malformed installed_plugins.json (lib catches JSONDecodeError); mock fallback on a *missing* file is preserved. VSCode Node copy unchanged. Behavior of skill-browser's existing skill reads unchanged.
+**Outcome:** Pending validation (ruff + mypy + import smoke).

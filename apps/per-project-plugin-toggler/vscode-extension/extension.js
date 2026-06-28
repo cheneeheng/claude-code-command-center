@@ -39,8 +39,10 @@ function normalisePath(p) {
 }
 
 // Cross-reference: loadInstalledPlugins, parseSkillFrontmatter and the skill
-// enumeration here are intentionally duplicated in this app's html/server.py and in
-// apps/skill-browser/server.py. Keep them in sync — see docs/shared-plugin-logic.md.
+// enumeration here are a parallel Node port of the libs/claude-plugins library
+// (consumed by html/server.py and apps/skill-browser/server.py). A Python library
+// can't serve this surface, so this copy is kept in sync by hand — see
+// docs/shared-plugin-logic.md.
 function loadInstalledPlugins(projectRoot) {
   const installedPath = path.join(
     os.homedir(),

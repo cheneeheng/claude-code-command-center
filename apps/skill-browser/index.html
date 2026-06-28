@@ -38,11 +38,16 @@
     .skill-btn:hover { background: var(--bg); }
     .skill-btn[aria-current="true"] { background: var(--accent); color: var(--accent-ink); }
     .skill-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-    .scope {
+    .scope, .kind {
       font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted);
       border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; flex-shrink: 0;
     }
-    .skill-btn[aria-current="true"] .scope { color: inherit; border-color: currentColor; }
+    .badges { display: flex; gap: 5px; flex-shrink: 0; }
+    .kind[data-kind="skill"] { color: #5b3df5; border-color: #cfc4fb; }
+    .kind[data-kind="agent"] { color: #0a7d52; border-color: #b6e2cf; }
+    .kind[data-kind="hook"]  { color: #b35309; border-color: #f0d3b0; }
+    .skill-btn[aria-current="true"] .scope,
+    .skill-btn[aria-current="true"] .kind { color: inherit; border-color: currentColor; }
     #detail { overflow-y: auto; padding: 20px 24px; }
     #detail .meta { color: var(--muted); font-size: 12px; margin: 0 0 4px; }
     #detail h2 { margin: 0 0 10px; font-size: 20px; }
@@ -57,19 +62,20 @@
 </head>
 <body>
   <header>
-    <h1>Claude Code Skill Browser</h1>
+    <h1>Claude Code Browser</h1>
     <span class="count" id="count"></span>
-    <input id="search" type="search" placeholder="Search skills…" aria-label="Search skills">
+    <input id="search" type="search" placeholder="Search skills, agents, hooks…"
+           aria-label="Search skills, agents, and hooks">
   </header>
   <main>
-    <nav id="list" aria-label="Skills"></nav>
+    <nav id="list" aria-label="Skills, agents, and hooks"></nav>
     <article id="detail" aria-live="polite">
-      <p class="empty">Select a skill to view its instructions.</p>
+      <p class="empty">Select an item to view its details.</p>
     </article>
   </main>
 
   <script>
-    let skills = [];
+    let members = [];
     const listEl = document.getElementById('list');
     const detailEl = document.getElementById('detail');
     const countEl = document.getElementById('count');
@@ -77,35 +83,43 @@
 
     function render(filter) {
       const q = filter.trim().toLowerCase();
-      const matches = skills.filter(s =>
-        !q || s.name.toLowerCase().includes(q) || s.scope.toLowerCase().includes(q) ||
-        s.plugin.toLowerCase().includes(q) || s.description.toLowerCase().includes(q));
+      const matches = members.filter(m =>
+        !q || m.name.toLowerCase().includes(q) || m.scope.toLowerCase().includes(q) ||
+        m.kind.toLowerCase().includes(q) || m.plugin.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q));
 
       listEl.replaceChildren();
       let currentPlugin = null;
-      for (const s of matches) {
-        if (s.plugin !== currentPlugin) {
-          currentPlugin = s.plugin;
+      for (const m of matches) {
+        if (m.plugin !== currentPlugin) {
+          currentPlugin = m.plugin;
           const h = document.createElement('h2');
-          h.textContent = s.plugin;
+          h.textContent = m.plugin;
           listEl.appendChild(h);
         }
         const btn = document.createElement('button');
         btn.className = 'skill-btn';
         const nm = document.createElement('span');
-        nm.textContent = s.name;
+        nm.textContent = m.name;
+        const badges = document.createElement('span');
+        badges.className = 'badges';
+        const kd = document.createElement('span');
+        kd.className = 'kind';
+        kd.dataset.kind = m.kind;
+        kd.textContent = m.kind;
         const sc = document.createElement('span');
         sc.className = 'scope';
-        sc.textContent = s.scope;
-        btn.append(nm, sc);
-        btn.title = s.description;
-        btn.addEventListener('click', () => select(s, btn));
+        sc.textContent = m.scope;
+        badges.append(kd, sc);
+        btn.append(nm, badges);
+        btn.title = m.description;
+        btn.addEventListener('click', () => select(m, btn));
         listEl.appendChild(btn);
       }
-      countEl.textContent = `${matches.length} of ${skills.length} skills`;
+      countEl.textContent = `${matches.length} of ${members.length} items`;
     }
 
-    async function select(s, btn) {
+    async function select(m, btn) {
       for (const b of listEl.querySelectorAll('.skill-btn'))
         b.removeAttribute('aria-current');
       btn.setAttribute('aria-current', 'true');
@@ -113,30 +127,30 @@
       detailEl.replaceChildren();
       const meta = document.createElement('p');
       meta.className = 'meta';
-      meta.textContent = `${s.scope} · ${s.plugin} · ${s.marketplace} · v${s.version}`;
+      meta.textContent = `${m.kind} · ${m.scope} · ${m.plugin} · ${m.marketplace} · v${m.version}`;
       const title = document.createElement('h2');
-      title.textContent = s.name;
+      title.textContent = m.name;
       const desc = document.createElement('p');
       desc.className = 'desc';
-      desc.textContent = s.description;
+      desc.textContent = m.description;
       const pre = document.createElement('pre');
       pre.textContent = 'Loading…';
       detailEl.append(meta, title, desc, pre);
 
       try {
-        const res = await fetch(`/api/skill?id=${s.id}`);
-        pre.textContent = res.ok ? await res.text() : 'Could not load this skill.';
+        const res = await fetch(`/api/member?id=${m.id}`);
+        pre.textContent = res.ok ? await res.text() : 'Could not load this item.';
       } catch {
-        pre.textContent = 'Could not load this skill.';
+        pre.textContent = 'Could not load this item.';
       }
     }
 
     searchEl.addEventListener('input', () => render(searchEl.value));
 
-    fetch('/api/skills')
+    fetch('/api/members')
       .then(r => r.json())
-      .then(data => { skills = data; render(''); })
-      .catch(() => { countEl.textContent = 'Failed to load skills.'; });
+      .then(data => { members = data; render(''); })
+      .catch(() => { countEl.textContent = 'Failed to load items.'; });
   </script>
 </body>
 </html>

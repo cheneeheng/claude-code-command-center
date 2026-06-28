@@ -39,7 +39,9 @@ Both surfaces use the same read/merge/write logic (implemented independently in 
 
 ## Key implementation details
 
-- `server.py` stdlib only — no pip dependencies.
+- `server.py` depends only on the in-repo `claude-plugins` library (stdlib otherwise) for
+  reading installed plugins/skills/agents/hooks; no third-party pip dependencies. The VSCode
+  extension ships a parallel Node port of that logic — see `docs/shared-plugin-logic.md`.
 - If `installed_plugins.json` is missing, `server.py` falls back to `MOCK_PLUGINS` and sets `"mock": true` in the API response.
 - VSCode extension confirmation is opt-in via the `skillsToggle.confirmActions` setting (default `false`). When enabled, toggle/uninstall show a `showWarningMessage`; on cancel, current state is re-posted to reset the webview toggle. When disabled (default), these actions apply immediately.
 - CORS in `server.py` is restricted to `http://localhost` only.
