@@ -65,11 +65,25 @@ header .count { color: var(--fg-muted); font-size: 12px; }
 /* --- Two-pane layout --- */
 main { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; flex: 1; min-height: 0; }
 #list { overflow-y: auto; border-right: 1px solid var(--border); background: var(--surface); }
-#list h2 {
+
+/* --- Collapsible sections (one <details> per plugin / loose group) --- */
+#list .group { border-bottom: 2px solid var(--border-strong); }
+#list summary {
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
-  color: var(--fg-muted); padding: 10px 14px 4px; position: sticky; top: 0;
-  background: var(--surface);
+  color: var(--fg-muted); padding: 9px 14px; cursor: pointer; user-select: none;
+  position: sticky; top: 0; z-index: 1; background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px; list-style: none;
 }
+#list summary::-webkit-details-marker { display: none; }
+#list summary::before {
+  content: "\25B8"; color: var(--fg-muted); transition: transform .15s;
+}
+#list .group[open] > summary::before { transform: rotate(90deg); }
+#list summary:hover { color: var(--fg); background: var(--border); }
+#list summary:focus-visible { outline: 2px solid var(--secondary); outline-offset: -2px; }
+#list .group-count { margin-left: auto; opacity: .8; }
+#list .group-body { padding: 4px 0; }
 
 .skill-btn {
   display: flex; justify-content: space-between; align-items: center; gap: 8px;
