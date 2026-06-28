@@ -23,6 +23,7 @@ from claude_plugins import (
     load_plugin_agents,
     load_plugin_hooks,
     load_plugin_skills,
+    loose_bases,
 )
 
 HERE = Path(__file__).parent
@@ -37,6 +38,9 @@ class Member:
 
     For skills and agents the body is read on demand from ``path``; for hooks
     (no single source file) a rendered ``body`` is precomputed at scan time.
+    ``source`` distinguishes plugin members from loose (non-plugin) ones authored
+    directly under a ``.claude`` dir; ``shadowed`` marks an entry overridden by a
+    higher-precedence one of the same kind+name (loose wins over plugin).
     """
 
     id: int
@@ -49,6 +53,8 @@ class Member:
     description: str
     path: str
     body: str
+    source: str = "plugin"
+    shadowed: bool = False
 
 
 def _render_hook(hook: PluginHook) -> str:
@@ -59,6 +65,28 @@ def _render_hook(hook: PluginHook) -> str:
         if action.get("detail"):
             lines.append(f"    {action['detail']}")
     return "\n".join(lines)
+
+
+def _precedence(member: Member) -> int:
+    """Rank for shadow resolution (lower wins): loose project, loose user, plugin."""
+    if member.source == "loose":
+        return 0 if member.scope == "project" else 1
+    return 2
+
+
+def _mark_shadowed(members: list[Member]) -> None:
+    """Flag each member overridden by a higher-precedence kind+name (in place).
+
+    Loose components win over plugin ones; loose project wins over loose user.
+    """
+    best: dict[tuple[str, str], int] = {}
+    for m in members:
+        key = (m.kind, m.name)
+        rank = _precedence(m)
+        if key not in best or rank < best[key]:
+            best[key] = rank
+    for m in members:
+        m.shadowed = _precedence(m) > best[(m.kind, m.name)]
 
 
 def load_members(project_root: Path) -> list[Member]:
@@ -87,6 +115,19 @@ def load_members(project_root: Path) -> list[Member]:
                     Member(0, "hook", scope, plugin, marketplace, version,
                            name, desc, "", _render_hook(hook))
                 )
+    # Loose (non-plugin) skills/agents authored directly under a .claude dir.
+    for scope, base in loose_bases(project_root).items():
+        for skill in load_plugin_skills(base):
+            members.append(
+                Member(0, "skill", scope, "", "", "",
+                       skill.name, skill.description, skill.path, "", source="loose")
+            )
+        for agent in load_plugin_agents(base):
+            members.append(
+                Member(0, "agent", scope, "", "", "",
+                       agent.name, agent.description, agent.path, "", source="loose")
+            )
+    _mark_shadowed(members)
     members.sort(key=lambda m: (m.scope, m.plugin, _KIND_ORDER[m.kind], m.name))
     for index, member in enumerate(members):
         member.id = index
@@ -148,8 +189,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    """Entry point for the plugin-component-browser server."""
-    parser = argparse.ArgumentParser(prog="plugin-component-browser")
+    """Entry point for the claude-component-browser server."""
+    parser = argparse.ArgumentParser(prog="claude-component-browser")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7780)
     args = parser.parse_args()

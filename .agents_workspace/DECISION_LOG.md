@@ -554,3 +554,27 @@ double-prefixes remain outside the two historical files.
 **Decision:** Renamed via git mv (history preserved) and updated all non-historical references (pyproject, both READMEs, root README/CLAUDE.md, register, lib README/__init__, extension.js cross-ref). Created apps/plugin-component-browser/styles.css as a trimmed copy: kept the Tidewater token palette + base typography + light/auto-dark, dropped the VSCode bridge, [data-theme] toggle blocks, and all toggler-only classes; re-skinned this app's two-pane layout with the tokens. Added kind-badge tokens (skill/agent/hook) for theme-aware contrast. Skipped the remote Google Fonts link (system-font fallbacks) to keep this localhost, stdlib, offline tool dependency-free. Inline <style> in index.html replaced by a linked /styles.css served via a new server route.
 **Impact / Risk:** Low. Fonts differ from the toggler (system fallbacks vs Fraunces/Hanken/JetBrains) — upgrade path is to add the same <link> if exact font parity is wanted. DECISION_LOG history entries left referencing the old name on purpose.
 **Outcome:** ruff + mypy strict clean; smoke confirms /styles.css and /api/members resolve and the index loads.
+
+### Entry 19
+
+**Type:** Decision
+**Mode:** Interactive (user-confirmed)
+**Timestamp:** 2026-06-28
+**Task:** Extend libs/claude-plugins to discover loose (non-plugin) skills/agents and surface them in the browser with loose-over-plugin precedence.
+
+**Context:** The library read only installed plugins (installed_plugins.json). The user wanted the browser/toggler to also show locally-created and per-project skills that live directly under a .claude dir, not in a plugin. Two forks: (a) how much to put in the library vs the consumer, (b) precedence on name collisions, (c) whether the toggler should also gain a loose-component surface.
+**Decision:** Added only discovery to the library — claude_dir() (extracted from plugins_base) and loose_bases(project_root) -> {user: <claude_dir>, project: <root>/.claude}. The existing member readers (load_plugin_skills/agents) already accept any base, so no new reader. Precedence/shadow logic stays in the browser (single consumer in v1, per the repo's "extract on the second consumer" rule). Precedence (user-confirmed): project-loose > user-loose > plugin; collisions are marked shadowed, not hidden (read-only viewer shows the full picture). Scope limited to skills + agents; loose hooks (settings.json) and commands deferred as a separate feature. Toggler NOT extended to toggle loose components — Claude Code has no native per-project on/off for loose skills, and faking one by mutating authored/committed files is out of scope; the toggler keeps toggling plugins only.
+**Impact / Risk:** Low. Library gains two pure path helpers (stdlib, strict mypy clean). Browser Member gains source/shadowed fields; /api/members now emits them. Node copy (extension.js) intentionally NOT given loose discovery — registered as Python-only in docs/shared-plugin-logic.md to avoid being read as drift.
+**Outcome:** ruff + mypy strict clean on lib and app; smoke test confirms loose discovery and that a project-loose skill shadows the same-named user-loose skill.
+
+### Entry 20
+
+**Type:** Decision
+**Mode:** Interactive (user-confirmed name)
+**Timestamp:** 2026-06-28
+**Task:** Rename apps/plugin-component-browser -> apps/claude-component-browser.
+
+**Context:** The app now browses plugin AND loose components, so "plugin-component-browser" undersold it; "component-browser" alone was judged not self-evident. User chose claude-component-browser. The toggler was intentionally NOT renamed (it only toggles plugins — name stays accurate).
+**Decision:** Moved the folder (git tracked all files as renames; the app .venv was deleted and re-synced because moving it left stale absolute paths in its trampoline scripts). Updated all non-historical references: pyproject name + uv.lock (regenerated via uv lock), app README (also refreshed to describe loose components), server.py prog, root README + CLAUDE.md catalog, docs/shared-plugin-logic.md, libs/claude-plugins README + __init__ docstring, ci.yml ruff+mypy matrices, and the extension.js cross-ref comment. DECISION_LOG history entries left referencing the old name on purpose.
+**Impact / Risk:** Low/mechanical. CI matrix paths updated so lint+typecheck still target the member. No public Python import path changed (the package dir libs/claude_plugins is unchanged; only the app folder moved).
+**Outcome:** ruff + mypy strict clean from the new path; smoke test passes from the renamed dir.

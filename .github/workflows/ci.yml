@@ -20,7 +20,7 @@ jobs:
           - apps/multi-repo-plan-runner
           - apps/per-project-plugin-toggler
           - apps/usage-dashboard
-          - apps/plugin-component-browser
+          - apps/claude-component-browser
           - tools/statusline-hook
           - tools/usage-report
           - libs/claude-usage
@@ -47,7 +47,7 @@ jobs:
             target: src
           - member: tools/usage-report
             target: src
-          - member: apps/plugin-component-browser
+          - member: apps/claude-component-browser
             target: server.py
     steps:
       - uses: actions/checkout@v4

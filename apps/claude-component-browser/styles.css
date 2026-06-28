@@ -82,15 +82,20 @@ main { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; flex: 1; 
 
 /* --- Badges --- */
 .badges { display: flex; gap: 5px; flex-shrink: 0; }
-.scope, .kind {
+.scope, .kind, .source {
   font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: var(--fg-muted);
   border: 1px solid var(--border); border-radius: 999px; padding: 1px 6px; flex-shrink: 0;
 }
 .kind[data-kind="skill"] { color: var(--kind-skill); border-color: var(--kind-skill); }
 .kind[data-kind="agent"] { color: var(--kind-agent); border-color: var(--kind-agent); }
 .kind[data-kind="hook"]  { color: var(--kind-hook);  border-color: var(--kind-hook); }
+.source { color: var(--secondary); border-color: var(--secondary); }
 .skill-btn[aria-current="true"] .scope,
-.skill-btn[aria-current="true"] .kind { color: inherit; border-color: currentColor; }
+.skill-btn[aria-current="true"] .kind,
+.skill-btn[aria-current="true"] .source { color: inherit; border-color: currentColor; }
+
+/* Shadowed: overridden by a higher-precedence component of the same kind+name. */
+.skill-btn.shadowed > span:first-child { opacity: .55; text-decoration: line-through; }
 
 /* --- Detail pane --- */
 #detail { overflow-y: auto; padding: 20px 24px; }
