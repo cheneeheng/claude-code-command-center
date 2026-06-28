@@ -1,11 +1,11 @@
 #!/usr/bin/env pwsh
-# Catalog of the installable tools/ members the command-center orchestrator manages.
+# Catalog of the installable members the command-center orchestrator manages.
 # Dot-source this and call Get-CommandCenterRegistry -RepoRoot <repo root>.
 #
 # Each descriptor is a [pscustomobject] with:
 #   Name           - member folder name / manifest key
 #   DisplayName    - human label
-#   Category       - 'tools'
+#   Category       - 'tools' or 'apps'
 #   SetupScript    - absolute path to the member's own install/uninstall script
 #   Version        - version string (VERSION file or pyproject), or $null
 #   RequiredConfig - config keys that must be present for an unattended (-All) install
@@ -28,6 +28,7 @@ function Get-CommandCenterRegistry {
     param([Parameter(Mandatory)][string]$RepoRoot)
 
     $tools = Join-Path $RepoRoot 'tools'
+    $apps  = Join-Path $RepoRoot 'apps'
 
     # --- session-name-date-prefixer ------------------------------------------
     $snpDir = Join-Path $tools 'session-name-date-prefixer'
@@ -171,5 +172,22 @@ function Get-CommandCenterRegistry {
         }
     }
 
-    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests)
+    # --- usage-dashboard -----------------------------------------------------
+    $udDir = Join-Path $apps 'usage-dashboard'
+    $usageDashboard = [pscustomobject]@{
+        Name           = 'usage-dashboard'
+        DisplayName    = 'Usage dashboard'
+        Category       = 'apps'
+        SetupScript    = Join-Path $udDir 'usage-dashboard-setup.ps1'
+        Version        = Read-MemberVersion $udDir
+        RequiredConfig = @()
+        Install        = { param($SetupScript, $Config) & $SetupScript -Action install | Out-Null; @{} }
+        Uninstall      = { param($SetupScript, $Entry)  & $SetupScript -Action uninstall | Out-Null }
+        Detect         = {
+            param($Entry)
+            [bool](Get-ScheduledTask -TaskName 'StartStatuslineServer' -TaskPath '\ClaudeAutomation\' -ErrorAction SilentlyContinue)
+        }
+    }
+
+    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $usageDashboard)
 }

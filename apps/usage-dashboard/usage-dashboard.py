@@ -6,10 +6,10 @@ Reads ~/.claude/projects/**/*.jsonl and serves a live dashboard on localhost:808
 No pip install. No dependencies. Pure stdlib.
 
 Usage:
-    python3 cc-statusline-dashboard-server.py
-    python3 cc-statusline-dashboard-server.py --port 9000
-    python3 cc-statusline-dashboard-server.py --host 0.0.0.0 --port 8080
-    python3 cc-statusline-dashboard-server.py --claude-dir ~/.claude ~/work/.claude
+    python3 usage-dashboard.py
+    python3 usage-dashboard.py --port 9000
+    python3 usage-dashboard.py --host 0.0.0.0 --port 8080
+    python3 usage-dashboard.py --claude-dir ~/.claude ~/work/.claude
 
 Module layout:
     claude-usage (lib)   - transcript parsing + pricing (load_sessions, estimated_cost)

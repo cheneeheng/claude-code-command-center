@@ -578,3 +578,27 @@ double-prefixes remain outside the two historical files.
 **Decision:** Moved the folder (git tracked all files as renames; the app .venv was deleted and re-synced because moving it left stale absolute paths in its trampoline scripts). Updated all non-historical references: pyproject name + uv.lock (regenerated via uv lock), app README (also refreshed to describe loose components), server.py prog, root README + CLAUDE.md catalog, docs/shared-plugin-logic.md, libs/claude-plugins README + __init__ docstring, ci.yml ruff+mypy matrices, and the extension.js cross-ref comment. DECISION_LOG history entries left referencing the old name on purpose.
 **Impact / Risk:** Low/mechanical. CI matrix paths updated so lint+typecheck still target the member. No public Python import path changed (the package dir libs/claude_plugins is unchanged; only the app folder moved).
 **Outcome:** ruff + mypy strict clean from the new path; smoke test passes from the renamed dir.
+
+### Entry 21
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-28T00:00:00Z
+**Task:** Rename usage-dashboard files to match the folder name; register the app in setup/registry.ps1.
+
+**Context:** "Files follow the folder name" was unscoped. Three files carried the legacy
+`cc-statusline-dashboard-server*` prefix; the internal modules (session_stats.py, merge.py,
+dashboard_*.py/css/js) are already descriptive. The scheduled task name and two history docs
+also reference the old names. registry.ps1 was documented as a tools/-only catalog.
+**Decision:** Renamed only the three legacy-prefixed files (`usage-dashboard.py`,
+`usage-dashboard-setup.ps1`, `usage-dashboard-start-once.ps1`) via `git mv`; left the
+descriptive internal modules untouched. Left the scheduled task name `StartStatuslineServer`
+unchanged (renaming it changes installed-task identity for existing users — out of scope).
+Left `docs/automation-suite.md` and `docs/automation-suite-decision-log.md` unchanged — both
+explicitly document the pre-split historical module, so editing them would falsify history.
+Extended registry.ps1 to cover an `apps/` member (Category 'apps') rather than restricting it
+to tools/; the orchestrator iterates descriptors generically, so this is safe.
+**Impact / Risk:** Existing installs created under the old task name still resolve (task name
+unchanged). Detect uses that task name. No functional change to the server.
+**Outcome:** Files renamed, refs updated, PS/py parse-checks pass, registry loads and resolves
+the new descriptor (Version 0.1.0).

@@ -1,4 +1,4 @@
-# Starts cc-statusline-dashboard-server.py only if no instance is already listening on the port.
+# Starts usage-dashboard.py only if no instance is already listening on the port.
 # Used as the scheduled task action so duplicate launches are safe.
 
 param([int]$Port = 8080)
@@ -7,7 +7,7 @@ $listening = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction Si
 if ($listening) { exit 0 }
 
 $pythonExe  = (python -c "import sys; print(sys.executable)")
-$scriptPath = Join-Path $PSScriptRoot "cc-statusline-dashboard-server.py"
+$scriptPath = Join-Path $PSScriptRoot "usage-dashboard.py"
 $claudeDir1 = Join-Path $env:USERPROFILE ".claude"
 $claudeDir2 = Join-Path $env:USERPROFILE ".claude_devcontainer"
 
