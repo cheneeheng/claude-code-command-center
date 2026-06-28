@@ -32,19 +32,20 @@
       const matches = members.filter(m =>
         !q || m.name.toLowerCase().includes(q) || m.scope.toLowerCase().includes(q) ||
         m.kind.toLowerCase().includes(q) || m.plugin.toLowerCase().includes(q) ||
-        m.description.toLowerCase().includes(q));
+        m.source.toLowerCase().includes(q) || m.description.toLowerCase().includes(q));
 
       listEl.replaceChildren();
-      let currentPlugin = null;
+      let currentGroup = null;
       for (const m of matches) {
-        if (m.plugin !== currentPlugin) {
-          currentPlugin = m.plugin;
+        const group = m.plugin || '(loose)';
+        if (group !== currentGroup) {
+          currentGroup = group;
           const h = document.createElement('h2');
-          h.textContent = m.plugin;
+          h.textContent = group;
           listEl.appendChild(h);
         }
         const btn = document.createElement('button');
-        btn.className = 'skill-btn';
+        btn.className = m.shadowed ? 'skill-btn shadowed' : 'skill-btn';
         const nm = document.createElement('span');
         nm.textContent = m.name;
         const badges = document.createElement('span');
@@ -57,8 +58,16 @@
         sc.className = 'scope';
         sc.textContent = m.scope;
         badges.append(kd, sc);
+        if (m.source === 'loose') {
+          const src = document.createElement('span');
+          src.className = 'source';
+          src.textContent = 'loose';
+          badges.append(src);
+        }
         btn.append(nm, badges);
-        btn.title = m.description;
+        btn.title = m.shadowed
+          ? `${m.description}\n(shadowed by a higher-precedence ${m.kind} of the same name)`
+          : m.description;
         btn.addEventListener('click', () => select(m, btn));
         listEl.appendChild(btn);
       }
@@ -73,7 +82,13 @@
       detailEl.replaceChildren();
       const meta = document.createElement('p');
       meta.className = 'meta';
-      meta.textContent = `${m.kind} · ${m.scope} · ${m.plugin} · ${m.marketplace} · v${m.version}`;
+      const parts = [
+        m.kind, m.scope,
+        m.source === 'loose' ? 'loose' : m.plugin,
+        m.marketplace, m.version ? `v${m.version}` : '',
+        m.shadowed ? 'shadowed' : '',
+      ].filter(Boolean);
+      meta.textContent = parts.join(' · ');
       const title = document.createElement('h2');
       title.textContent = m.name;
       const desc = document.createElement('p');

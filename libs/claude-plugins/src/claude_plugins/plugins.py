@@ -10,21 +10,57 @@ import json
 import os
 from pathlib import Path
 
-__all__ = ["load_installed_plugins", "normalise_path", "plugins_base"]
+__all__ = [
+    "claude_dir",
+    "load_installed_plugins",
+    "loose_bases",
+    "normalise_path",
+    "plugins_base",
+]
 
 
-def plugins_base() -> Path:
-    """Return ``<claude_dir>/plugins``, honouring the first ``$CLAUDE_DIR`` entry.
+def claude_dir() -> Path:
+    """Return the Claude config dir, honouring the first ``$CLAUDE_DIR`` entry.
 
     ``$CLAUDE_DIR`` may be a pathsep-separated list; only its first entry is used.
     Falls back to ``~/.claude`` when the variable is unset.
 
     Returns:
-        The plugins directory path.
+        The Claude config directory path.
     """
     env = os.environ.get("CLAUDE_DIR", "")
-    base = Path(env.split(os.pathsep)[0].strip()) if env else Path.home() / ".claude"
-    return base / "plugins"
+    return Path(env.split(os.pathsep)[0].strip()) if env else Path.home() / ".claude"
+
+
+def plugins_base() -> Path:
+    """Return ``<claude_dir>/plugins``.
+
+    Returns:
+        The plugins directory path.
+    """
+    return claude_dir() / "plugins"
+
+
+def loose_bases(project_root: Path) -> dict[str, str]:
+    """Map scope to the ``.claude`` base dir holding loose (non-plugin) components.
+
+    Loose skills and agents live under ``<base>/skills/<name>/SKILL.md`` and
+    ``<base>/agents/<name>.md`` — the same on-disk layout as a plugin, so the
+    plugin member readers accept these bases directly. Loose components exist
+    only at user and project scope; ``local`` is a plugin/settings concept with
+    no loose equivalent on disk.
+
+    Args:
+        project_root: The project directory whose ``.claude`` dir holds
+            project-scope loose components.
+
+    Returns:
+        ``{"user": <claude_dir>, "project": <project_root>/.claude}``.
+    """
+    return {
+        "user": str(claude_dir()),
+        "project": str(Path(project_root) / ".claude"),
+    }
 
 
 def normalise_path(p: str) -> str:

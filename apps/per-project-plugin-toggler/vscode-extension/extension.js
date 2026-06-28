@@ -40,7 +40,7 @@ function normalisePath(p) {
 
 // Cross-reference: loadInstalledPlugins, parseSkillFrontmatter and the skill
 // enumeration here are a parallel Node port of the libs/claude-plugins library
-// (consumed by html/server.py and apps/plugin-component-browser/server.py). A Python library
+// (consumed by html/server.py and apps/claude-component-browser/server.py). A Python library
 // can't serve this surface, so this copy is kept in sync by hand — see
 // docs/shared-plugin-logic.md.
 function loadInstalledPlugins(projectRoot) {
