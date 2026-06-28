@@ -1,10 +1,10 @@
-# Combined install/uninstall for the statusline dashboard server task.
-# Registers a Windows Task Scheduler task that starts cc-statusline-dashboard-server.py
+# Combined install/uninstall for the usage dashboard server task.
+# Registers a Windows Task Scheduler task that starts usage-dashboard.py
 # at logon and on resume from sleep/hibernate. Run as the current user (no elevation required).
 # Usage:
-#   .\cc-statusline-dashboard-server-setup.ps1                       # install (default)
-#   .\cc-statusline-dashboard-server-setup.ps1 -Action install
-#   .\cc-statusline-dashboard-server-setup.ps1 -Action uninstall
+#   .\usage-dashboard-setup.ps1                       # install (default)
+#   .\usage-dashboard-setup.ps1 -Action install
+#   .\usage-dashboard-setup.ps1 -Action uninstall
 param(
     [ValidateSet('install', 'uninstall')]
     [string]$Action = 'install'
@@ -12,7 +12,7 @@ param(
 
 $taskFolder = "\ClaudeAutomation"
 $taskName   = "StartStatuslineServer"
-$wrapperPath = Join-Path $PSScriptRoot "cc-statusline-dashboard-server-start-once.ps1"
+$wrapperPath = Join-Path $PSScriptRoot "usage-dashboard-start-once.ps1"
 
 function Install-StatuslineServerTask {
     # Ensure the task folder exists

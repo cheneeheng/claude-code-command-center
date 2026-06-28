@@ -3,7 +3,7 @@
 An HTTP server that reads Claude Code's local logs and serves a single-page
 dashboard of token usage, cost, and live rate limits. Its one dependency is the
 local [`claude-usage`](../../libs/claude-usage/) library (transcript parsing +
-pricing); run it with `uv run python cc-statusline-dashboard-server.py`.
+pricing); run it with `uv run python usage-dashboard.py`.
 
 ```
 http://localhost:8080
@@ -45,7 +45,7 @@ That single override lives in `merge.py._apply_actual_cost` and nowhere else.
 ## Module layout
 
 ```
-cc-statusline-dashboard-server.py   ← entry point (CLI, starts HTTP server)
+usage-dashboard.py                  ← entry point (CLI, starts HTTP server)
 │
 ├── claude-usage (library)          ← transcript parsing + pricing (load_sessions, estimated_cost)
 ├── dashboard_config.py             ← CLAUDE_DIRS, live-session timeout
@@ -120,7 +120,7 @@ sessions and aggregates everything, the server ships it as JSON, and
 
 | File | Responsibility |
 |------|----------------|
-| `cc-statusline-dashboard-server.py` | Entry point. CLI args (`--host/--port/--claude-dir`), trims statusline logs on startup, starts the HTTP server. |
+| `usage-dashboard.py` | Entry point. CLI args (`--host/--port/--claude-dir`), trims statusline logs on startup, starts the HTTP server. |
 | `dashboard_config.py` | Runtime config only: `CLAUDE_DIRS` (overridable via `--claude-dir`) and the live-session timeout. Parsing and the pricing table live in the `claude-usage` library. |
 | `session_stats.py` | **Source 1.** Loads per-session token/cost summaries from `claude-usage` and aggregates them (`summarize_sessions`) into totals and the by-day / by-project / by-model breakdowns. |
 | `live_statusline.py` | **Source 2.** Reads the statusline logs into live per-session state (rate limits, context %, *actual* cost); also `trim_statusline_logs` to bound disk growth. |
@@ -170,21 +170,21 @@ parsing.
 
 ```bash
 # Default: localhost:8080, reads ~/.claude
-uv run python cc-statusline-dashboard-server.py
+uv run python usage-dashboard.py
 
 # Custom host/port
-uv run python cc-statusline-dashboard-server.py --host 0.0.0.0 --port 9000
+uv run python usage-dashboard.py --host 0.0.0.0 --port 9000
 
 # Aggregate multiple Claude config dirs as if they were one
-uv run python cc-statusline-dashboard-server.py --claude-dir ~/.claude ~/.claude_devcontainer
+uv run python usage-dashboard.py --claude-dir ~/.claude ~/.claude_devcontainer
 ```
 
 To run it automatically on Windows (logon + resume from sleep), use the
 scheduled-task installer:
 
 ```powershell
-.\cc-statusline-dashboard-server-setup.ps1              # install
-.\cc-statusline-dashboard-server-setup.ps1 -Action uninstall
+.\usage-dashboard-setup.ps1              # install
+.\usage-dashboard-setup.ps1 -Action uninstall
 ```
 
 ### Environment variables
