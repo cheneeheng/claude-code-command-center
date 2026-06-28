@@ -1,4 +1,6 @@
 let members = [];
+let preview = true;  // render markdown by default; toggled per session in the detail pane
+const md = window.markdownit();  // html:false by default -> raw HTML is escaped, links sanitized
 const listEl = document.getElementById('list');
 const detailEl = document.getElementById('detail');
 const countEl = document.getElementById('count');
@@ -89,15 +91,45 @@ async function select(m, btn) {
   const desc = document.createElement('p');
   desc.className = 'desc';
   desc.textContent = m.description;
-  const pre = document.createElement('pre');
-  pre.textContent = 'Loading…';
-  detailEl.append(meta, title, desc, pre);
+  detailEl.append(meta, title, desc);
+
+  // Only skills/agents are markdown; hooks carry a pre-rendered plain-text body.
+  const isMarkdown = m.kind === 'skill' || m.kind === 'agent';
+  let bodyText = '';
+  const content = document.createElement('div');
+  content.textContent = 'Loading…';
+
+  const paint = () => {
+    content.replaceChildren();
+    if (isMarkdown && preview) {
+      content.className = 'markdown-body';
+      content.innerHTML = md.render(bodyText);
+    } else {
+      content.className = 'raw-body';
+      const pre = document.createElement('pre');
+      pre.textContent = bodyText;
+      content.appendChild(pre);
+    }
+  };
+
+  if (isMarkdown) {
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'view-toggle';
+    const sync = () => { toggle.textContent = preview ? 'View raw' : 'View rendered'; };
+    sync();
+    toggle.addEventListener('click', () => { preview = !preview; sync(); paint(); });
+    detailEl.append(toggle);
+  }
+  detailEl.append(content);
 
   try {
     const res = await fetch(`/api/member?id=${m.id}`);
-    pre.textContent = res.ok ? await res.text() : 'Could not load this item.';
+    if (res.ok) { bodyText = await res.text(); paint(); }
+    else { content.className = 'raw-body'; content.textContent = 'Could not load this item.'; }
   } catch {
-    pre.textContent = 'Could not load this item.';
+    content.className = 'raw-body';
+    content.textContent = 'Could not load this item.';
   }
 }
 

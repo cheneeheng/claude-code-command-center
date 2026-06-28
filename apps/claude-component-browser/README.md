@@ -21,8 +21,10 @@ component and a plugin one share a kind+name, the loose one wins and the other i
 **shadowed** (struck through); loose project beats loose user beats plugin.
 
 - **Search** filters by name, description, plugin, source, scope, or kind.
-- **Detail pane** shows the selected item's body — a skill/agent's markdown, or a rendered view of
-  a hook's event, matcher, and actions.
+- **Detail pane** shows the selected item's body. A skill/agent's markdown is rendered (via a
+  vendored, offline copy of `markdown-it` with raw HTML escaped); use the **View raw / View
+  rendered** toggle to switch. Hooks show a rendered view of their event, matcher, and actions.
+- **Sections** group by plugin (loose components first) and collapse; each shows an item count.
 - Honours `$C4_CLAUDE_DIR` (first entry) to point at a different config dir.
 
 The plugin/skill/agent/hook reading lives in the
