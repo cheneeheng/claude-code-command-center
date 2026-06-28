@@ -71,11 +71,19 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   rendered on the VSCode marketplace page; and `scheduled-session-digests`, whose four
   independently installable digests (`daily-summary`, `daily-lessons`, `weekly-lessons`,
   `git-sync`) each keep their own README under their sub-folder, linked from the member's top
-  README. Members do not carry their own `CHANGELOG.md`; release history will live in a single
-  root changelog once the repo cuts its first release. No per-member planning docs and no
-  per-member decision logs: build planning is ephemeral, and agent decisions go in the active
+  README. Independently released components keep their own `CHANGELOG.md` (Keep a Changelog
+  format) tracking that component's tagged releases; the repo as a whole also keeps a root
+  `CHANGELOG.md` once it cuts its first repo-wide release. Components not yet released
+  independently carry no `CHANGELOG.md` until their first release. No per-member planning docs and
+  no per-member decision logs: build planning is ephemeral, and agent decisions go in the active
   `.agents_workspace/DECISION_LOG.md` (historical per-member logs are frozen in
   `.agents_workspace/archive/decision-log.md`).
+- **Releases:** two independent axes with non-overlapping tag namespaces. A *component* release is
+  a SemVer tag prefixed with the component's short alias (e.g. `pppt-vX.Y.Z` for
+  `per-project-plugin-toggler`) and triggers only that component's release workflow. A *whole-repo*
+  release is a bare `vX.Y.Z` tag. The bare `v*` namespace never collides with a prefixed
+  `<alias>-v*` one, so the axes coexist. See `docs/releasing.md` for the prefix→component table and
+  the per-component release steps.
 
 ## Scope discipline
 

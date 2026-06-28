@@ -707,3 +707,83 @@ direction; CLAUDE.md updated to match so the convention and the tree agree.
 **Outcome:** Root `ci.yml` parses (pyyaml safe_load OK; 8 jobs). Only a root-level
 `.agents_workspace` remains. No live references to the old CHANGELOG/ARCHITECTURE paths outside
 frozen history.
+
+### Entry 25
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-28T00:00:00Z
+**Task:** Rework the per-project-plugin-toggler VSCode-extension release automation (the
+root-level rework Entry 24 flagged as required), on branch `chore/pppt-release-workflow`.
+
+**Context:** Entry 24 left the extension's `release.yml` inert: it lived in a subdir (GitHub only
+runs `.github/workflows` at the repo root) and triggered `on: release [released]`, which in the
+monorepo would fire on an unrelated repo-root release and try to attach the extension `.vsix` to
+it. Two forks needed resolving: (a) how to trigger an extension release independently of repo
+releases, and (b) how to sync the canonical CSS/icon into the webview on a Linux runner.
+
+**Decision:**
+- **Independent `pppt-v*` tag trigger.** Moved (`git mv`) to root
+  `.github/workflows/release-extension.yml`, triggered by `push: tags: ['pppt-v*']` plus
+  `workflow_dispatch`. This gives the extension its own version line decoupled from any repo-root
+  release tag — resolving the tag-vs-package.json conflict that caused Entry 24 to omit the
+  `version-tag` CI job. Folded that guard back in as an `Assert tag matches package.json` step
+  (`${GITHUB_REF_NAME#pppt-v}` vs `vscode-extension/package.json`), gated on `event_name == push`
+  so manual dispatch runs still package.
+- **Single `ubuntu-latest` runner** (was a ubuntu+windows matrix). The `.vsix` is
+  platform-independent JS/webview with no native modules — build once.
+- **Explicit `cp` for CSS/icon sync, not the `prepackage` hook.** The extension's `prepackage`
+  runs `make sync-css || powershell ... sync-css.ps1`; from the `vscode-extension/` dir there is no
+  Makefile (it lives at the member root) so `make` fails, and the fallback calls `powershell`
+  (Windows-only — absent on Linux; the runner has `pwsh`, not `powershell`). So on Ubuntu the hook
+  path is fragile. Mirrored the proven `extension.yml` package-check job: explicit
+  `cp html/styles.css …` (and `icon.svg`, to fully match the canonical `make sync-css`) from the
+  member-root working-directory default, then `npx vsce package`.
+
+**Impact / Risk:** Low. The workflow only fires on a `pppt-v*` tag, so it cannot disrupt repo-root
+releases. It does not publish to the Marketplace (only attaches the `.vsix` to the GitHub release
+for that tag) — adding `vsce publish` + a `VSCE_PAT` secret is the future upgrade path. Verified:
+pyyaml `safe_load` OK; canonical `html/styles.css` and `html/icon.svg` exist; the nested
+`apps/per-project-plugin-toggler/.github/workflows/` is now empty (untracked by git).
+**Outcome:** Pending — needs a real `pppt-v0.9.1` tag push to verify end to end (current
+`package.json` version is 0.9.1).
+
+### Entry 26
+
+**Type:** Decision
+**Mode:** Interactive (user-directed, two AskUserQuestion forks resolved)
+**Timestamp:** 2026-06-28T00:00:00Z
+**Task:** Establish the repo's release model — per-component vs whole-repo tags, and per-component
+changelogs — on branch `chore/pppt-release-workflow`.
+
+**Context:** The user asked for tag-based releases that can target either a single component or the
+whole repo, plus per-component changelogs, starting the plugin toggler at a tracked version. This
+directly reverses the convention PR #10 (Entry 24) had just re-established: "members do not carry
+their own CHANGELOG.md; release history lives in a single root changelog." Two forks went to the
+user: (a) the toggler's version baseline given package.json is already 0.9.1, and (b) how much to
+build now.
+
+**Decision (user-chosen where noted):**
+- **Two-axis tag model, non-overlapping namespaces.** Component release = `<alias>-vX.Y.Z`
+  (`pppt-v*` for the toggler) triggering that component's workflow; whole-repo release = bare
+  `vX.Y.Z`. `v*` never matches `<alias>-v*`, so they coexist. Documented in new `docs/releasing.md`
+  (axis table + alias registry + per-component steps) and a new **Releases** convention bullet in
+  root CLAUDE.md.
+- **Per-component CHANGELOG.md restored** (reverses Entry 24). CLAUDE.md Docs convention amended:
+  independently released components keep their own Keep-a-Changelog `CHANGELOG.md`; the repo keeps a
+  root changelog once it cuts its first repo-wide release; un-released components carry none yet.
+  Root + toggler READMEs repoint to the changelog/release guide.
+- **Version baseline = keep 0.9.1** (user choice, over reset-to-0.0.1 or 1.0.0). The new
+  `apps/per-project-plugin-toggler/CHANGELOG.md` starts at `[0.9.1] - 2026-06-12` as the first
+  release *tracked in this monorepo*, with a note that 0.x development predates this repo and
+  happened in a previous repository — so the prior per-version history is not reproduced here.
+- **Scope = toggler component only** (user choice). The whole-repo `v*` axis is documented as the
+  reserved namespace but its `release-repo.yml` + root CHANGELOG are deferred until the repo
+  actually cuts a repo-wide release (YAGNI). `release-extension.yml` already triggers on `pppt-v*`
+  and asserts tag == package.json (0.9.1), so no workflow change was needed.
+
+**Impact / Risk:** Low. Reverses the just-merged "single root changelog" direction deliberately;
+CLAUDE.md/READMEs updated so convention and tree agree. First component release is cut by tagging
+`pppt-v0.9.1` on main once this branch merges.
+**Outcome:** Pending merge of `chore/pppt-release-workflow`, then `pppt-v0.9.1` tag push to verify
+the release workflow end to end.
