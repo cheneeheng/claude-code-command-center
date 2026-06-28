@@ -1,10 +1,13 @@
 [project]
-name = "skill-browser"
+name = "plugin-component-browser"
 version = "0.1.0"
-description = "Local web browser for the Claude Code skills installed on this machine."
+description = "Local web browser for the Claude Code skills, agents, and hooks on this machine."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["claude-plugins"]
+
+[tool.uv.sources]
+claude-plugins = { path = "../../libs/claude-plugins", editable = true }
 
 [dependency-groups]
 dev = [
@@ -20,7 +23,6 @@ package = false
 line-length = 88
 target-version = "py311"
 
-# Non-strict: server.py deliberately mirrors the plugin-toggler's JSON-reading
-# logic (see docs/shared-plugin-logic.md), which is dict/Any-heavy by nature.
 [tool.mypy]
 python_version = "3.11"
+strict = true

@@ -4,7 +4,12 @@ version = "0.9.1"
 description = "Enable/disable Claude Code plugins per project from a browser UI or VSCode."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+# The Python server depends on claude-plugins; the VSCode extension ships a
+# parallel Node copy (see docs/shared-plugin-logic.md) and has no Python deps.
+dependencies = ["claude-plugins"]
+
+[tool.uv.sources]
+claude-plugins = { path = "../../libs/claude-plugins", editable = true }
 
 [dependency-groups]
 dev = [

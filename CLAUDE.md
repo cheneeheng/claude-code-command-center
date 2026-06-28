@@ -9,11 +9,11 @@ A monorepo of independent projects centered on Claude Code, grouped by category:
 
 ```
 apps/      full applications you run (cross-repo-file-diff, multi-repo-plan-runner,
-           per-project-plugin-toggler, usage-dashboard, skill-browser)
+           per-project-plugin-toggler, usage-dashboard, plugin-component-browser)
 tools/     single-purpose utilities & scripts (statusline-hook,
            session-name-date-prefixer, file-sync,
            scheduled-session-digests, usage-report)
-libs/      shared libraries (claude-usage)
+libs/      shared libraries (claude-usage, claude-plugins)
 setup/     unified installer for the installable tools/ members + per-machine manifest
 plugins/   packaged Claude Code skills/plugins (planned)
 docs/      monorepo-wide docs
@@ -32,8 +32,11 @@ the second consumer, not the first. `claude-usage` (Claude Code local-data acces
 **intentional duplication:** sometimes a library doesn't fit (e.g. a consumer is deliberately
 zero-dependency, or has a parallel non-Python implementation). When logic is copied across
 members on purpose, register it in `docs/shared-plugin-logic.md` and add a `Cross-reference:`
-comment in each copy, so the copies are kept in sync. That file is the worked example
-(plugin/skill reading, shared by `skill-browser` and `per-project-plugin-toggler`).
+comment in each copy, so the copies are kept in sync. That file is the worked example: the
+plugin/skill/agent/hook reader is the `claude-plugins` library, consumed by
+`plugin-component-browser` and `per-project-plugin-toggler`'s Python server, with only the
+toggler's VSCode **Node** port left as
+a deliberate copy a Python library can't serve.
 
 Members are **self-contained**: each keeps its own README, CHANGELOG, tests, and CLAUDE.md.
 The umbrella adds a catalog and shared conventions; it does not flatten or rewrite members.

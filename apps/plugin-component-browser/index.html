@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code Component Browser</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Claude Code Browser</h1>
+    <span class="count" id="count"></span>
+    <input id="search" type="search" placeholder="Search skills, agents, hooks…"
+           aria-label="Search skills, agents, and hooks">
+  </header>
+  <main>
+    <nav id="list" aria-label="Skills, agents, and hooks"></nav>
+    <article id="detail" aria-live="polite">
+      <p class="empty">Select an item to view its details.</p>
+    </article>
+  </main>
+
+  <script>
+    let members = [];
+    const listEl = document.getElementById('list');
+    const detailEl = document.getElementById('detail');
+    const countEl = document.getElementById('count');
+    const searchEl = document.getElementById('search');
+
+    function render(filter) {
+      const q = filter.trim().toLowerCase();
+      const matches = members.filter(m =>
+        !q || m.name.toLowerCase().includes(q) || m.scope.toLowerCase().includes(q) ||
+        m.kind.toLowerCase().includes(q) || m.plugin.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q));
+
+      listEl.replaceChildren();
+      let currentPlugin = null;
+      for (const m of matches) {
+        if (m.plugin !== currentPlugin) {
+          currentPlugin = m.plugin;
+          const h = document.createElement('h2');
+          h.textContent = m.plugin;
+          listEl.appendChild(h);
+        }
+        const btn = document.createElement('button');
+        btn.className = 'skill-btn';
+        const nm = document.createElement('span');
+        nm.textContent = m.name;
+        const badges = document.createElement('span');
+        badges.className = 'badges';
+        const kd = document.createElement('span');
+        kd.className = 'kind';
+        kd.dataset.kind = m.kind;
+        kd.textContent = m.kind;
+        const sc = document.createElement('span');
+        sc.className = 'scope';
+        sc.textContent = m.scope;
+        badges.append(kd, sc);
+        btn.append(nm, badges);
+        btn.title = m.description;
+        btn.addEventListener('click', () => select(m, btn));
+        listEl.appendChild(btn);
+      }
+      countEl.textContent = `${matches.length} of ${members.length} items`;
+    }
+
+    async function select(m, btn) {
+      for (const b of listEl.querySelectorAll('.skill-btn'))
+        b.removeAttribute('aria-current');
+      btn.setAttribute('aria-current', 'true');
+
+      detailEl.replaceChildren();
+      const meta = document.createElement('p');
+      meta.className = 'meta';
+      meta.textContent = `${m.kind} · ${m.scope} · ${m.plugin} · ${m.marketplace} · v${m.version}`;
+      const title = document.createElement('h2');
+      title.textContent = m.name;
+      const desc = document.createElement('p');
+      desc.className = 'desc';
+      desc.textContent = m.description;
+      const pre = document.createElement('pre');
+      pre.textContent = 'Loading…';
+      detailEl.append(meta, title, desc, pre);
+
+      try {
+        const res = await fetch(`/api/member?id=${m.id}`);
+        pre.textContent = res.ok ? await res.text() : 'Could not load this item.';
+      } catch {
+        pre.textContent = 'Could not load this item.';
+      }
+    }
+
+    searchEl.addEventListener('input', () => render(searchEl.value));
+
+    fetch('/api/members')
+      .then(r => r.json())
+      .then(data => { members = data; render(''); })
+      .catch(() => { countEl.textContent = 'Failed to load items.'; });
+  </script>
+</body>
+</html>

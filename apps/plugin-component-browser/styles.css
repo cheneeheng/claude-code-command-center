@@ -1,0 +1,109 @@
+/* Tidewater theme — shared look with per-project-plugin-toggler.
+   This is a trimmed copy of that app's styles.css: the VSCode bridge, the
+   explicit theme-toggle ([data-theme]) blocks, and all toggler-only component
+   classes are dropped; only the token palette + base typography are reused, then
+   this browser's own two-pane layout is skinned with the tokens. Keep the token
+   values in sync with apps/per-project-plugin-toggler/html/styles.css. */
+
+:root {
+  --font-ui:      "Hanken Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --radius-lg: 10px; --radius-md: 6px; --radius-sm: 4px;
+
+  --bg:#F0F5F3; --surface:#FFFFFF; --surface-2:#F3F8F6;
+  --fg:#143230; --fg-muted:#5F7E7A; --border:#DCEAE6; --border-strong:#C7DBD6;
+  --accent:#CB6442; --accent-wash:#FAEDE6;
+  --secondary:#0E7E77; --secondary-hi:#14938C; --secondary-wash:#E2F1EF;
+  --on-text:#fff;
+  --shadow-sm:0 1px 2px rgba(15,50,48,.06),0 1px 3px rgba(15,50,48,.05);
+
+  /* Kind badge hues (skill / agent / hook) — tuned for contrast on light surfaces. */
+  --kind-skill:#5B3DF5; --kind-agent:#0A7D52; --kind-hook:#B3502E;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg:#0C1F1D; --surface:#122A27; --surface-2:#163230;
+    --fg:#E7F1EE; --fg-muted:#7C9590; --border:#203F3A; --border-strong:#2D544D;
+    --accent:#E98A62; --accent-wash:rgba(233,138,98,.11);
+    --secondary:#2FB3A8; --secondary-hi:#45C7BC; --secondary-wash:rgba(47,179,168,.12);
+    --on-text:#06201e;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+
+    --kind-skill:#B9A3FB; --kind-agent:#45C7BC; --kind-hook:#E98A62;
+  }
+}
+
+/* --- Reset --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font: 14px/1.5 var(--font-ui);
+  color: var(--fg); background: var(--bg);
+  height: 100vh; display: flex; flex-direction: column;
+}
+
+/* --- Header --- */
+header {
+  padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface);
+  display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+}
+header h1 {
+  font-family: var(--font-display); font-optical-sizing: auto;
+  font-size: 18px; font-weight: 600; color: var(--fg);
+}
+header .count { color: var(--fg-muted); font-size: 12px; }
+#search {
+  margin-left: auto; padding: 7px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius-md); font: inherit; min-width: 240px;
+  background: var(--bg); color: var(--fg);
+}
+#search:focus-visible { outline: 2px solid var(--secondary); outline-offset: 1px; }
+
+/* --- Two-pane layout --- */
+main { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; flex: 1; min-height: 0; }
+#list { overflow-y: auto; border-right: 1px solid var(--border); background: var(--surface); }
+#list h2 {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--fg-muted); padding: 10px 14px 4px; position: sticky; top: 0;
+  background: var(--surface);
+}
+
+.skill-btn {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  width: 100%; text-align: left; border: 0; background: none;
+  padding: 7px 14px; font: inherit; color: var(--fg); cursor: pointer;
+}
+.skill-btn:hover { background: var(--surface-2); }
+.skill-btn[aria-current="true"] { background: var(--secondary); color: var(--on-text); }
+.skill-btn:focus-visible { outline: 2px solid var(--secondary); outline-offset: -2px; }
+
+/* --- Badges --- */
+.badges { display: flex; gap: 5px; flex-shrink: 0; }
+.scope, .kind {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: var(--fg-muted);
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 6px; flex-shrink: 0;
+}
+.kind[data-kind="skill"] { color: var(--kind-skill); border-color: var(--kind-skill); }
+.kind[data-kind="agent"] { color: var(--kind-agent); border-color: var(--kind-agent); }
+.kind[data-kind="hook"]  { color: var(--kind-hook);  border-color: var(--kind-hook); }
+.skill-btn[aria-current="true"] .scope,
+.skill-btn[aria-current="true"] .kind { color: inherit; border-color: currentColor; }
+
+/* --- Detail pane --- */
+#detail { overflow-y: auto; padding: 20px 24px; }
+#detail .meta { color: var(--fg-muted); font-size: 12px; margin: 0 0 4px; font-family: var(--font-mono); }
+#detail h2 { margin: 0 0 10px; font-family: var(--font-display); font-size: 20px; font-weight: 600; }
+#detail .desc { color: var(--fg-muted); margin: 0 0 18px; }
+#detail pre {
+  white-space: pre-wrap; word-wrap: break-word; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px;
+  font-size: 13px; font-family: var(--font-mono); color: var(--fg);
+}
+.empty { color: var(--fg-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

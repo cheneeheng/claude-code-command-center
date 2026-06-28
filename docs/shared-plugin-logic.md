@@ -1,46 +1,44 @@
-# Shared plugin-reading logic — intentional duplication register
+# Shared plugin-reading logic — library + intentional Node duplicate
 
-Some members independently implement the **same** logic for reading Claude Code's installed
-plugins and skills. This is a **deliberate copy**, not an accident. This file is the register:
-if you change the behaviour in one place, change it in all of them.
+Several members read the **same** thing: Claude Code's installed plugins and their members
+(skills, agents, hooks). The **Python** implementation is now a single library,
+[`libs/claude-plugins`](../libs/claude-plugins/). A **Node.js** copy survives in the VSCode
+extension because a Python library can't serve that surface — that copy is a **deliberate**
+duplicate, and this file is its register: if you change the behaviour, change it in both.
 
-## What is duplicated
+## What the logic does
 
-Reading `~/.claude/plugins/installed_plugins.json` and each plugin's `skills/<name>/SKILL.md`:
+Reading `~/.claude/plugins/installed_plugins.json` and each plugin's
+`skills/<name>/SKILL.md`, `agents/<name>.md`, and `hooks/hooks.json`:
 
 | Logic | Purpose |
 |-------|---------|
 | `normalise_path` | Cross-platform path normalisation for project-root comparison. |
 | `load_installed_plugins(project_root)` / `loadInstalledPlugins(projectRoot)` | Bucket installed plugins by **scope** (`local` / `project` / `user`), matching `projectPath` against the project root. |
-| `parse_skill_frontmatter` / `parseSkillFrontmatter` | Extract `(name, description)` from a SKILL.md's YAML frontmatter (regex; handles inline and `>-`/`\|` block scalars). |
-| skill enumeration | Walk `<installPath>/skills/*/SKILL.md`. |
+| `parse_frontmatter` / `parseSkillFrontmatter` | Extract `(name, description)` from a markdown file's YAML frontmatter (regex; handles inline and `>-`/`>`/`\|` block scalars). |
+| skill / agent / hook enumeration | Walk `<installPath>/skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`. |
 
-## The copies (keep in sync)
+## The implementations
 
-| # | Location | Language |
-|---|----------|----------|
-| 1 | `apps/skill-browser/server.py` | Python |
-| 2 | `apps/per-project-plugin-toggler/html/server.py` | Python |
-| 3 | `apps/per-project-plugin-toggler/vscode-extension/extension.js` | Node |
+| # | Location | Language | Role |
+|---|----------|----------|------|
+| 1 | `libs/claude-plugins` | Python | **Canonical** library. |
+| 2 | `apps/plugin-component-browser/server.py` | Python | Consumes #1. |
+| 3 | `apps/per-project-plugin-toggler/html/server.py` | Python | Consumes #1. |
+| 4 | `apps/per-project-plugin-toggler/vscode-extension/extension.js` | Node | **Intentional duplicate** of #1 — keep in sync by hand. |
 
-## Why copied instead of a `libs/` library
+## Why the Node copy is not de-duplicated
 
-A `libs/claude-plugins` would satisfy our library bar (cohesive domain + ≥2 consumers), but:
-
-- The plugin-toggler is deliberately **stdlib / zero-dependency** and ships a **parallel Node.js
-  implementation** (#3). A Python library can't serve the Node surface, so it would only de-dupe
-  two of the three copies while forcing a dependency onto an app that advertises having none.
-- The shared surface is small (~3 short functions).
-
-So the cost of the library (new package + refactors + a new dependency on the toggler) outweighs
-the benefit today. **Revisit extracting `libs/claude-plugins` if a fourth (Python) consumer
-appears, or if this logic grows materially.**
+The VSCode extension is a **parallel Node.js implementation** (#4). A Python library can't serve a
+Node surface, so #4 stays a copy. The Python copies (#2, #3) are gone — they now import #1, which
+is the extraction the previous version of this register predicted.
 
 ## Known intentional differences (not drift)
 
-- The toggler returns **mock** plugin data when `installed_plugins.json` is missing (a dev aid);
-  `skill-browser` returns empty (it is a read-only viewer).
-- `skill-browser` is **non-strict** mypy here specifically so its copy stays parallel to the
-  toggler's JSON-reading code rather than diverging through added type annotations.
+- The toggler returns **mock** plugin data when `installed_plugins.json` is missing (a dev aid),
+  via a thin wrapper in `html/server.py` over the library; the library itself and
+  `plugin-component-browser` return empty (read-only viewers).
+- The library raises nothing on a malformed `installed_plugins.json` — it returns empty buckets;
+  the Node copy should match (return empty rather than throw).
 - Display quirks inherited from the shared parser (e.g. a quoted `name: "x"` renders with quotes)
-  apply to all copies — fix them in all three if you fix them at all.
+  apply to all copies — fix them in the library and #4 together.
