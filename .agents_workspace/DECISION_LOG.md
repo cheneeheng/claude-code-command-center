@@ -707,3 +707,43 @@ direction; CLAUDE.md updated to match so the convention and the tree agree.
 **Outcome:** Root `ci.yml` parses (pyyaml safe_load OK; 8 jobs). Only a root-level
 `.agents_workspace` remains. No live references to the old CHANGELOG/ARCHITECTURE paths outside
 frozen history.
+
+### Entry 25
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-28T00:00:00Z
+**Task:** Rework the per-project-plugin-toggler VSCode-extension release automation (the
+root-level rework Entry 24 flagged as required), on branch `chore/pppt-release-workflow`.
+
+**Context:** Entry 24 left the extension's `release.yml` inert: it lived in a subdir (GitHub only
+runs `.github/workflows` at the repo root) and triggered `on: release [released]`, which in the
+monorepo would fire on an unrelated repo-root release and try to attach the extension `.vsix` to
+it. Two forks needed resolving: (a) how to trigger an extension release independently of repo
+releases, and (b) how to sync the canonical CSS/icon into the webview on a Linux runner.
+
+**Decision:**
+- **Independent `pppt-v*` tag trigger.** Moved (`git mv`) to root
+  `.github/workflows/release-extension.yml`, triggered by `push: tags: ['pppt-v*']` plus
+  `workflow_dispatch`. This gives the extension its own version line decoupled from any repo-root
+  release tag — resolving the tag-vs-package.json conflict that caused Entry 24 to omit the
+  `version-tag` CI job. Folded that guard back in as an `Assert tag matches package.json` step
+  (`${GITHUB_REF_NAME#pppt-v}` vs `vscode-extension/package.json`), gated on `event_name == push`
+  so manual dispatch runs still package.
+- **Single `ubuntu-latest` runner** (was a ubuntu+windows matrix). The `.vsix` is
+  platform-independent JS/webview with no native modules — build once.
+- **Explicit `cp` for CSS/icon sync, not the `prepackage` hook.** The extension's `prepackage`
+  runs `make sync-css || powershell ... sync-css.ps1`; from the `vscode-extension/` dir there is no
+  Makefile (it lives at the member root) so `make` fails, and the fallback calls `powershell`
+  (Windows-only — absent on Linux; the runner has `pwsh`, not `powershell`). So on Ubuntu the hook
+  path is fragile. Mirrored the proven `extension.yml` package-check job: explicit
+  `cp html/styles.css …` (and `icon.svg`, to fully match the canonical `make sync-css`) from the
+  member-root working-directory default, then `npx vsce package`.
+
+**Impact / Risk:** Low. The workflow only fires on a `pppt-v*` tag, so it cannot disrupt repo-root
+releases. It does not publish to the Marketplace (only attaches the `.vsix` to the GitHub release
+for that tag) — adding `vsce publish` + a `VSCE_PAT` secret is the future upgrade path. Verified:
+pyyaml `safe_load` OK; canonical `html/styles.css` and `html/icon.svg` exist; the nested
+`apps/per-project-plugin-toggler/.github/workflows/` is now empty (untracked by git).
+**Outcome:** Pending — needs a real `pppt-v0.9.1` tag push to verify end to end (current
+`package.json` version is 0.9.1).
