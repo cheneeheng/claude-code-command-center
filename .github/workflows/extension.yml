@@ -3,7 +3,13 @@ name: CI · VSCode extension (per-project-plugin-toggler)
 on:
   push:
     branches: [main]
+    paths:
+      - 'apps/per-project-plugin-toggler/**'
+      - '.github/workflows/extension.yml'
   pull_request:
+    paths:
+      - 'apps/per-project-plugin-toggler/**'
+      - '.github/workflows/extension.yml'
   workflow_dispatch:
 
 permissions:
