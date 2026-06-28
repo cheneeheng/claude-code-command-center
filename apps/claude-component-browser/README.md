@@ -11,17 +11,20 @@ launch it from), enumerates each plugin's `skills/<name>/SKILL.md`, `agents/*.md
 ```bash
 cd /your/project && uv run python /path/to/server.py   # http://127.0.0.1:7780
 uv run python server.py --port 9001
+uv run python server.py --project-dir /your/project     # instead of cd-ing first
 ```
 
-Run it from a project root so `local`/`project`-scope plugins and the project's loose `.claude`
-skills/agents resolve; `user`-scope members always show. Each item carries a **kind** badge
+Run it from a project root (or pass `--project-dir`) so `local`/`project`-scope plugins and the
+project's loose `.claude` skills/agents resolve; `user`-scope members always show. Each item carries a **kind** badge
 (skill / agent / hook), a scope badge, and a `loose` badge for non-plugin components. When a loose
 component and a plugin one share a kind+name, the loose one wins and the other is shown
 **shadowed** (struck through); loose project beats loose user beats plugin.
 
 - **Search** filters by name, description, plugin, source, scope, or kind.
-- **Detail pane** shows the selected item's body — a skill/agent's markdown, or a rendered view of
-  a hook's event, matcher, and actions.
+- **Detail pane** shows the selected item's body. A skill/agent's markdown is rendered (via a
+  vendored, offline copy of `markdown-it` with raw HTML escaped); use the **View raw / View
+  rendered** toggle to switch. Hooks show a rendered view of their event, matcher, and actions.
+- **Sections** group by plugin (loose components first) and collapse; each shows an item count.
 - Honours `$C4_CLAUDE_DIR` (first entry) to point at a different config dir.
 
 The plugin/skill/agent/hook reading lives in the

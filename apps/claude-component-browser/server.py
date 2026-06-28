@@ -128,7 +128,11 @@ def load_members(project_root: Path) -> list[Member]:
                        agent.name, agent.description, agent.path, "", source="loose")
             )
     _mark_shadowed(members)
-    members.sort(key=lambda m: (m.scope, m.plugin, _KIND_ORDER[m.kind], m.name))
+    # Loose components grouped together at the top, then plugins by name; the UI
+    # groups on plugin name, so plugin is the primary key for non-loose members.
+    members.sort(
+        key=lambda m: (m.source != "loose", m.plugin, m.scope, _KIND_ORDER[m.kind], m.name)
+    )
     for index, member in enumerate(members):
         member.id = index
     return members
@@ -152,6 +156,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, (HERE / "index.html").read_bytes(), "text/html; charset=utf-8")
         elif parsed.path == "/styles.css":
             self._send(200, (HERE / "styles.css").read_bytes(), "text/css; charset=utf-8")
+        elif parsed.path in ("/app.js", "/markdown-it.min.js"):
+            self._send(200, (HERE / parsed.path.lstrip("/")).read_bytes(),
+                       "text/javascript; charset=utf-8")
         elif parsed.path == "/api/members":
             payload = [
                 {k: v for k, v in asdict(m).items() if k not in ("path", "body")}
@@ -193,9 +200,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="claude-component-browser")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7780)
+    parser.add_argument(
+        "--project-dir",
+        type=Path,
+        default=None,
+        help="Project root to resolve project-scoped components from (default: cwd).",
+    )
     args = parser.parse_args()
 
-    project_root = Path.cwd()
+    project_root = (args.project_dir or Path.cwd()).resolve()
     Handler.members = load_members(project_root)
     kinds = {m.kind for m in Handler.members}
     by_kind = ", ".join(f"{sum(m.kind == k for m in Handler.members)} {k}s" for k in sorted(kinds))

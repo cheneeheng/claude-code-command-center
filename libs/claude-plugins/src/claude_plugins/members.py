@@ -54,6 +54,13 @@ class PluginHook:
     actions: list[dict[str, str]]
 
 
+def _unquote(value: str) -> str:
+    """Strip one matching pair of surrounding quotes from a YAML inline scalar."""
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        return value[1:-1]
+    return value
+
+
 def parse_frontmatter(path: Path, fallback: str = "") -> tuple[str, str]:
     """Return ``(name, description)`` from a markdown file's YAML frontmatter.
 
@@ -80,7 +87,7 @@ def parse_frontmatter(path: Path, fallback: str = "") -> tuple[str, str]:
         return fallback, ""
     fm = m.group(1)
     name_match = re.search(r"^name:\s*(.+)$", fm, re.MULTILINE)
-    name = name_match.group(1).strip() if name_match else fallback
+    name = _unquote(name_match.group(1).strip()) if name_match else fallback
     block_match = re.search(
         r"^description:\s*(?:>-|>|[|][-]?)\s*\n((?:[ \t].+\n?)*)", fm, re.MULTILINE
     )
@@ -89,7 +96,7 @@ def parse_frontmatter(path: Path, fallback: str = "") -> tuple[str, str]:
         description = " ".join(ln.strip() for ln in raw.splitlines() if ln.strip())
     else:
         inline = re.search(r"^description:\s*(.+)$", fm, re.MULTILINE)
-        description = inline.group(1).strip() if inline else ""
+        description = _unquote(inline.group(1).strip()) if inline else ""
     return name, description
 
 
