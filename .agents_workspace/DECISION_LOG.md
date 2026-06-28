@@ -542,3 +542,15 @@ double-prefixes remain outside the two historical files.
 **Decision:** User chose extraction. Created libs/claude-plugins (stdlib-only, strict mypy) with normalise_path, plugins_base, load_installed_plugins, parse_frontmatter, load_plugin_skills/agents/hooks (skills/agents -> PluginMember incl. server-side path; hooks -> PluginHook). skill-browser and plugin-toggler/html import it; the VSCode extension.js stays a registered Node copy. Kept CLAUDE_DIR (not C4_) env var to match claude-usage and per Entry 16 (apps/libs left un-prefixed).
 **Impact / Risk:** plugin-toggler/html gains an editable workspace dependency (no longer a single copy-paste file) and now: (a) returns empty buckets instead of raising on a malformed installed_plugins.json (lib catches JSONDecodeError); mock fallback on a *missing* file is preserved. VSCode Node copy unchanged. Behavior of skill-browser's existing skill reads unchanged.
 **Outcome:** Pending validation (ruff + mypy + import smoke).
+
+### Entry 18
+
+**Type:** Decision
+**Mode:** Interactive (user-confirmed name) + Autonomous (CSS scope)
+**Timestamp:** 2026-06-28
+**Task:** Rename skill-browser -> plugin-component-browser; reuse the toggler's styles.css.
+
+**Context:** The app now browses skills/agents/hooks, so "skill-browser" was too narrow. User picked the name plugin-component-browser. "Reuse the toggler's styles.css, adapt as needed" left the adaptation scope to me; the toggler's CSS is a full theme with VSCode-bridge, theme-toggle blocks, toggler-only component classes, and a remote Google Fonts <link>.
+**Decision:** Renamed via git mv (history preserved) and updated all non-historical references (pyproject, both READMEs, root README/CLAUDE.md, register, lib README/__init__, extension.js cross-ref). Created apps/plugin-component-browser/styles.css as a trimmed copy: kept the Tidewater token palette + base typography + light/auto-dark, dropped the VSCode bridge, [data-theme] toggle blocks, and all toggler-only classes; re-skinned this app's two-pane layout with the tokens. Added kind-badge tokens (skill/agent/hook) for theme-aware contrast. Skipped the remote Google Fonts link (system-font fallbacks) to keep this localhost, stdlib, offline tool dependency-free. Inline <style> in index.html replaced by a linked /styles.css served via a new server route.
+**Impact / Risk:** Low. Fonts differ from the toggler (system fallbacks vs Fraunces/Hanken/JetBrains) — upgrade path is to add the same <link> if exact font parity is wanted. DECISION_LOG history entries left referencing the old name on purpose.
+**Outcome:** ruff + mypy strict clean; smoke confirms /styles.css and /api/members resolve and the index loads.

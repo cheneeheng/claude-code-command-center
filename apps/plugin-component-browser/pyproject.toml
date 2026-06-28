@@ -1,5 +1,5 @@
 [project]
-name = "skill-browser"
+name = "plugin-component-browser"
 version = "0.1.0"
 description = "Local web browser for the Claude Code skills, agents, and hooks on this machine."
 readme = "README.md"

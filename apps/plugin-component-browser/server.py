@@ -109,6 +109,8 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/":
             self._send(200, (HERE / "index.html").read_bytes(), "text/html; charset=utf-8")
+        elif parsed.path == "/styles.css":
+            self._send(200, (HERE / "styles.css").read_bytes(), "text/css; charset=utf-8")
         elif parsed.path == "/api/members":
             payload = [
                 {k: v for k, v in asdict(m).items() if k not in ("path", "body")}
@@ -146,8 +148,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    """Entry point for the skill-browser server."""
-    parser = argparse.ArgumentParser(prog="skill-browser")
+    """Entry point for the plugin-component-browser server."""
+    parser = argparse.ArgumentParser(prog="plugin-component-browser")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7780)
     args = parser.parse_args()
@@ -156,7 +158,7 @@ def main() -> None:
     Handler.members = load_members(project_root)
     kinds = {m.kind for m in Handler.members}
     by_kind = ", ".join(f"{sum(m.kind == k for m in Handler.members)} {k}s" for k in sorted(kinds))
-    print(f"  Skill Browser — {len(Handler.members)} members indexed ({by_kind or 'none'})")
+    print(f"  Plugin Component Browser — {len(Handler.members)} members indexed ({by_kind or 'none'})")
     print(f"  Project root: {project_root}")
     print(f"  Open: http://{args.host}:{args.port}  (Ctrl+C to stop)")
     try:

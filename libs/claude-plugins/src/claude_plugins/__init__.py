@@ -3,7 +3,7 @@
 A dependency-free reader for Claude Code's on-disk plugin layout — the
 ``<claude_dir>/plugins/installed_plugins.json`` registry plus each plugin's
 ``skills/``, ``agents/`` and ``hooks/`` members. Shared by the
-``skill-browser`` and ``per-project-plugin-toggler`` apps.
+``plugin-component-browser`` and ``per-project-plugin-toggler`` apps.
 """
 
 from claude_plugins.members import (

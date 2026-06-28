@@ -7,7 +7,7 @@ It models one well-defined external contract — the
 `~/.claude/plugins/installed_plugins.json` registry and each plugin's
 `skills/<name>/SKILL.md`, `agents/<name>.md` and `hooks/hooks.json` layout — and
 turns it into typed records. It exists because more than one member needs this
-exact parsing: the [`skill-browser`](../../apps/skill-browser/) app and the
+exact parsing: the [`plugin-component-browser`](../../apps/plugin-component-browser/) app and the
 [`per-project-plugin-toggler`](../../apps/per-project-plugin-toggler/) app both
 consume it.
 

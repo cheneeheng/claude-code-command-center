@@ -1,7 +1,7 @@
-# skill-browser
+# plugin-component-browser
 
-A local web app that lists and searches every **Claude Code skill, agent, and hook installed on
-this machine**. It reads `~/.claude/plugins/installed_plugins.json`, buckets plugins by **scope**
+A local web app that lists and searches every **Claude Code plugin component — skill, agent, and
+hook — installed on this machine**. It reads `~/.claude/plugins/installed_plugins.json`, buckets plugins by **scope**
 (`local` / `project` / `user`, matched against the directory you launch it from), enumerates each
 plugin's `skills/<name>/SKILL.md`, `agents/*.md`, and `hooks/hooks.json`, and serves a searchable
 single-page UI — click an item to read its full details.
