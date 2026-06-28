@@ -1,4 +1,4 @@
-name: CI
+name: CI · Python
 
 on:
   push:
@@ -61,11 +61,19 @@ jobs:
   test:
     name: pytest (multi-repo-plan-runner)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/multi-repo-plan-runner
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: pytest
-        working-directory: apps/multi-repo-plan-runner
-        run: uv run pytest
+      - name: ruff format check
+        run: uv run ruff format --check .
+      - name: pytest (100% coverage gate)
+        run: uv run pytest --cov-fail-under=100
+      # Packaging smoke test: exercises importlib.resources resolution of the shipped
+      # schema end to end (the $schema pointer in a fresh config) without needing `claude`.
+      - name: packaging smoke test
+        run: uv run docket init --dry-run

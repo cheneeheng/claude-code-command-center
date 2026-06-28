@@ -661,3 +661,49 @@ for these members — they must switch to the `C4_`-prefixed names. `statusline-
 `usage-report` already used `C4_CLAUDE_DIR`, so the suite is now consistent.
 **Outcome:** No unprefixed env-var reads remain (grep clean); `py_compile` passes on the three
 changed modules.
+
+### Entry 24
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-28T00:00:00Z
+**Task:** PR #9 follow-up — reverse several PR #9 docs decisions per user instruction (restore
+root planning v1/v2, drop per-member CHANGELOGs, archive the stray ARCHITECTURE doc, merge
+per-member CI into root, restore the scheduled-session-digests sub-READMEs).
+
+**Context:** The user flagged five mistakes from PR #9. Three required judgment calls beyond a
+literal restore: (a) where to put the moved `multi-repo-plan-runner/.agents_workspace/ARCHITECTURE.md`
+in the shared root archive, (b) how to fold per-member CI into the root workflow given GitHub only
+runs `.github/workflows` at the repo root (the per-member workflows never executed), and (c) what to
+do with two release-coupled pieces — pppt's `version-tag` CI job and its `release.yml`.
+**Decision:**
+- **Planning v1/v2** restored from `c823f0b~1`; v3 left in place. Frozen v1/v2/v3 SKELETONs that
+  name the old CHANGELOG/ARCHITECTURE paths are left verbatim (frozen-history rule).
+- **CHANGELOGs** all four deleted; no root changelog created yet (none until the repo's first
+  release). README/CLAUDE.md/README catalog references to per-member CHANGELOGs removed, and the
+  one-README convention amended to state members carry no `CHANGELOG.md`.
+- **ARCHITECTURE** moved (via `git mv`) to `.agents_workspace/archive/multi-repo-plan-runner-architecture.md`
+  — name-prefixed by source member to stay unambiguous in the shared archive, mirroring the
+  consolidated `decision-log.md` convention. The nested `apps/multi-repo-plan-runner/.agents_workspace/`
+  removed so only a root-level workspace remains; the three mrpr CLAUDE.md references repointed.
+- **CI** merged into root `.github/workflows/ci.yml`: mrpr's stricter gates (`ruff format --check`,
+  `pytest --cov-fail-under=100`, `docket init --dry-run` smoke) folded into the existing mrpr `test`
+  job; pppt's five functional jobs (python-syntax, css-sync, lint-extension, package-check,
+  smoke-test) ported with `apps/per-project-plugin-toggler/`-prefixed paths. Both per-member
+  `ci.yml` deleted; mrpr's now-empty `.github` removed.
+- **OMITTED pppt `version-tag`** job: it only fires on a tag push (root CI has no tag trigger) and
+  asserts the release tag equals `vscode-extension/package.json` — incompatible with the planned
+  single repo-root release where a tag like `v0.1.0` is not the extension version. Porting it
+  would fail root releases. Left `apps/per-project-plugin-toggler/.github/workflows/release.yml`
+  in place (it is a release workflow, not CI, and is out of the "merge CI" scope).
+- **scheduled-session-digests sub-READMEs** restored from `db1cd2e~1` (top README reverted to its
+  pre-consolidation, sub-folder-linking form); one-README convention amended to sanction these
+  four sub-READMEs alongside the existing vscode-extension exception.
+**Impact / Risk:** `version-tag` and `release.yml` are both currently inert (neither runs from a
+subdir / without a tag trigger) — the VSCode extension's release automation is non-functional in
+the monorepo and needs a deliberate root-level rework before the next extension release. The
+restored planning v1/v2 and sub-READMEs reverse PR #9's "one README / no per-member planning"
+direction; CLAUDE.md updated to match so the convention and the tree agree.
+**Outcome:** Root `ci.yml` parses (pyyaml safe_load OK; 8 jobs). Only a root-level
+`.agents_workspace` remains. No live references to the old CHANGELOG/ARCHITECTURE paths outside
+frozen history.

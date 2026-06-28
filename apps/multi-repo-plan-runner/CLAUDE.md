@@ -40,8 +40,9 @@ settings · `defaults` · `projects[]`); `load_registry` merges them per-knob
 
 ## Architecture
 
-Two thin frontends over one shared core. Read `.agents_workspace/ARCHITECTURE.md` for the full
-diagrams + Key Decisions log before any structural change.
+Two thin frontends over one shared core. Read
+`../../.agents_workspace/archive/multi-repo-plan-runner-architecture.md` (archived at the repo
+root) for the full diagrams + Key Decisions log before any structural change.
 
 - `core.py` — registry load, plan discovery/read, `safe_slug`, `manual_command`, `resolve_instruction`, the headless `run_implement` generator, and the server-side `RunManager` (batch orchestration). The only subprocess (`claude -p`) lives here.
 - `tracker.py` — the implementation sidecar: lifecycle status + transition history. Owns the `ALLOWED` transition table, atomic writes, and `reset_stale_runs` (startup recovery).
@@ -55,10 +56,11 @@ and written **only** through `tracker`. Keep business logic out of the route han
 
 ## Invariants — do not break these
 
-These are load-bearing; several are documented as accepted decisions in ARCHITECTURE.md.
+These are load-bearing; several are documented as accepted decisions in the archived
+architecture doc (`../../.agents_workspace/archive/multi-repo-plan-runner-architecture.md`).
 
 - **Plans are read-only to docket.** Never create, edit, or delete anything under `planning/`. All mutable state is the sidecar under `.agents_workspace/implementation/<slug>.json`. A plan's own `status:` frontmatter is ignored — lifecycle status comes exclusively from the sidecar; a missing sidecar means `ready`.
-- **Lifecycle status is a closed set** `ready | running | implemented` with a fixed transition table (`tracker.ALLOWED`, keyed by `(from, to) -> {triggers}`). Never bypass `tracker.set_status` to change status, and never add an edge without adding it to that table. The state machine is drawn in ARCHITECTURE.md.
+- **Lifecycle status is a closed set** `ready | running | implemented` with a fixed transition table (`tracker.ALLOWED`, keyed by `(from, to) -> {triggers}`). Never bypass `tracker.set_status` to change status, and never add an edge without adding it to that table. The state machine is drawn in the archived architecture doc.
 - **The headless run pipes the instruction, not the plan body.** stdin gets a short instruction that *names* the plan file (`.agents_workspace/planning/<slug>.md`); Claude Code opens it (and any siblings) itself. Do not pipe the plan body. Instruction comes from `instruction_template` (registry) → `DEFAULT_INSTRUCTION_TEMPLATE`, with `{path}` substituted, overridable per submit.
 - **Every external slug goes through `core.safe_slug`** before becoming a path or query value — it is the path-traversal guard that keeps access inside `planning/`/`implementation/`.
 - **Per-project `threading.Lock`** serializes same-repo headless runs (different projects run concurrently). It is intra-process only — not cross-process locked (documented MVP limitation). Runs/batches are in-memory only, never persisted.

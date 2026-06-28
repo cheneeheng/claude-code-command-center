@@ -91,5 +91,3 @@ subcommands accept `--registry PATH`. The browser server binds to `127.0.0.1` on
 - The MVP TUI streams one run at a time (the browser streams concurrent per-project batches).
 - docket leaves working-tree changes; it does **not** commit. Review the diff yourself
   (`git diff` / your editor) — that is the final step.
-
-See [CHANGELOG.md](CHANGELOG.md) for release history.
