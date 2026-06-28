@@ -135,6 +135,33 @@ async function select(m, btn) {
 
 searchEl.addEventListener('input', () => render(searchEl.value));
 
+// Sidebar resize: drag the divider (or arrow-key it) to set the list width.
+// Native `resize` is corner-only and is ignored on fl/grid items, so do it here.
+const resizer = document.getElementById('resizer');
+const MIN_W = 240, MAX_W = 560;
+const setListWidth = px => {
+  listEl.style.width = Math.min(MAX_W, Math.max(MIN_W, px)) + 'px';
+};
+let dragStartX = 0, dragStartW = 0;
+const onDrag = e => setListWidth(dragStartW + e.clientX - dragStartX);
+const endDrag = () => {
+  resizer.classList.remove('dragging');
+  document.removeEventListener('pointermove', onDrag);
+  document.removeEventListener('pointerup', endDrag);
+};
+resizer.addEventListener('pointerdown', e => {
+  dragStartX = e.clientX;
+  dragStartW = listEl.offsetWidth;
+  resizer.classList.add('dragging');
+  document.addEventListener('pointermove', onDrag);
+  document.addEventListener('pointerup', endDrag);
+  e.preventDefault();
+});
+resizer.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') { setListWidth(listEl.offsetWidth - 16); e.preventDefault(); }
+  else if (e.key === 'ArrowRight') { setListWidth(listEl.offsetWidth + 16); e.preventDefault(); }
+});
+
 fetch('/api/members')
   .then(r => r.json())
   .then(data => { members = data; render(''); })
