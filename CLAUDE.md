@@ -59,9 +59,19 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
 - **Env vars:** every environment variable this repo defines and reads is prefixed `C4_`
   (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
   Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir
-  for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in). OS-provided
+  for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in),
+  `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
+- **Docs:** exactly **one `README.md` per member** (apps/tools/libs/setup) plus the root README,
+  which is the catalog. Deeper end-user docs live under a member's `docs/` (e.g.
+  `multi-repo-plan-runner/docs/guide/`, `per-project-plugin-toggler/docs/user-guide-*.md`) and the
+  README links into them — do not split a member into multiple READMEs. The one sanctioned second
+  README is `per-project-plugin-toggler/vscode-extension/README.md`, which ships with the VSIX and
+  is rendered on the VSCode marketplace page. No per-member planning docs and no per-member
+  decision logs: build planning is ephemeral, and agent decisions go in the active
+  `.agents_workspace/DECISION_LOG.md` (historical per-member logs are frozen in
+  `.agents_workspace/archive/decision-log.md`).
 
 ## Scope discipline
 
@@ -69,7 +79,8 @@ Work within the member you were asked to change. Do not retrofit conventions acr
 members in a single change. Adding a new member: place it under the right category folder, give
 it a self-descriptive name, a README, and (for Python) a `uv` project.
 
-## Plan & decisions
+## Decisions
 
-- Build plan: `.agents_workspace/planning/v1/SKELETON.md`
-- Decision log: `.agents_workspace/DECISION_LOG.md`
+- Active decision log: `.agents_workspace/DECISION_LOG.md` (append here when you resolve
+  genuine ambiguity).
+- Archived per-member logs: `.agents_workspace/archive/decision-log.md` (frozen history).

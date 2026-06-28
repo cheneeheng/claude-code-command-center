@@ -26,7 +26,7 @@ for entry in buckets["user"]:
 | Symbol | Purpose |
 |--------|---------|
 | `load_installed_plugins(project_root)` | Bucket installed plugins by **scope** (`local`/`project`/`user`), matching `projectPath` against the project root. Empty buckets if the registry is missing/unreadable. |
-| `plugins_base()` | Resolve `<claude_dir>/plugins` (honours the first pathsep entry of `$CLAUDE_DIR`). |
+| `plugins_base()` | Resolve `<claude_dir>/plugins` (honours the first pathsep entry of `$C4_CLAUDE_DIR`). |
 | `normalise_path(p)` | Cross-platform path normalisation for project-root comparison. |
 | `parse_frontmatter(path, fallback="")` | Extract `(name, description)` from a markdown file's YAML frontmatter (regex; inline and `>-`/`>`/`\|` block scalars). |
 | `load_plugin_skills(install_path)` | Read `skills/<name>/SKILL.md` → `list[PluginMember]`. |

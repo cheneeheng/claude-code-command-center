@@ -191,8 +191,8 @@ scheduled-task installer:
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `CLAUDE_DIR` | `~/.claude` | One or more config dirs (`os.pathsep`-separated). Overridden by `--claude-dir`. |
-| `STATUSLINE_LIVE_TIMEOUT` | `1800` | Seconds a session may be idle before it drops out of the live view. Also adjustable per-request via the dashboard's "session timeout" control. |
+| `C4_CLAUDE_DIR` | `~/.claude` | One or more config dirs (`os.pathsep`-separated). Overridden by `--claude-dir`. |
+| `C4_STATUSLINE_LIVE_TIMEOUT` | `1800` | Seconds a session may be idle before it drops out of the live view. Also adjustable per-request via the dashboard's "session timeout" control. |
 
 ---
 

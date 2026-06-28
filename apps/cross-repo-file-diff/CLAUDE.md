@@ -29,8 +29,9 @@ Core flow: **open → find two repos → compare a file → copy across.**
 
 ## Hard architectural constraints (do not violate)
 
-These are deliberate decisions, not accidents — see `docs/planning/SKELETON_v3.md` and the
-`DECISION_LOG.md` before proposing changes that touch them:
+These are deliberate decisions, not accidents — they are documented in this file and in the
+repo-root archived decision log (`.agents_workspace/archive/decision-log.md`). Read them
+before proposing changes that touch them:
 
 - **Multiple files, classic `<script>`/`<link>`, never `type="module"`.** The app is split
   into `styles/{tokens,layout,components}.css` and `scripts/*.js`, loaded by classic
@@ -87,7 +88,7 @@ each file a plain object attached to `window.Vantage` (no classes), loaded in th
   `DOMContentLoaded`.
 
 Data flows one way: Scanner/Persist produce plain in-memory objects (`Repo`, `TreeNode`,
-`Selection`, `SidebarState` — shapes documented in SKELETON_v3.md §02), `Vantage.UI` holds them
+`Selection`, `SidebarState` — plain-object shapes), `Vantage.UI` holds them
 as state and re-renders the relevant region. The markup has fixed mount-point IDs that
 `UI.cacheDom()` looks up; regions, the sidebar, and the puck are toggled via the `hidden`
 attribute and class toggles, not routing.
@@ -102,15 +103,11 @@ clicking anywhere on a card sets `.is-active` (a second click, or a click on emp
 it — purely cosmetic, it never touches the A/B comparison), while only the chevron expands the
 card (which also force-selects it). **Swap** reorders A/B without reopening a minimized sidebar.
 
-## Planning docs
-
-`docs/planning/SKELETON_v3.md` + `ITER_01_v3.md`…`ITER_04_v3.md` are the authoritative
-**current (v3)** design — the multi-file reshape. The `*_v2` files (single-file reshape) and the
-untagged `SKELETON.md` / `ITER_0*.md` (v1 three-file design) are superseded, kept for history.
-Read the v3 skeleton before any non-trivial change.
-
 ## Conventions
 
-- Agent decision log lives at `docs/claude_logs/DECISION_LOG.md`.
+- The current design is the **v3 multi-file reshape** described in the sections above; the
+  v1 (three-file) and v2 (single-file) designs are superseded and live only in git history.
+- Agent decisions are archived at the repo-root `.agents_workspace/archive/decision-log.md`;
+  new decisions go in the repo-root `.agents_workspace/DECISION_LOG.md`.
 - Section banners in the scripts use `/* ===== ... ===== */`; each file is one cohesive
   module attached to `window.Vantage`. Match that style — no frameworks, no classes, no JSX.

@@ -60,5 +60,6 @@ There is nothing to build or install — edit the files in `styles/` or `scripts
 browser. The split is one concern per file, wired by classic `<link>`/`<script>` tags whose
 **order in `index.html` is the dependency contract** (`scripts/namespace.js` first, `app.js`
 last); cross-file sharing is via the `window.Vantage` namespace, not ES modules. The design and
-constraints are documented in `docs/planning/` (the `*_v3` files are the current design) and
-`CLAUDE.md`.
+constraints are documented in `CLAUDE.md`.
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.

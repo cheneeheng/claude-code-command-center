@@ -1,6 +1,206 @@
-# Decision Log
+# Archived Decision Logs
+
+Consolidated historical agent decision logs from across the monorepo. These were
+previously scattered in per-member `docs/claude_logs/DECISION_LOG.md`,
+`.agents_workspace/DECISION_LOG.md`, and `docs/automation-suite-decision-log.md` files.
+They are frozen here as a record; the active going-forward log is
+`.agents_workspace/DECISION_LOG.md` at the repo root.
+
+Entry content is preserved verbatim. The only structural change is that
+`cross-repo-file-diff`'s top-level `## N` entry headings were demoted to `### N` so they
+nest under their member section.
 
 ---
+
+## apps/cross-repo-file-diff
+
+_Source: `apps/cross-repo-file-diff/docs/claude_logs/DECISION_LOG.md`_
+
+### 1
+
+- Type: Decision
+- Mode: Autonomous
+- Timestamp: 2026-06-13T21:15:57Z
+- Task: Implement Vantage MVP from SKELETON+ITER_01..05.
+- Context: Six plan docs (SKELETON + 5 iterations) each rewrite §02/§05 additively for a 3-file static app.
+- Decision: Built directly to the cumulative final MVP state (union of all iteration features) in one pass rather than six sequential file rewrites, since iterations are additive deltas over the same three files. Equivalent end state to running the full sequence to the mvp:true terminator.
+- Impact/Risk: A missed iteration detail would not be caught by an intermediate step; mitigated by checking each feature against its source iteration spec.
+- Outcome: All 10 MVP checklist features implemented across `index.html`, `vantage.css`, `vantage.js`. `node --check vantage.js` passed with no errors. HTML correctly references both `vantage.css` and `vantage.js` via classic `<script src="vantage.js">` (no `type="module"`), satisfying the `file://` constraint from §03.
+
+### 2
+
+- Type: Decision
+- Mode: Autonomous
+- Timestamp: 2026-06-14T00:00:00Z
+- Task: Implement the v2 plan family (SKELETON_v2 → ITER_01_v2 → ITER_02_v2, mvp:true terminator) on branch `feat/v2-single-file-redesign`.
+- Context: Three v2 plan docs additively rewrite §02/§05 for a single-file reshape of v1; ITER_01_v2 and ITER_02_v2 both touch the same `index.html`. Several spec points left implementation choices open.
+- Decision: (a) Built directly to the cumulative final MVP state in one pass rather than three sequential rewrites of the same single file — same approach as Entry 1; equivalent end state to running the sequence to the terminator. (b) Dropped the Tidewater brand sheet's `@import` of Google Fonts when inlining it: it is a network call, which violates the hard "no network calls" constraint and the offline-capable goal; the brand type tokens already declare Georgia/system-ui/monospace fallbacks (skeleton §03 explicitly sanctions falling back to system fonts). (c) Collapsed v1's three files into one `index.html` per §03 ("exactly one file") — `git rm vantage.css vantage.js`. (d) Removed v1's sort dropdown: v2 §05 specifies the board is "sorted by last activity" and the header component tree lists only BoardFilter, so the sort control is out of scope; board now always sorts by last activity. (e) Removed v1's persistent footer selection bar (not in the v2 component tree); added a "Clear" control to the sidebar header and the Copy A→B / B→A buttons to the sidebar footer — the §01 concept core flow requires copy-across, and since selection persists across close/minimize a clear affordance is needed to reset A/B. (f) VSCode URI composition normalizes backslashes→forward-slashes, trims trailing slashes, and forces a leading "/" so Windows drive paths render `vscode://file/C:/...` and POSIX paths `vscode://file/Users/...` (per ITER_02_v2 build-time note on slash format).
+- Impact/Risk: A missed iteration detail would not be caught by an intermediate build step; mitigated by checking each feature against its source iteration spec. Adding Clear/Copy controls and removing sort are minor deviations from the literal component tree but keep the core flow usable; flagged here rather than silently. VSCode URI format verified by composition logic but not exercised against a live VSCode install.
+- Outcome: Single `index.html` (brand tokens + component CSS + classic inlined script). Extracted script passes `node --check`; all 31 `getElementById` references resolve against declared element ids. Board (filter, last-activity sort), expandable cards + lazy file tree, A/B selection, slide-in diff sidebar (close/minimize→puck, selection-preserving, cached diff), Open-in-VSCode button (disabled until root path set), and root-path IndexedDB persistence all implemented. Jump-to-repo / Ctrl+K search removed.
+
+### 3
+
+- Type: Decision
+- Mode: Autonomous
+- Timestamp: 2026-06-15T00:00:00Z
+- Task: Implement the v3 plan family (SKELETON_v3 → ITER_01..04_v3, mvp:true terminator) on branch `feat/v3-multi-file-redesign`.
+- Context: Five v3 plan docs additively rewrite §02/§05 to reshape v2's single inlined `index.html` into multiple classic-script files, plus two surface changes (sidebar can only be open|minimized — no close; board cards highlight comparison state). All four iterations touch the same module files.
+- Decision: (a) Built directly to the cumulative MVP state in one pass (same approach as Entries 1–2) rather than re-stubbing then filling the same files four times — equivalent end state to running the sequence to the terminator, each feature checked against its source iteration. (b) Split into `styles/{tokens,layout,components}.css` and `scripts/{namespace,persist,scanner,compare,copy,editor,ui,app}.js` per the §02 layout; `window.Vantage` namespace + load order replace import/export. The v2 `App` namespace became `Vantage.UI`. (c) Sidebar lost its close (×) and its in-header Clear; per ITER_02 §05 the clear/swap moved to a new persistent **selection bar** (sticky under the toolbar, shown once any side is set) which is the bridge to the sidebar. Clearing the selection is now the only way to remove the comparison surface (no dismiss path while both sides are set), satisfying the v3 invariant. (d) `Editor.vscodeUri(repoName)` adopted the plan's one-arg signature by holding `Editor.rootPath` internally, synced via `Editor.setRootPath()` from UI on load/save/clear — keeps the call synchronous for render. (e) `Selection` entry field renamed v2 `fileHandle` → `handle` to match the SKELETON_v3 §02 data model. (f) Re-added a sort control (last-activity default / A–Z / stack) per ITER_01 §05, which v2 had removed. (g) Board highlights: `.is-compare-a/-b` (derived from Selection, with A/B badges) and `.is-active` (the expanded/drilled-into card) computed each render, nothing persisted.
+- Impact/Risk: A missed iteration detail would not be caught by an intermediate build; mitigated by per-feature spec checks. CLAUDE.md and README still describe the v2 single-file architecture and its now-superseded "single file / do not split" constraint — left unchanged (out of plan scope) and flagged to the user as a follow-up, since this branch deliberately reverses that constraint. VSCode URI format verified by composition logic, not against a live VSCode install. No browser runtime test performed; validation limited to `node --check` and id cross-referencing.
+- Outcome: Multi-file static app: `index.html` (markup + ordered `<link>`/`<script>`), 3 CSS files, 8 JS modules. All 8 scripts pass `node --check`; every `getElementById` id in `ui.js` resolves against `index.html`; no dangling references to the removed close/clear controls. Implements live board (filter/sort/rescan/reconnect), lazy file trees, A/B selection with selection bar + board highlights, line-based diff sidebar (open|minimized→puck, selection-preserving, cached lastDiff), copy/overwrite behind confirm, and Open-in-VSCode gated on the optional root path.
+
+### 4
+
+- Type: Decision
+- Mode: Autonomous
+- Timestamp: 2026-06-15T00:00:00Z
+- Task: Post-v3 card-interaction refinements on branch `feat/v3-multi-file-redesign` (selection/hover/chevron/swap tweaks requested interactively).
+- Context: User feedback on the live v3 board: the `.is-active` highlight fired only on expand; A's outline was indistinguishable from the selected outline (both teal); swap auto-reopened a minimized sidebar; chevron was hard to hit; hover highlighted only the title. SKELETON_v3 §05 explicitly reserved `.is-active` for "an explicit repo-pick action rather than expanded," so this is in-plan, not a deviation.
+- Decision: (a) Decoupled select from expand (user-chosen via AskUserQuestion): clicking anywhere on a card sets visual focus (`.is-active`); only the chevron expands. "Select" is visual-only — it never touches the A/B comparison. (b) Selected state changed from a neutral ink ring to a fill+lift (`--surface-2` bg, `--fg-muted` border, `shadow-md`) per user preference; chose a neutral treatment because both brand accent hues are taken (teal=A, terracotta=B) and their compare borders still paint on top. (c) Deselect implemented via a single document-level click listener using `e.target.closest('.repo-card')` (clicks outside any card clear focus) plus second-click-toggles-off in `selectCard` — avoids per-element handlers. (d) Chevron force-selects (sets active, not toggle) so clicking it always leaves the card selected. (e) Swap no longer routes through `onSelectionChanged`: it preserves the current sidebar mode (a minimized panel stays minimized) and only recomputes the diff when the panel is open; a minimized panel recomputes lazily on reopen (`lastDiff` nulled). (f) Added a swap control to the sidebar header mirroring the selection bar. (g) Whole-card hover highlight (moved `:hover` from `.repo-card-header` to `.repo-card:not(.is-active)`, background-only so it doesn't stomp compare borders); chevron is now the only element with button/pointer affordance and a real padded hit area.
+- Impact/Risk: Selected fill and non-selected hover both use `--surface-2`; selection leans on border + elevation to distinguish — flagged to user as possibly subtle, with a bump path offered. Document-level click listener fires on all out-of-card clicks (toolbar/sidebar/modal) and clears board focus — harmless since focus is purely visual. No browser runtime test; validation limited to `node --check` on `ui.js`.
+- Outcome: `scripts/ui.js`, `styles/components.css`, `index.html` updated. `ui.js` passes `node --check`. Card interaction model: click=select (toggle), empty-space/second-click=deselect, chevron=expand+force-select, file rows=assign A/B (stop propagation), swap=reorder without reopening the sidebar.
+
+---
+
+## apps/multi-repo-plan-runner
+
+_Source: `apps/multi-repo-plan-runner/.agents_workspace/DECISION_LOG.md`_
+
+### Entry 1
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-20T00:00:00Z
+**Task:** Implement docket from the SKELETON → ITER_01..03 plan to MVP.
+
+**Context:** ITER_03 §04 specifies an atomic sidecar write via `os.replace` over the target.
+On Windows a just-written target file is transiently locked by Defender/indexer, so an
+immediate overwrite deterministically failed with `PermissionError (WinError 5)` in a
+round-trip test (mark → reopen on the same plan). Plain `os.replace` to overwrite otherwise
+works.
+**Decision:** Kept the spec's atomic `os.replace` and added a bounded retry (10× @ 50ms) on
+`PermissionError` in `tracker._atomic_write`. This preserves the crash-safety guarantee while
+tolerating the platform's transient lock. Not a new dependency; ~6 lines.
+**Impact / Risk:** Worst case a status write blocks up to ~0.5s before raising. Negligible for
+a local single-user tool. No effect on POSIX where the lock doesn't occur.
+**Outcome:** Round-trip test (mark/reopen/headless lifecycle/reset_stale_runs) passes.
+
+### Entry 2
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-20T00:00:00Z
+**Task:** Batch-implement instruction UX in both frontends (ITER_03 §05).
+
+**Context:** The plan describes a per-plan, individually-editable instruction *panel* for batch
+submit (browser) and an instruction prompt (TUI). A full inline multi-textarea panel is
+significant UI code not core to the MVP behavior (per-plan distinct instructions).
+**Decision:** Satisfied the functional requirement — distinct instruction per plan — with the
+minimum UI: the browser collects each selected plan's instruction via sequential
+`window.prompt` calls (each pre-filled with the resolved template), and the TUI uses a single
+`InstructionModal` for single-implement plus per-plan default resolution for batch. Different
+instructions per plan are still possible; the dedicated multi-row panel is deferred.
+**Impact / Risk:** Less polished batch UX than the plan's panel; behavior (per-plan
+instructions, per-project sequential, concurrent across projects, stop-on-failure) is fully
+intact. Easy to upgrade to a panel later without touching core.
+**Outcome:** Functional; not yet runtime-tested for a live headless run (requires the `claude`
+CLI + `textual` installed).
+
+### Entry 3
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-20T00:00:00Z
+**Task:** Plan-compliance review (review-against-plan) of the ITER_03 MVP.
+
+**Context:** SKELETON §02 lists `started_at` as a field of the in-memory `Run` record, but the
+implemented `core.Run` dataclass omits it and no code path reads or sets a run start time.
+**Decision:** Left `started_at` out rather than adding an unused field. It has no consumer in
+the MVP (no elapsed-time display, no scheduling), so adding it would be dead code against the
+write-less-code / YAGNI defaults. Recorded as a conscious spec deviation instead.
+**Impact / Risk:** None functionally. If a future iteration surfaces run duration, add the
+field then with its consumer.
+**Outcome:** Documented; no code change.
+
+### Entry 4
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-20T00:00:00Z
+**Task:** Add a pytest suite at 100% coverage (user-requested).
+
+**Context:** `tracker._atomic_write` retried `os.replace` with `for attempt in range(10): ... if
+attempt == 9: raise`. The loop can never complete normally (it always returns on success or
+raises on the 10th failure), leaving an unreachable branch that blocks 100% branch coverage.
+**Decision:** Rewrote the retry as `for _ in range(9): try/except+sleep` followed by a final
+bare `os.replace`. Behaviour is identical — 10 total attempts, 9 × 50ms sleeps between them, a
+persistent `PermissionError` still propagates — but every branch is now reachable and tested.
+Atomicity (temp-file + `os.replace`) and the Windows retry invariant are preserved.
+**Impact / Risk:** None functional. Covered by `test_atomic_write_retries_then_succeeds` and
+`test_atomic_write_gives_up_after_retries`.
+**Outcome:** tracker.py at 100% line+branch coverage.
+
+### Entry 5
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-20T00:00:00Z
+**Task:** Add a pytest suite at 100% coverage (user-requested).
+
+**Context:** The TUI test harness (`App.run_test()`) crashed on teardown with `'str' object has
+no attribute '_close_messages'`. `DocketApp.__init__` stored the registry path in
+`self._registry`, shadowing Textual's internal `App._registry` (the node set Textual iterates on
+close). Masked in normal use because the process exits on quit, but a real latent bug.
+**Decision:** Renamed the instance attribute to `self._registry_path` (3 occurrences in tui.py).
+No behaviour change to docket; removes the framework-internal collision.
+**Impact / Risk:** None — purely an internal rename. Enables the TUI to be driven under the
+Textual test harness.
+**Outcome:** tui.py at 100% coverage; clean app teardown.
+
+### Entry 6
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-20T00:00:00Z
+**Task:** Implement v2 plans (ITER_01_v2 config layering, ITER_02_v2 init/doctor/schema).
+
+**Context:** `discover_repos` in ITER_02_v2 §04 derives the project name from `repo.name`
+(unresolved). When `docket init --scan .` is run, the discovered repo at the scan root is
+`Path(".")`, whose `.name` is `""` — an empty name that `load_registry` then rejects as
+"missing 'name'". The plan also builds the `~`-relative path with `f"~/{p.relative_to(home)}"`,
+which on Windows stringifies with backslashes.
+**Decision:** Resolve the repo path first and take the name from the resolved path
+(`p.name`), and emit the `~`-relative path with `.as_posix()`. For the normal `--scan ~/code`
+case the names are identical to the plan's; only the degenerate "." root and the path separators
+change. Strictly more robust, never worse; keeps generated configs portable and valid.
+**Impact / Risk:** None negative. `init --scan .` now yields a valid non-empty name and
+forward-slash paths.
+**Outcome:** Verified via `docket init --scan . --dry-run`.
+
+### Entry 7
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-20T00:00:00Z
+**Task:** "CI updated accordingly" (part of the v2 goal).
+
+**Context:** The goal asked for CI to be updated for the v2 work but did not specify how.
+`docket doctor` is positioned in ITER_02_v2 §04 as a CI gate, but its `claude_bin` PATH check
+and per-project path checks fail in CI (no `claude`, project paths are local). Making it a hard
+gate would red-X every CI run.
+**Decision:** Keep the existing lint + test(100% coverage) jobs and add a single packaging
+smoke step `uv run docket init --dry-run` to the test job. It exercises `_schema_path()` /
+`importlib.resources` resolution of the shipped schema end to end — the real packaging risk that
+unit tests (which may patch the path) can miss — and exits 0 without needing `claude`.
+**Impact / Risk:** Minimal; one extra fast step. Did not wire `docket doctor` into CI for the
+reason above.
+**Outcome:** CI stays green; packaging of the schema asset is smoke-tested.
+
+---
+
+## apps/per-project-plugin-toggler
+
+_Source: `apps/per-project-plugin-toggler/docs/claude_logs/DECISION_LOG.md`_
 
 ### Entry 001
 
@@ -378,3 +578,58 @@
 **Decision:** Interpreted request 2 as "source the mark from the SVG file". HTML surface: external <use href="/icon.svg#mark"> (same-origin, page vars cascade into the use shadow tree) + new /icon.svg route. Webview: external <use> is cross-origin-blocked, so extension.js inlines webview/icon.svg via an __ICON_SVG__ placeholder. icon.svg fills use var(--x, fallback) so the same file doubles as the favicon.
 **Impact / Risk:** Two copies of icon.svg (html/ and vscode-extension/webview/) with no sync step, unlike styles.css. External <use> requires a modern browser (all evergreen browsers OK).
 **Outcome:** Pending user verification in browser and Extension Development Host.
+
+---
+
+## tools/scheduled-session-digests
+
+_Source: `tools/scheduled-session-digests/docs/claude_logs/DECISION_LOG.md`_
+
+### Entry 1
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-15T21:58:00+08:00
+**Task:** Add interactive skills (daily-lessons, daily-summary, weekly-lessons) replacing the `claude --print` cron triggers, which break under the new programmatic-credit limit.
+
+**Context:** Two forks the user left unresolved:
+1. The daily-lessons subagents run in parallel and share the meta-repo working dir. The `ceh-lessons-learned` skill writes to a fixed relative path (`docs/claude_logs/LESSONS_LEARNED.md`), so reusing it across parallel subagents would collide.
+2. Where to stage the per-chat input files / manifest, and whether to use subagents for the weekly harvest.
+
+**Decision:**
+1. The daily-lessons SKILL.md embeds the lessons-learned methodology and instructs each subagent to write directly to its own unique output path, instead of invoking `ceh-lessons-learned`. This makes the fan-out parallel-safe. daily-summary was already parallel-safe (its prompt writes to a per-job Output path).
+2. Staging goes in `$CLAUDE_META_DIR/.claude/scheduler-jobs/<scheduler>/` (input files + `manifest.json`); the prepare scripts add `.claude/scheduler-jobs/` to the meta repo `.gitignore` so a partial run is never committed. Weekly uses no subagents — it is a single analysis job, per the user.
+
+**Impact / Risk:** The daily-lessons output format is now defined in SKILL.md rather than delegated to the `ceh-lessons-learned` skill; if that skill's format evolves, the SKILL.md must be updated to match. Low risk — format is stable and self-contained.
+
+**Outcome:** Six prepare scripts (.sh + .ps1) and three SKILL.md files created; all pass syntax/parse checks and the no-work path was smoke-tested on both platforms.
+
+---
+
+## automation-suite
+
+_Source: `docs/automation-suite-decision-log.md`_
+
+### Entry 001
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-10T00:00:00+02:00
+**Task:** Update dashboard.css to follow the styling in tmp.css
+
+**Context:** tmp.css styles a different component set (plugin manager), so "follow the styling" could not mean copying rules 1:1. It also omits the Google Fonts @import (VSCode CSP) and lacks tokens the dashboard JS/markup depend on.
+**Decision:** Adopted tmp.css's design language and foundation: radius token hierarchy (--radius-lg/md/sm), --shadow-sm as the only shadow, no atmosphere/glow/hover-lift, secondary-teal hover states, tmp.css's theme-btn and section-title styles. Kept the font @import (standalone HTML page), the semantic chart colors, the legacy alias layer, and --accent-hi (read by dashboard.js for chart hover). Skipped the VSCode bridge block (dashboard never runs in a webview).
+**Impact / Risk:** Visual-only changes; cards lose hover lift and glow shadows, hovers shift from terracotta to teal. No markup or JS changes.
+**Outcome:** dashboard.css rewritten; grep confirmed no remaining references to dropped tokens.
+
+### Entry 002
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-16T00:00:00+02:00
+**Task:** Refactor the dashboard server — separate the two data sources, add a README
+
+**Context:** User chose "Restructure modules"; the option preview depicted a nested `dashboard/` package (session_stats.py, live_statusline.py, merge.py, README.md). But `dashboard_server.py` loads the static assets via `Path(__file__).parent / dashboard.html`, and the scheduled-task launcher runs `cc-statusline-dashboard-server.py` from this exact folder with sibling-module imports on sys.path. A nested package would force asset-path and import-path rewrites for no functional gain.
+**Decision:** Kept the new modules flat in the existing folder rather than nesting them in a `dashboard/` subpackage. Split `dashboard_data.py` into `session_stats.py` (transcripts → tokens + estimated cost), `live_statusline.py` (statusline logs → rate limits + actual cost), and `merge.py` (reconciliation + payload). Moved `build_payload` out of `dashboard_server.py` into `merge.py`; deleted `dashboard_data.py`. The semantic outcome (three separated modules + README) matches the user's selection.
+**Impact / Risk:** No behavior change except a ~1e-12 float-ordering difference in `by_model` cost (per-session grouping of the four cost terms instead of one streamed accumulator); invisible after 2-decimal formatting. Asset loading and launch path untouched.
+**Outcome:** All modules byte-compile; payload output verified equal to the original for sessions and live data, and equal-to-rounding for stats, against real ~/.claude data.

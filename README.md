@@ -38,10 +38,12 @@ the catalog; click into a folder for full docs.
 | Library | What it does |
 |---------|--------------|
 | [`claude-usage`](libs/claude-usage/) | Dependency-free library that reads Claude Code's `~/.claude/projects/**/*.jsonl` transcripts into per-session token/cost data, plus the model pricing table. |
+| [`claude-plugins`](libs/claude-plugins/) | Dependency-free library that reads Claude Code's installed plugins and their skills/agents/hooks from local config into typed records. |
 
-A library earns a place here only with a **cohesive domain** and **≥2 real consumers** — not as
-a utilities junk drawer. `claude-usage` qualifies: it models one external contract (the transcript
-layout) and is consumed by both the `usage-dashboard` app and the `usage-report` CLI.
+A library earns a place here only with a **cohesive domain** and **≥2 real consumers** — not as a
+utilities junk drawer. `claude-usage` qualifies (the transcript layout, consumed by the
+`usage-dashboard` app and the `usage-report` CLI); so does `claude-plugins` (the installed-plugin
+layout, consumed by the `claude-component-browser` and `per-project-plugin-toggler` apps).
 
 ## Installing the tools
 
@@ -67,9 +69,10 @@ never collides with Claude Code's or the OS's variables:
 
 | Variable | Used by | Purpose |
 |----------|---------|---------|
-| `C4_CLAUDE_DIR` | `statusline-hook`, `usage-report`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. |
+| `C4_CLAUDE_DIR` | `statusline-hook`, `usage-report`, `usage-dashboard`, `claude-component-browser`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. |
 | `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). |
 | `C4_STATUSLINE_EXPORT` | `statusline-hook` | Opt-in to the JSONL export when set to `1`/`true`/`yes`. |
+| `C4_STATUSLINE_LIVE_TIMEOUT` | `usage-dashboard` | Seconds a session may be idle before dropping out of the live view (default `1800`). |
 
 OS-provided variables (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 
@@ -94,7 +97,8 @@ docs/      monorepo-wide docs
 
 [Apache-2.0](LICENSE) for the whole repository.
 
-## Plan & decisions
+## Decisions
 
-The build plan lives in [`.agents_workspace/planning/v1/SKELETON.md`](.agents_workspace/planning/v1/SKELETON.md);
-decisions are logged in [`.agents_workspace/DECISION_LOG.md`](.agents_workspace/DECISION_LOG.md).
+Agent decisions are logged in [`.agents_workspace/DECISION_LOG.md`](.agents_workspace/DECISION_LOG.md).
+Historical per-member logs are consolidated in
+[`.agents_workspace/archive/decision-log.md`](.agents_workspace/archive/decision-log.md).

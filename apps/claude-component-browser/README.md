@@ -22,7 +22,7 @@ component and a plugin one share a kind+name, the loose one wins and the other i
 - **Search** filters by name, description, plugin, source, scope, or kind.
 - **Detail pane** shows the selected item's body — a skill/agent's markdown, or a rendered view of
   a hook's event, matcher, and actions.
-- Honours `$CLAUDE_DIR` (first entry) to point at a different config dir.
+- Honours `$C4_CLAUDE_DIR` (first entry) to point at a different config dir.
 
 The plugin/skill/agent/hook reading lives in the
 [`claude-plugins`](../../libs/claude-plugins/) library (stdlib only); this app is a thin server +
@@ -31,9 +31,7 @@ body endpoint takes a bounds-checked index into the server's own scan (no user-s
 no traversal).
 
 > The reading logic is shared with
-> [`per-project-plugin-toggler`](../per-project-plugin-toggler/) via `claude-plugins` — see
-> [`docs/shared-plugin-logic.md`](../../docs/shared-plugin-logic.md). Skills come from
+> [`per-project-plugin-toggler`](../per-project-plugin-toggler/) (the app for enabling/disabling
+> plugins per project) via the `claude-plugins` library — see
+> [`docs/shared-plugin-logic.md`](../../docs/shared-plugin-logic.md). The skills you see come from
 > marketplaces like [`cheneeheng/agent-skills`](https://github.com/cheneeheng/agent-skills).
-
-> The skills you see come from marketplaces like [`cheneeheng/agent-skills`](https://github.com/cheneeheng/agent-skills).
-> To enable/disable plugins per project, see the [`per-project-plugin-toggler`](../per-project-plugin-toggler/) app.

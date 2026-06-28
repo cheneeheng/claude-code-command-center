@@ -66,6 +66,9 @@ These are load-bearing; several are documented as accepted decisions in ARCHITEC
 
 ## Conventions
 
-- Decision Log lives at `.agents_workspace/DECISION_LOG.md` (not the contract default). Append there when you resolve genuine ambiguity.
-- Planning artifacts (`SKELETON.md`, `ITER_NN.md`) under `.agents_workspace/planning/` are the build spec this MVP was implemented from.
+- Decisions: this member's historical build decisions are archived in the repo-root
+  `.agents_workspace/archive/decision-log.md`; new decisions go in the repo-root
+  `.agents_workspace/DECISION_LOG.md`. (Note: the `.agents_workspace/planning/` and
+  `.agents_workspace/implementation/` paths elsewhere in this file refer to the **target
+  repos** docket operates on, not this repo.)
 - Primary dev platform is Windows (PowerShell); a Bash tool is also available. Code must stay cross-platform.

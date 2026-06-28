@@ -55,8 +55,8 @@ class Session:
 
 
 def claude_dirs() -> list[Path]:
-    """Return the Claude config dirs, honouring a pathsep-separated ``$CLAUDE_DIR``."""
-    env = os.environ.get("CLAUDE_DIR", "")
+    """Return the Claude config dirs, honouring a pathsep-separated ``$C4_CLAUDE_DIR``."""
+    env = os.environ.get("C4_CLAUDE_DIR", "")
     if env:
         return [Path(p) for p in env.split(os.pathsep) if p.strip()]
     return [Path.home() / ".claude"]
