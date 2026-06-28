@@ -747,3 +747,43 @@ pyyaml `safe_load` OK; canonical `html/styles.css` and `html/icon.svg` exist; th
 `apps/per-project-plugin-toggler/.github/workflows/` is now empty (untracked by git).
 **Outcome:** Pending — needs a real `pppt-v0.9.1` tag push to verify end to end (current
 `package.json` version is 0.9.1).
+
+### Entry 26
+
+**Type:** Decision
+**Mode:** Interactive (user-directed, two AskUserQuestion forks resolved)
+**Timestamp:** 2026-06-28T00:00:00Z
+**Task:** Establish the repo's release model — per-component vs whole-repo tags, and per-component
+changelogs — on branch `chore/pppt-release-workflow`.
+
+**Context:** The user asked for tag-based releases that can target either a single component or the
+whole repo, plus per-component changelogs, starting the plugin toggler at a tracked version. This
+directly reverses the convention PR #10 (Entry 24) had just re-established: "members do not carry
+their own CHANGELOG.md; release history lives in a single root changelog." Two forks went to the
+user: (a) the toggler's version baseline given package.json is already 0.9.1, and (b) how much to
+build now.
+
+**Decision (user-chosen where noted):**
+- **Two-axis tag model, non-overlapping namespaces.** Component release = `<alias>-vX.Y.Z`
+  (`pppt-v*` for the toggler) triggering that component's workflow; whole-repo release = bare
+  `vX.Y.Z`. `v*` never matches `<alias>-v*`, so they coexist. Documented in new `docs/releasing.md`
+  (axis table + alias registry + per-component steps) and a new **Releases** convention bullet in
+  root CLAUDE.md.
+- **Per-component CHANGELOG.md restored** (reverses Entry 24). CLAUDE.md Docs convention amended:
+  independently released components keep their own Keep-a-Changelog `CHANGELOG.md`; the repo keeps a
+  root changelog once it cuts its first repo-wide release; un-released components carry none yet.
+  Root + toggler READMEs repoint to the changelog/release guide.
+- **Version baseline = keep 0.9.1** (user choice, over reset-to-0.0.1 or 1.0.0). The new
+  `apps/per-project-plugin-toggler/CHANGELOG.md` starts at `[0.9.1] - 2026-06-12` as the first
+  release *tracked in this monorepo*, with a note that 0.x development predates this repo and
+  happened in a previous repository — so the prior per-version history is not reproduced here.
+- **Scope = toggler component only** (user choice). The whole-repo `v*` axis is documented as the
+  reserved namespace but its `release-repo.yml` + root CHANGELOG are deferred until the repo
+  actually cuts a repo-wide release (YAGNI). `release-extension.yml` already triggers on `pppt-v*`
+  and asserts tag == package.json (0.9.1), so no workflow change was needed.
+
+**Impact / Risk:** Low. Reverses the just-merged "single root changelog" direction deliberately;
+CLAUDE.md/READMEs updated so convention and tree agree. First component release is cut by tagging
+`pppt-v0.9.1` on main once this branch merges.
+**Outcome:** Pending merge of `chore/pppt-release-workflow`, then `pppt-v0.9.1` tag push to verify
+the release workflow end to end.

@@ -99,3 +99,8 @@ make sync-css           # macOS / Linux
 ## Troubleshooting
 
 **`[WinError 10053]` in server output (Windows only):** benign — the browser closed a connection before the server finished reading it. Suppressed at the `handle_error` level; no action needed. See [HTML user guide](docs/user-guide-html.md#winError-10053-in-the-terminal-windows) for details.
+
+## Releases
+
+Tagged `pppt-vX.Y.Z`; see [CHANGELOG.md](CHANGELOG.md) for release history and the monorepo
+[release guide](../../docs/releasing.md) for how a release is cut.

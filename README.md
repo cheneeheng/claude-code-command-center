@@ -3,8 +3,9 @@
 The ultimate monorepo for working with **Claude Code** — apps you run, utility tools,
 and shared libraries, all centered on Claude Code.
 
-Each member keeps its own `README.md` and `CLAUDE.md`. This front page is
-the catalog; click into a folder for full docs.
+Each member keeps its own `README.md` and `CLAUDE.md` (plus a `CHANGELOG.md` once it is
+released independently). This front page is the catalog; click into a folder for full docs.
+Releases are tagged per component — see the [release guide](docs/releasing.md).
 
 ## Catalog
 
