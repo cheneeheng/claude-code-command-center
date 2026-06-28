@@ -38,10 +38,12 @@ the catalog; click into a folder for full docs.
 | Library | What it does |
 |---------|--------------|
 | [`claude-usage`](libs/claude-usage/) | Dependency-free library that reads Claude Code's `~/.claude/projects/**/*.jsonl` transcripts into per-session token/cost data, plus the model pricing table. |
+| [`claude-plugins`](libs/claude-plugins/) | Dependency-free library that reads Claude Code's installed plugins and their skills/agents/hooks from local config into typed records. |
 
-A library earns a place here only with a **cohesive domain** and **≥2 real consumers** — not as
-a utilities junk drawer. `claude-usage` qualifies: it models one external contract (the transcript
-layout) and is consumed by both the `usage-dashboard` app and the `usage-report` CLI.
+A library earns a place here only with a **cohesive domain** and **≥2 real consumers** — not as a
+utilities junk drawer. `claude-usage` qualifies (the transcript layout, consumed by the
+`usage-dashboard` app and the `usage-report` CLI); so does `claude-plugins` (the installed-plugin
+layout, consumed by the `claude-component-browser` and `per-project-plugin-toggler` apps).
 
 ## Installing the tools
 
