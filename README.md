@@ -94,7 +94,8 @@ docs/      monorepo-wide docs
 
 [Apache-2.0](LICENSE) for the whole repository.
 
-## Plan & decisions
+## Decisions
 
-The build plan lives in [`.agents_workspace/planning/v1/SKELETON.md`](.agents_workspace/planning/v1/SKELETON.md);
-decisions are logged in [`.agents_workspace/DECISION_LOG.md`](.agents_workspace/DECISION_LOG.md).
+Agent decisions are logged in [`.agents_workspace/DECISION_LOG.md`](.agents_workspace/DECISION_LOG.md).
+Historical per-member logs are consolidated in
+[`.agents_workspace/archive/decision-log.md`](.agents_workspace/archive/decision-log.md).

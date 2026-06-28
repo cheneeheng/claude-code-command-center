@@ -69,7 +69,8 @@ Work within the member you were asked to change. Do not retrofit conventions acr
 members in a single change. Adding a new member: place it under the right category folder, give
 it a self-descriptive name, a README, and (for Python) a `uv` project.
 
-## Plan & decisions
+## Decisions
 
-- Build plan: `.agents_workspace/planning/v1/SKELETON.md`
-- Decision log: `.agents_workspace/DECISION_LOG.md`
+- Active decision log: `.agents_workspace/DECISION_LOG.md` (append here when you resolve
+  genuine ambiguity).
+- Archived per-member logs: `.agents_workspace/archive/decision-log.md` (frozen history).
