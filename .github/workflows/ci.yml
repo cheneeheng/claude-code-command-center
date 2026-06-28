@@ -20,10 +20,11 @@ jobs:
           - apps/multi-repo-plan-runner
           - apps/per-project-plugin-toggler
           - apps/usage-dashboard
-          - apps/skill-browser
+          - apps/plugin-component-browser
           - tools/statusline-hook
           - tools/usage-report
           - libs/claude-usage
+          - libs/claude-plugins
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -42,8 +43,12 @@ jobs:
         include:
           - member: libs/claude-usage
             target: src
+          - member: libs/claude-plugins
+            target: src
           - member: tools/usage-report
             target: src
+          - member: apps/plugin-component-browser
+            target: server.py
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
