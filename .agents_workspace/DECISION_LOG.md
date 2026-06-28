@@ -635,3 +635,29 @@ all internal markdown file links verified to resolve. Frozen CHANGELOG and DECIS
 that names the deleted files was intentionally left verbatim, so a few historical references now
 point at archived/removed paths by design.
 **Outcome:** Work done on branch `docs/cleanup`, committed per phase, left for end-of-work review.
+
+### Entry 23
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-28T00:00:00Z
+**Task:** Apply the `C4_` env-var prefix the repo convention requires (the follow-up Entry 22 deferred).
+
+**Context:** Three env vars were read unprefixed, contradicting the repo rule that every var it
+defines is `C4_`-prefixed: `CLAUDE_DIR` (read by `claude-usage` and `claude-plugins`) and
+`STATUSLINE_LIVE_TIMEOUT` (read by `usage-dashboard`). This reverses Entry 22's "left untouched"
+call now that the user has asked for the fix. Entry 16 / Entry (claude-plugins extraction) had
+earlier kept `CLAUDE_DIR` unprefixed on purpose to match `claude-usage`; that rationale is now
+superseded.
+**Decision:** Renamed the env-var keys directly — `CLAUDE_DIR` → `C4_CLAUDE_DIR`,
+`STATUSLINE_LIVE_TIMEOUT` → `C4_STATUSLINE_LIVE_TIMEOUT` — in the three reads plus their
+docstrings and READMEs, and added `C4_STATUSLINE_LIVE_TIMEOUT` to the canonical lists in the
+root CLAUDE.md and README. No backward-compatibility fallback (per the no-shims convention).
+Left the Python module identifier `dashboard_config.CLAUDE_DIRS` unchanged — it is a code symbol,
+not an env var. Frozen history (CHANGELOG, prior DECISION_LOG entries) naming the old vars is
+left verbatim.
+**Impact / Risk:** Breaking for anyone who currently sets `CLAUDE_DIR` / `STATUSLINE_LIVE_TIMEOUT`
+for these members — they must switch to the `C4_`-prefixed names. `statusline-hook` and
+`usage-report` already used `C4_CLAUDE_DIR`, so the suite is now consistent.
+**Outcome:** No unprefixed env-var reads remain (grep clean); `py_compile` passes on the three
+changed modules.

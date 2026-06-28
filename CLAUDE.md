@@ -59,7 +59,8 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
 - **Env vars:** every environment variable this repo defines and reads is prefixed `C4_`
   (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
   Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir
-  for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in). OS-provided
+  for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in),
+  `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
 - **Docs:** exactly **one `README.md` per member** (apps/tools/libs/setup) plus the root README,

@@ -20,15 +20,15 @@ __all__ = [
 
 
 def claude_dir() -> Path:
-    """Return the Claude config dir, honouring the first ``$CLAUDE_DIR`` entry.
+    """Return the Claude config dir, honouring the first ``$C4_CLAUDE_DIR`` entry.
 
-    ``$CLAUDE_DIR`` may be a pathsep-separated list; only its first entry is used.
+    ``$C4_CLAUDE_DIR`` may be a pathsep-separated list; only its first entry is used.
     Falls back to ``~/.claude`` when the variable is unset.
 
     Returns:
         The Claude config directory path.
     """
-    env = os.environ.get("CLAUDE_DIR", "")
+    env = os.environ.get("C4_CLAUDE_DIR", "")
     return Path(env.split(os.pathsep)[0].strip()) if env else Path.home() / ".claude"
 
 

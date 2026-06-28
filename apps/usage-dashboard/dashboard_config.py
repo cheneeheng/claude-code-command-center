@@ -13,4 +13,4 @@ import claude_usage
 CLAUDE_DIRS: list[Path] = claude_usage.claude_dirs()
 
 # Sessions with no statusline update in this window are considered inactive.
-LIVE_SESSION_TIMEOUT_SECS: int = int(os.environ.get("STATUSLINE_LIVE_TIMEOUT", 1800))  # 30 min
+LIVE_SESSION_TIMEOUT_SECS: int = int(os.environ.get("C4_STATUSLINE_LIVE_TIMEOUT", 1800))  # 30 min

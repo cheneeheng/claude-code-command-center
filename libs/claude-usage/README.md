@@ -13,7 +13,7 @@ summaries. It exists because more than one member needs this exact parsing: the
 ```python
 from claude_usage import load_sessions, claude_dirs, estimated_cost, Session
 
-for s in load_sessions():          # newest first; honours $CLAUDE_DIR
+for s in load_sessions():          # newest first; honours $C4_CLAUDE_DIR
     print(s.project, s.total_tokens, f"${s.cost_usd:.2f}")
 ```
 
@@ -21,7 +21,7 @@ for s in load_sessions():          # newest first; honours $CLAUDE_DIR
 |--------|---------|
 | `load_sessions(dirs=None)` | Parse all transcripts into a list of `Session` (newest first). |
 | `Session` | Dataclass: tokens (input/output/cache), `total_tokens`, estimated `cost_usd`, `models`, `project`, timestamps. |
-| `claude_dirs()` | Resolve the Claude config dirs (honours pathsep-separated `$CLAUDE_DIR`). |
+| `claude_dirs()` | Resolve the Claude config dirs (honours pathsep-separated `$C4_CLAUDE_DIR`). |
 | `transcript_files(dirs=None)` | The raw transcript paths, deduped and sorted. |
 | `estimated_cost(per_model)` | USD estimate from per-model token counts and `MODEL_COSTS`. |
 | `model_family` / `model_costs` / `MODEL_COSTS` | Pricing table and family collapsing. |
