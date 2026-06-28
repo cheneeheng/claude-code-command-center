@@ -62,6 +62,15 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
+- **Docs:** exactly **one `README.md` per member** (apps/tools/libs/setup) plus the root README,
+  which is the catalog. Deeper end-user docs live under a member's `docs/` (e.g.
+  `multi-repo-plan-runner/docs/guide/`, `per-project-plugin-toggler/docs/user-guide-*.md`) and the
+  README links into them — do not split a member into multiple READMEs. The one sanctioned second
+  README is `per-project-plugin-toggler/vscode-extension/README.md`, which ships with the VSIX and
+  is rendered on the VSCode marketplace page. No per-member planning docs and no per-member
+  decision logs: build planning is ephemeral, and agent decisions go in the active
+  `.agents_workspace/DECISION_LOG.md` (historical per-member logs are frozen in
+  `.agents_workspace/archive/decision-log.md`).
 
 ## Scope discipline
 
