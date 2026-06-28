@@ -63,8 +63,12 @@ header .count { color: var(--fg-muted); font-size: 12px; }
 #search:focus-visible { outline: 2px solid var(--secondary); outline-offset: 1px; }
 
 /* --- Two-pane layout --- */
-main { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; flex: 1; min-height: 0; }
-#list { overflow-y: auto; border-right: 1px solid var(--border); background: var(--surface); }
+main { display: grid; grid-template-columns: auto 1fr; flex: 1; min-height: 0; }
+#list {
+  width: 320px; min-width: 240px; max-width: 560px;  /* user-draggable within bounds */
+  resize: horizontal; overflow: auto;
+  border-right: 1px solid var(--border); background: var(--surface);
+}
 
 /* --- Collapsible sections (one <details> per plugin / loose group) --- */
 #list .group { border-bottom: 2px solid var(--border-strong); }
