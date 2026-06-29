@@ -818,3 +818,42 @@ which is current branding and was kept.
 **Impact / Risk:** Low. Pure additive render changes plus doc/comment edits; no new deps, no module
 system change, `file://` constraint untouched. README/CLAUDE.md updated so docs match the new viewer.
 **Outcome:** Pending manual check in Chromium (load order + diff render).
+
+### Entry 28
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-29T00:00:00Z
+**Task:** Add a runnable example for `apps/multi-repo-plan-runner`, clean its docs against the
+user-operator-guide skill, and trim the README's overlap with the docs. Branch
+`feat/multi-repo-plan-runner-example`.
+
+**Context:** The goal asked for a "runnable example" with no chosen shape. docket resolves each
+project `path` with `os.path.abspath` (CWD-relative), so a committed example registry cannot use a
+machine-portable absolute path — it must use either relative paths (tied to the run directory) or
+per-user absolute paths. Two forks the user left open: (1) how the example registry encodes paths,
+and (2) whether the sample target repos are real git repos.
+
+**Decision:**
+- Example registry (`examples/docket.json`) uses **relative** project paths
+  (`examples/sample-repos/...`) and the docs/README instruct running from the member root, where
+  those resolve. Chosen over per-user absolute paths (not portable) and over adding a launcher/path-
+  rewrite shim (new code for what one documented `cd` solves — write-less-code).
+- Sample repos are plain directories with `.agents_workspace/planning/` plans, **not** real git
+  repos — nested `.git` dirs inside the monorepo cause more trouble than they teach; the example
+  demonstrates docket's UI/lifecycle, not git review. Noted as such in each sample README.
+- Lifecycle sidecars written by the example are git-ignored
+  (`examples/sample-repos/*/.agents_workspace/implementation/`) so the example always starts at
+  `ready` on a clean checkout.
+- Two projects (web-app with a nested `feature-search/ITER_01`, plus api-service) so the example
+  also exercises plan nesting and per-project batch grouping.
+- Docs cleanup: fixed two real inaccuracies (reference.md CLI table and install.md verify-line both
+  omitted the `init`/`doctor` subcommands) and wired the example into the docs spine (index +
+  getting-started). README trimmed from the full Install/Registry/Run duplication down to an
+  overview + a pointer table into `docs/guide/`.
+
+**Impact / Risk:** Low. No change to `docket/` source — only added `examples/`, doc edits, a
+.gitignore rule, and a README rewrite. Verified live: `docket doctor` reports 0 errors/0 warnings,
+`list_plans` returns all three plans as `ready`, and a manual `set_status` writes a git-ignored
+sidecar.
+**Outcome:** Example runs; docs and README consistent with the shipped CLI.

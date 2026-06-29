@@ -9,12 +9,14 @@ the [guide index](index.md).
 docket [--registry PATH] <command>
 ```
 
-`--registry PATH` is a global option (it precedes the subcommand) and applies to both subcommands.
+`--registry PATH` is a global option (it precedes the subcommand) and applies to every subcommand.
 
 | Command | Options | Purpose |
 |---------|---------|---------|
 | `docket tui` | — | Launch the Textual terminal UI. |
 | `docket serve` | `--port N` (default `8765`) | Launch the localhost browser server at `http://127.0.0.1:N`. |
+| `docket init` | `--scan ROOT`, `--output PATH`, `--force`, `--merge`, `--dry-run` | Generate or update a `.docket.json` registry. See [Configure the registry](operations/configure-registry.md). |
+| `docket doctor` | — | Load the resolved registry and report problems; exits `1` on any error. |
 
 With no command, docket prints help and exits non-zero.
 
