@@ -12,20 +12,17 @@ Core flow: **open → find two repos → compare a file → copy across.**
 
 ## Running, building, testing
 
+See README.md for end-user setup (folder picker, the optional "Set root path" for VSCode links).
+Facts that constrain edits:
+
 - **No build step, no package manager, no dependencies, no tests.** The app is a set of
   **static files**: `index.html` (markup + ordered tags), `styles/*.css`, and `scripts/*.js`,
   loaded as classic `<link>`/`<script>`. v1 was a three-file split, v2 collapsed it into a
   single inlined `index.html`, and **v3 re-split it** into several small classic-script files
   (one concern per file) wired by load order — see the constraints below.
-- **Run it** by opening `index.html` directly (`file://`) in **Chrome / Edge / Opera**.
-  It will not work in Firefox or Safari — it depends on the File System Access API.
-- On first use, click **"Change folder"** and pick the projects root. The directory handle
-  is persisted in IndexedDB, so reopening the page reconnects without re-prompting (the
-  browser still requires a permission re-grant click via "Reconnect folder").
-- **Optional:** click **"Set root path"** and paste the absolute path of the projects root
-  to enable the per-card "Open in VSCode" buttons. The File System Access API never exposes
-  the real filesystem path of a picked folder, so this must be entered separately; the app
-  works fully without it.
+- Runs from `file://` in **Chrome / Edge / Opera** only — it depends on the File System Access
+  API, so it will not work in Firefox or Safari. The picked directory handle is persisted in
+  IndexedDB (reopening reconnects, subject to a browser permission re-grant click).
 
 ## Hard architectural constraints (do not violate)
 

@@ -12,26 +12,15 @@ browser side is pure stdlib).
 
 ## Commands
 
-Prefer `uv` for everything (it reads the committed `uv.lock`). Only if `uv` is not installed or
-fails to run, fall back to the standard `pip`/`python` tooling.
+See README.md for the full command set. Prefer `uv` for everything (it reads the committed
+`uv.lock`); only if `uv` is not installed or fails to run, fall back to `pip`/`python`.
 
-```
-uv sync                          # install   (fallback: pip install -e .)
-uv run docket tui                # Textual terminal UI            (fallback: docket tui)
-uv run docket serve --port 8765  # localhost browser page         (fallback: docket serve --port 8765)
-                                 # -> http://127.0.0.1:8765
-uv run docket init --scan ~/code # scaffold/refresh .docket.json  (--merge to add new repos in place)
-uv run docket doctor             # sanity-check the resolved config (exit 1 on any error)
-uv run pytest                    # test suite (100% coverage gate via --cov, configured in pyproject)
-```
-
-Both subcommands accept `--registry PATH`. A pytest suite lives under `tests/` (`unit/` +
-`api/`) and is kept at 100% line+branch coverage — per the contract, do not add tests unless
-asked, but if you change `docket/` keep the suite green and coverage at 100%. No linter step
-exists. For a quick sanity check on an edit, parse/type-check the changed file
-(`uv run python -m py_compile <file>`, fallback `python -m py_compile <file>`). The headless
-runner shells out to `claude` (BYO-CLI, must be installed and authenticated); docket never
-handles API keys.
+A pytest suite lives under `tests/` (`unit/` + `api/`) and is kept at 100% line+branch coverage —
+per the contract, do not add tests unless asked, but if you change `docket/` keep the suite green
+and coverage at 100% (`uv run pytest`). No linter step exists. For a quick sanity check on an edit,
+parse/type-check the changed file (`uv run python -m py_compile <file>`, fallback
+`python -m py_compile <file>`). The headless runner shells out to `claude` (BYO-CLI, must be
+installed and authenticated); docket never handles API keys.
 
 Registry resolution (first match wins): `--registry PATH` → `$DOCKET_REGISTRY` →
 `./.docket.json` → `~/.config/docket/.docket.json`. The registry has three layers (top-level app

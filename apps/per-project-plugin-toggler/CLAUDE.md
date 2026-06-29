@@ -4,29 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Running
 
-See README.md for full usage. Quick reference:
+See README.md for full usage. Quick agent reference:
 
-**HTML version** — must be run from the target project root (`project_root = os.getcwd()` at startup):
-```bash
-cd /your/project
-python3 /path/to/html/server.py        # port 7779
-python3 /path/to/html/server.py 8080   # custom port
-```
-Convenience scripts: `html/start.sh` (Linux/macOS), `html/start.ps1` / `html/start.bat` (Windows).
+- **HTML version** must run from the target project root (`project_root = os.getcwd()` at startup):
+  `python3 html/server.py` (default port 7779; pass a port to override). Convenience launchers:
+  `html/start.sh`, `html/start.ps1`, `html/start.bat`.
+- **VSCode extension dev:** `F5` in VSCode → command palette → `Skills: Manage Plugins`. Package
+  with `cd vscode-extension && vsce package` (the `prepackage` hook auto-runs CSS sync).
 
-**VSCode extension dev:** `F5` in VSCode → command palette → `Skills: Manage Plugins`
-
-**Package extension:**
-```bash
-cd vscode-extension && vsce package
-```
-`prepackage` hook auto-runs CSS sync; no manual step needed before packaging.
-
-**CSS/icon sync** — `html/styles.css` and `html/icon.svg` are canonical. After any edit to either:
-```bash
-make sync-css   # or: powershell scripts/sync-css.ps1
-```
-Do not edit `vscode-extension/webview/styles.css` or `vscode-extension/webview/icon.svg` directly — they are overwritten by this command. (`vscode-extension/icon.svg` at the extension root is separate: the monochrome activity-bar icon referenced by `package.json`.)
+**CSS/icon sync (load-bearing) —** `html/styles.css` and `html/icon.svg` are canonical. After any
+edit to either, run `make sync-css` (or `powershell scripts/sync-css.ps1`). Do not edit
+`vscode-extension/webview/styles.css` or `vscode-extension/webview/icon.svg` directly — they are
+overwritten by this command. (`vscode-extension/icon.svg` at the extension root is separate: the
+monochrome activity-bar icon referenced by `package.json`.)
 
 ## Architecture
 
