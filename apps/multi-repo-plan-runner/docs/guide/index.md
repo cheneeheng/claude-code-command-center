@@ -18,6 +18,7 @@ you can jump straight to the one you need.
 
 | Page | Read it when |
 |------|--------------|
+| [Runnable example](../../examples/README.md) | You want to see docket working immediately, with no setup. |
 | [Getting started](getting-started.md) | First time — go from nothing to one implemented plan. |
 | [Implement a plan headless](how-to/implement-headless.md) | You want docket to run `claude -p` for you and stream the output. |
 | [Implement a plan manually](how-to/implement-manually.md) | You want to run Claude Code yourself and just track the outcome. |

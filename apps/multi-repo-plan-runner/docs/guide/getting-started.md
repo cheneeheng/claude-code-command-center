@@ -2,6 +2,11 @@
 
 Goal: from a fresh checkout to one plan implemented through docket, in about five minutes.
 
+> **Just want to see it work first?** The repo ships a [runnable example](../../examples/README.md)
+> — two sample repos with plans and a ready-made registry. Run
+> `uv run docket --registry examples/docket.json tui` from the member root and skip straight to a
+> populated UI, no setup. Come back here when you're ready to point docket at your own repos.
+
 ## Before you begin
 
 You need:

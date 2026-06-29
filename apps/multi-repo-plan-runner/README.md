@@ -11,83 +11,42 @@ reads them. The mutable state docket owns lives separately under
 status and full transition history. Delete `implementation/` and you only lose status/history,
 never a plan.
 
-## Lifecycle
+A plan moves through `ready → running → implemented`, driven two ways — **headless** (docket runs
+`claude -p` in the repo and streams the output) or **manual** (you run Claude Code yourself and
+mark the result). Submit many plans at once and docket groups them by project, running each
+project's plans sequentially and different projects concurrently. Two interchangeable frontends sit
+over one shared core: a Textual **TUI** and a localhost **browser page** (`127.0.0.1` only).
 
-A plan moves through `ready → running → implemented`, driven two ways:
+Python 3.11+. The only pip dependency is `textual` (the browser side is pure stdlib). The `claude`
+CLI is BYO — docket shells out to it for headless runs and never handles API keys.
 
-- **Headless** — docket runs `claude -p` in the repo and streams the output. The stdin prompt is
-  a short instruction that **names the plan file**; the plan body is never piped (Claude Code
-  reads the file itself). docket sets `running` on spawn, `implemented` on success.
-- **Manual** — you run Claude Code yourself; docket hands you a copy-pasteable command and you
-  **mark it implemented** by hand. No subprocess, no `running` state — but the transition is
-  still logged.
+## Quick start
 
-Submit many plans at once: docket groups them by project and runs each project's plans
-sequentially (stop-on-failure per project), with different projects running concurrently.
+See it working immediately, no setup — from this directory (`apps/multi-repo-plan-runner/`):
 
-## Install
-
-```
-pip install -e .
+```bash
+uv run docket --registry examples/docket.json tui
 ```
 
-Requires Python 3.11+. The only pip dependency is `textual` (the browser side is pure stdlib).
-The `claude` CLI must be separately installed and authenticated (BYO-CLI) — docket shells out to
-it and does not handle API keys.
+That loads the [runnable example](examples/README.md): two sample repos with plans and a ready-made
+registry. When you're ready for your own repos, follow [Getting started](docs/guide/getting-started.md).
 
-## Registry
+## Documentation
 
-The registry is a single `.docket.json` (a sample is committed). Resolution order, first match
-wins: `--registry PATH` → `$DOCKET_REGISTRY` → `./.docket.json` → `~/.config/docket/.docket.json`.
+Full guide under [`docs/guide/`](docs/guide/index.md):
 
-Don't start from a blank file — generate one and edit:
+| Page | For |
+|------|-----|
+| [Getting started](docs/guide/getting-started.md) | Nothing to one implemented plan. |
+| [Runnable example](examples/README.md) | A populated UI with zero setup. |
+| [How-to guides](docs/guide/index.md#user-guide) | Headless, manual, batch, re-run/reopen. |
+| [Install](docs/guide/operations/install.md) · [Configure the registry](docs/guide/operations/configure-registry.md) · [Runbook](docs/guide/operations/runbook.md) | Standing docket up and keeping it healthy. |
+| [Reference](docs/guide/reference.md) | CLI, key bindings, lifecycle state machine, every registry field. |
+| [Troubleshooting](docs/guide/troubleshooting.md) | Something in the UI isn't behaving. |
 
-```
-docket init                 # write a full default ./.docket.json
-docket init --scan ~/code   # also pre-populate projects from repos with a planning/ dir
-docket init --scan ~/code --merge   # re-run later: add only newly-found repos, keep your edits
-```
+## Limitations (MVP)
 
-It has three layers — top-level app settings, a `defaults` baseline, and per-project overrides:
-
-```json
-{
-  "$schema": "docket/schema/docket.schema.json",
-  "port": 8765,
-  "defaults": {
-    "model": "claude-sonnet-4-6",
-    "max_turns": 40,
-    "instruction_template": "Read the plan at {path} and implement it fully. ..."
-  },
-  "projects": [
-    { "name": "pyxyflow", "path": "~/code/pyxyflow" },
-    { "name": "mcp-harness", "path": "~/code/mcp-harness", "max_turns": 30 }
-  ]
-}
-```
-
-Each project needs `name` (unique) + `path` (a git repo; `~`/`$VARS` expanded) and may override
-any `defaults` knob: `allowed_tools`, `instruction_template`, `model`, `max_turns`,
-`permission_mode`, `planning_dir`, `implementation_dir`, `claude_bin`, `claude_extra_args`. A
-knob left unset everywhere falls back to a built-in default. List overrides **replace** (not
-merge) the defaults list. The committed `$schema` pointer gives editors autocomplete + validation;
-docket itself never reads the schema at runtime.
-
-## Run
-
-```
-docket tui                  # Textual terminal UI
-docket serve --port 8765    # localhost browser page -> http://127.0.0.1:8765
-docket doctor               # check the resolved config (paths, permission_mode, claude on PATH)
-```
-
-`serve`'s default port comes from `port` in the config (the `--port` flag overrides). All
-subcommands accept `--registry PATH`. The browser server binds to `127.0.0.1` only.
-
-## MVP limitations
-
-- The per-project lock serializes same-repo headless runs **within one process**. Running the
-  TUI and the server against the **same repo simultaneously** is not cross-process-locked.
-- The MVP TUI streams one run at a time (the browser streams concurrent per-project batches).
-- docket leaves working-tree changes; it does **not** commit. Review the diff yourself
-  (`git diff` / your editor) — that is the final step.
+- The per-project lock serializes same-repo headless runs **within one process** — running the TUI
+  and the server against the **same repo simultaneously** is not cross-process-locked.
+- The TUI streams one run at a time; the browser streams concurrent per-project batches.
+- docket leaves working-tree changes; it does **not** commit. Reviewing the diff is your final step.

@@ -1,0 +1,12 @@
+{
+  "$schema": "../docket/schema/docket.schema.json",
+  "port": 8765,
+  "defaults": {
+    "model": "claude-sonnet-4-6",
+    "max_turns": 40
+  },
+  "projects": [
+    { "name": "web-app", "path": "examples/sample-repos/web-app" },
+    { "name": "api-service", "path": "examples/sample-repos/api-service" }
+  ]
+}

@@ -27,8 +27,8 @@ uv sync
 uv run docket --help
 ```
 
-Expected: a usage line listing the `tui` and `serve` subcommands. Then run the test suite to
-confirm the install is sound:
+Expected: a usage line listing the `tui`, `serve`, `init`, and `doctor` subcommands. Then run the
+test suite to confirm the install is sound:
 
 ```bash
 uv run pytest

@@ -19,3 +19,6 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Runnable example: lifecycle sidecars are runtime state — keep the example at "ready"
+examples/sample-repos/*/.agents_workspace/implementation/
