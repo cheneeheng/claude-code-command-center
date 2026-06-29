@@ -59,7 +59,7 @@ window.Vantage.Persist = {
   async saveCache(cache) { return this._set(this.CACHE_KEY, cache); },
   async loadCache() { return this._get(this.CACHE_KEY); },
 
-  // Optional absolute root path, used only to build VSCode links (ITER_04).
+  // Optional absolute root path, used only to build VSCode links.
   async saveRootPath(str) { return this._set(this.ROOT_PATH_KEY, str); },
   async loadRootPath() {
     const v = await this._get(this.ROOT_PATH_KEY);

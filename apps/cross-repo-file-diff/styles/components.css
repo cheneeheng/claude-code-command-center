@@ -1,5 +1,5 @@
 /* ==========================================================================
-   VANTAGE — components (v3)
+   Vantage — components
    Visual treatment: typography, controls, badges, repo cards, file tree, diff
    rows, sidebar / puck chrome, selection bar, and the board highlight states.
    Positioning lives in layout.css; tokens come from tokens.css.
@@ -186,7 +186,7 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); }
 /* The whole card is the selectable surface, so the whole card highlights on hover. */
 .repo-card:not(.is-active):hover { background: var(--surface-2); }
 
-/* — Board highlight states (v3): derived each render from Selection + active card — */
+/* — Board highlight states: derived each render from Selection + active card — */
 /* Selected/active fills + lifts the card — a neutral treatment distinct from the
    teal A-outline (is-compare-a) and terracotta B-outline (is-compare-b), which
    still paint their border on top of the fill. */
@@ -295,16 +295,25 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); }
 .diff-status { padding: var(--space-3) var(--space-5); color: var(--fg-muted); font-size: var(--fs-100); }
 .diff-status.diff-error { color: var(--danger); }
 .diff-status.diff-binary, .diff-status.diff-identical { color: var(--fg-muted); }
+.diff-status.diff-summary { font-family: var(--font-mono); letter-spacing: var(--tracking-wide); }
 .diff-placeholder { padding: var(--space-8) var(--space-5); text-align: center; color: var(--fg-subtle); font-size: var(--fs-100); }
 
 .diff-view { font-family: var(--font-mono); font-size: var(--fs-75); line-height: var(--lh-snug); }
-.diff-line { display: flex; padding: 0 var(--space-5); white-space: pre-wrap; word-break: break-word; }
-.diff-line .diff-gutter { width: 1.4em; flex-shrink: 0; color: var(--fg-subtle); user-select: none; }
+.diff-line { display: flex; padding: 0 var(--space-3) 0 0; white-space: pre-wrap; word-break: break-word; }
+.diff-line .diff-ln {
+  width: 3.2em; flex-shrink: 0; padding: 0 var(--space-2); text-align: right;
+  color: var(--fg-subtle); user-select: none; font-variant-numeric: tabular-nums;
+}
+.diff-line .diff-ln:nth-of-type(2) { border-right: 1px solid var(--border); margin-right: var(--space-2); }
+.diff-line .diff-gutter { width: 1.4em; flex-shrink: 0; text-align: center; color: var(--fg-subtle); user-select: none; }
 .diff-line .diff-text { flex: 1; }
+.diff-word { border-radius: var(--radius-sm); padding: 0 1px; }
 .diff-add  { background: var(--success-wash); }
 .diff-add  .diff-gutter { color: var(--success); }
+.diff-add  .diff-word { background: color-mix(in srgb, var(--success) 30%, transparent); }
 .diff-del  { background: var(--danger-wash); }
 .diff-del  .diff-gutter { color: var(--danger); }
+.diff-del  .diff-word { background: color-mix(in srgb, var(--danger) 28%, transparent); }
 .diff-same { background: transparent; }
 
 .sidebar-footer { border-top: 1px solid var(--border); }

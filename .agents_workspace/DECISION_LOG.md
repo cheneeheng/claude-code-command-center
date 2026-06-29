@@ -787,3 +787,34 @@ CLAUDE.md/READMEs updated so convention and tree agree. First component release 
 `pppt-v0.9.1` on main once this branch merges.
 **Outcome:** Pending merge of `chore/pppt-release-workflow`, then `pppt-v0.9.1` tag push to verify
 the release workflow end to end.
+
+### Entry 27
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-06-29T00:00:00Z
+**Task:** Scrub stale old-project references from `apps/cross-repo-file-diff` and improve its diff
+viewer without adding dependencies, on branch `feat/cross-repo-diff-viewer-upgrade`.
+
+**Context:** The goal asked that the app be "up to date with no reference to the old project" plus an
+"improved diff viewer without external library." The app was extracted from a standalone iterative-
+planning repo whose planning artifacts (SKELETON/ITER docs, the TIDEWATER brand sheet) were already
+removed, but leftover references to that lineage remained in code comments, CSS headers, CLAUDE.md,
+and README: `v1/v2/v3` design-version labels, `ITER_04` cites, and the `TIDEWATER` codename. "Old
+project" was read as that predecessor planning project/lineage — not the live product name "Vantage",
+which is current branding and was kept.
+
+**Decision:**
+- Removed the version-lineage framing (`v1`/`v2`/`v3`, `ITER_04`, `TIDEWATER`) wherever it only
+  pointed back at the old planning project, while preserving the real architectural constraints those
+  sentences also stated (e.g. "sidebar has open|minimized modes, no close"). CSS header banners
+  renamed to plain "Vantage — …".
+- Diff-viewer improvement kept to three cohesive, dependency-free features: old/new line numbers in
+  the gutter, word-level intra-line highlighting of changed spans within replaced lines (a second
+  hand-rolled token-level LCS in `compare.js`, guarded at 400 tokens/line), and a `+N −M` change
+  summary in the status row. Deliberately skipped stateful context-folding (minimal-change bias /
+  YAGNI). Word highlight uses native CSS `color-mix()` (Chromium-only target already required).
+
+**Impact / Risk:** Low. Pure additive render changes plus doc/comment edits; no new deps, no module
+system change, `file://` constraint untouched. README/CLAUDE.md updated so docs match the new viewer.
+**Outcome:** Pending manual check in Chromium (load order + diff render).

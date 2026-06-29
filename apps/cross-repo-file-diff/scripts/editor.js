@@ -1,7 +1,7 @@
 /* ===================================================================
    Vantage.Editor — compose a vscode://file/ URI from the manual root path
    The File System Access API never exposes the picked folder's absolute path,
-   so the root path is supplied separately (ITER_04) and held here.
+   so the root path is supplied separately and held here.
    =================================================================== */
 
 'use strict';

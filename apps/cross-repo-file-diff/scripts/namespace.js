@@ -1,5 +1,5 @@
 /* ===================================================================
-   Vantage v3 — namespace (loaded FIRST)
+   Vantage — namespace (loaded FIRST)
    Cross-file sharing happens through this single global object, not
    import/export, so the page works opened directly over file://.
    Every module attaches itself to window.Vantage; load order in

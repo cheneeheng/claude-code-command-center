@@ -1,5 +1,5 @@
 /* ==========================================================================
-   TIDEWATER — Brand design tokens (v3)
+   Vantage — brand design tokens
    :root custom properties referenced by layout.css and components.css.
    Neutral fallbacks are baked into the light :root block so the page still
    renders if a real brand sheet is never supplied. No @import / no CDN — fonts
