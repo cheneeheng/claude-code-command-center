@@ -1,5 +1,5 @@
 /* ==========================================================================
-   VANTAGE — layout & positioning (v3)
+   Vantage — layout & positioning
    Page shell, reset, document base, board grid, sidebar / puck positioning,
    modal overlay and toast placement. Visual treatment of components lives in
    components.css; tokens come from tokens.css.

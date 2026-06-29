@@ -51,7 +51,9 @@ exposes the real filesystem path of the folder you pick — Vantage works fully 
   destructive action, always confirmed; there is no delete.
 - **Last-activity is a proxy**, derived from file modification times
   (`.git/logs/HEAD` → `.git/HEAD` → a shallow working-tree walk), not parsed Git history.
-- Diffs are line-based (a hand-written LCS) and shown flat, not side-by-side.
+- Diffs use a hand-written LCS, shown in a unified single column (not side-by-side) with old/new
+  line numbers, a `+N −M` change summary, and word-level highlighting of what changed within a
+  replaced line.
 - VSCode path composition assumes repos are **direct children** of the root.
 
 ## Development

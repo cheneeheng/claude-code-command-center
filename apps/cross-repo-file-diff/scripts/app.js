@@ -1,5 +1,5 @@
 /* ===================================================================
-   Vantage v3 — bootstrap (loaded LAST)
+   Vantage — bootstrap (loaded LAST)
    The only file that touches the DOM on boot. Every Vantage module must be
    loaded before this in index.html (load order is the dependency contract).
    =================================================================== */

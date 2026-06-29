@@ -95,7 +95,7 @@ window.Vantage.UI = {
     this.el.selectionSwapBtn.addEventListener('click', () => this.swapSelection());
     this.el.selectionClearBtn.addEventListener('click', () => this.clearSelection());
 
-    // Sidebar: swap mirrors the selection bar; minimize only (no close in v3); puck re-opens.
+    // Sidebar: swap mirrors the selection bar; minimize only (no close); puck re-opens.
     this.el.sidebarSwapBtn.addEventListener('click', () => this.swapSelection());
     this.el.sidebarMinimizeBtn.addEventListener('click', () => this.minimizeSidebar());
     this.el.floatingPuck.addEventListener('click', () => this.openSidebar());
@@ -334,7 +334,7 @@ window.Vantage.UI = {
     // they keep their own behaviour without also re-selecting.
     card.addEventListener('click', () => this.selectCard(repo));
 
-    // Derived highlight states (v3).
+    // Derived highlight states.
     const hl = this.highlightFor(repo);
     if (hl.isCompareA) card.classList.add('is-compare-a');
     if (hl.isCompareB) card.classList.add('is-compare-b');
@@ -770,7 +770,20 @@ window.Vantage.UI = {
       return;
     }
 
+    // Byte-different but line-content-identical → the only difference is the EOL
+    // style (CRLF vs LF); the line diff would show no changes, so say so plainly.
+    if (textA.replace(/\r\n?/g, '\n') === textB.replace(/\r\n?/g, '\n')) {
+      this.setDiffStatus('Identical content — only line endings differ (CRLF vs LF).', 'diff-identical');
+      this.lastDiff = this.diffKey();
+      this.el.sidebarFooter.hidden = false;
+      this.updateCopyBarLabels();
+      return;
+    }
+
     const lines = Compare.diff(textA, textB);
+    let added = 0, removed = 0;
+    for (const l of lines) { if (l.kind === 'add') added++; else if (l.kind === 'del') removed++; }
+    this.setDiffStatus('+' + added + '  −' + removed, 'diff-summary');
     this.renderDiffView(lines);
     // Cache keyed to the current A/B pair so minimize → reopen is instant.
     this.lastDiff = Object.assign(this.diffKey(), { lines });
@@ -788,21 +801,68 @@ window.Vantage.UI = {
   },
 
   renderDiffView(lines) {
+    const Compare = window.Vantage.Compare;
     const frag = document.createDocumentFragment();
-    for (const line of lines) {
-      const row = document.createElement('div');
-      row.className = 'diff-line diff-' + line.kind;
-      const gutter = document.createElement('span');
-      gutter.className = 'diff-gutter';
-      gutter.textContent = line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : '';
-      const text = document.createElement('span');
-      text.className = 'diff-text';
-      text.textContent = line.text;
-      row.appendChild(gutter);
-      row.appendChild(text);
-      frag.appendChild(row);
+    let oldNo = 0, newNo = 0;
+    for (let i = 0; i < lines.length; ) {
+      if (lines[i].kind === 'same') {
+        oldNo++; newNo++;
+        frag.appendChild(this.diffRow('same', oldNo, newNo, [{ text: lines[i].text, changed: false }]));
+        i++;
+        continue;
+      }
+      // A changed region: a run of deletions then a run of additions. Zip them
+      // index-by-index so each replaced line gets word-level highlighting against
+      // its counterpart; any unpaired surplus renders without intra-line marks.
+      let d = i; while (d < lines.length && lines[d].kind === 'del') d++;
+      let a = d; while (a < lines.length && lines[a].kind === 'add') a++;
+      const dels = lines.slice(i, d), adds = lines.slice(d, a);
+      const pairs = Math.min(dels.length, adds.length);
+      for (let k = 0; k < dels.length; k++) {
+        oldNo++;
+        const segs = k < pairs ? Compare.wordDiff(dels[k].text, adds[k].text).a
+                               : [{ text: dels[k].text, changed: false }];
+        frag.appendChild(this.diffRow('del', oldNo, null, segs));
+      }
+      for (let k = 0; k < adds.length; k++) {
+        newNo++;
+        const segs = k < pairs ? Compare.wordDiff(dels[k].text, adds[k].text).b
+                               : [{ text: adds[k].text, changed: false }];
+        frag.appendChild(this.diffRow('add', null, newNo, segs));
+      }
+      i = a;
     }
     this.el.diffView.appendChild(frag);
+  },
+
+  // Build one diff row: old/new line-number cells, the +/-/blank gutter, and the
+  // line text rendered from Segment[] (changed runs wrapped in .diff-word).
+  diffRow(kind, oldNo, newNo, segs) {
+    const row = document.createElement('div');
+    row.className = 'diff-line diff-' + kind;
+    const lnOld = document.createElement('span');
+    lnOld.className = 'diff-ln';
+    lnOld.textContent = oldNo == null ? '' : oldNo;
+    const lnNew = document.createElement('span');
+    lnNew.className = 'diff-ln';
+    lnNew.textContent = newNo == null ? '' : newNo;
+    const gutter = document.createElement('span');
+    gutter.className = 'diff-gutter';
+    gutter.textContent = kind === 'add' ? '+' : kind === 'del' ? '-' : '';
+    const text = document.createElement('span');
+    text.className = 'diff-text';
+    for (const seg of segs) {
+      if (seg.changed) {
+        const mark = document.createElement('span');
+        mark.className = 'diff-word';
+        mark.textContent = seg.text;
+        text.appendChild(mark);
+      } else {
+        text.appendChild(document.createTextNode(seg.text));
+      }
+    }
+    row.append(lnOld, lnNew, gutter, text);
+    return row;
   },
 
   updateCopyBarLabels() {

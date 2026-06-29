@@ -17,8 +17,7 @@ Facts that constrain edits:
 
 - **No build step, no package manager, no dependencies, no tests.** The app is a set of
   **static files**: `index.html` (markup + ordered tags), `styles/*.css`, and `scripts/*.js`,
-  loaded as classic `<link>`/`<script>`. v1 was a three-file split, v2 collapsed it into a
-  single inlined `index.html`, and **v3 re-split it** into several small classic-script files
+  loaded as classic `<link>`/`<script>`. It is several small classic-script files
   (one concern per file) wired by load order — see the constraints below.
 - Runs from `file://` in **Chrome / Edge / Opera** only — it depends on the File System Access
   API, so it will not work in Firefox or Safari. The picked directory handle is persisted in
@@ -67,7 +66,9 @@ each file a plain object attached to `window.Vantage` (no classes), loaded in th
   marker files (`package.json`→Node, `Cargo.toml`→Rust, etc.); `lastActivity` runs the mtime
   fallback chain; `readTree`/`readChildren` lazily build a repo's file tree on expand. Respects
   `Vantage.IGNORE_LIST`.
-- **`compare.js` → `Vantage.Compare`** — `diff(textA, textB)` (line-based LCS → `DiffLine[]`)
+- **`compare.js` → `Vantage.Compare`** — `diff(textA, textB)` (line-based LCS → `DiffLine[]`),
+  `wordDiff(lineA, lineB)` (token-level LCS → `{ a, b }` of `{ text, changed }` segments, powering
+  the intra-line highlight of replaced lines),
   and `looksBinary` (skip diffing binary files).
 - **`copy.js` → `Vantage.Copy`** — `copyFile(srcFileHandle, dstDirHandle, name)` and
   `resolveDestDir`/`destExists`, behind the overwrite confirm.
@@ -79,7 +80,10 @@ each file a plain object attached to `window.Vantage` (no classes), loaded in th
   `selection`, `filterText`, `sortMode`, `sidebarMode`, `lastDiff`, `activeRepoName`, …), DOM
   refs cached in `UI.el`, event binding, and all rendering (`renderBoard`, `buildRepoCard`,
   `renderTreeNode`, `buildVscodeButton`, the selection bar, the slide-in diff sidebar + floating
-  puck, root-path/confirm modals, toasts). The board has a sort control (last-activity / A–Z /
+  puck, root-path/confirm modals, toasts). The diff view (`renderDiffView`/`diffRow`) is a unified
+  single column: each row carries old/new line numbers, a `+`/`-` gutter, and—for replaced lines
+  paired across a del/add run—word-level highlight spans from `Compare.wordDiff`; a `+N −M` summary
+  shows in the status row. The board has a sort control (last-activity / A–Z /
   stack); there is **no** jump-to-repo search.
 - **`app.js`** (LAST) — the only file that touches the DOM on boot: `Vantage.UI.init()` on
   `DOMContentLoaded`.
@@ -90,7 +94,7 @@ as state and re-renders the relevant region. The markup has fixed mount-point ID
 `UI.cacheDom()` looks up; regions, the sidebar, and the puck are toggled via the `hidden`
 attribute and class toggles, not routing.
 
-Two v3-specific surface rules: the diff sidebar has only **`open | minimized`** modes — there is
+Two surface rules: the diff sidebar has only **`open | minimized`** modes — there is
 **no close/dismiss control**; minimize is presentation-only and never clears the selection, and
 the only way to remove the comparison surface is to **Clear** the selection (in the selection
 bar). Board cards carry **derived** highlight classes recomputed each render — `.is-compare-a` /
@@ -102,8 +106,6 @@ card (which also force-selects it). **Swap** reorders A/B without reopening a mi
 
 ## Conventions
 
-- The current design is the **v3 multi-file reshape** described in the sections above; the
-  v1 (three-file) and v2 (single-file) designs are superseded and live only in git history.
 - Agent decisions are archived at the repo-root `.agents_workspace/archive/decision-log.md`;
   new decisions go in the repo-root `.agents_workspace/DECISION_LOG.md`.
 - Section banners in the scripts use `/* ===== ... ===== */`; each file is one cohesive

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   VANTAGE — components (v3)
+   Vantage — components
    Visual treatment: typography, controls, badges, repo cards, file tree, diff
    rows, sidebar / puck chrome, selection bar, and the board highlight states.
    Positioning lives in layout.css; tokens come from tokens.css.
@@ -151,8 +151,8 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); }
 }
 .selection-slot .slot-label { font-weight: var(--weight-semibold); flex-shrink: 0; }
 .selection-slot .slot-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.selection-slot.slot-a .slot-label { color: var(--secondary); }
-.selection-slot.slot-b .slot-label { color: var(--accent); }
+.selection-slot.slot-a .slot-label { color: var(--accent); }
+.selection-slot.slot-b .slot-label { color: var(--secondary); }
 .selection-slot.slot-empty { color: var(--fg-subtle); border-style: dashed; }
 .selection-next { font-family: var(--font-mono); font-size: var(--fs-50); color: var(--fg-muted); white-space: nowrap; }
 .selection-next strong { color: var(--fg); }
@@ -186,17 +186,17 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); }
 /* The whole card is the selectable surface, so the whole card highlights on hover. */
 .repo-card:not(.is-active):hover { background: var(--surface-2); }
 
-/* — Board highlight states (v3): derived each render from Selection + active card — */
+/* — Board highlight states: derived each render from Selection + active card — */
 /* Selected/active fills + lifts the card — a neutral treatment distinct from the
-   teal A-outline (is-compare-a) and terracotta B-outline (is-compare-b), which
+   terracotta A-outline (is-compare-a) and teal B-outline (is-compare-b), which
    still paint their border on top of the fill. */
 .repo-card.is-active { background: var(--surface-2); border-color: var(--fg-muted); box-shadow: var(--shadow-md); }
-.repo-card.is-compare-a { border-color: var(--secondary); }
-.repo-card.is-compare-b { border-color: var(--accent); }
+.repo-card.is-compare-a { border-color: var(--accent); }
+.repo-card.is-compare-b { border-color: var(--secondary); }
 .repo-card.is-compare-a.is-compare-b {
-  border-color: var(--secondary);
+  border-color: var(--accent);
   background:
-    linear-gradient(135deg, var(--secondary-wash) 0 50%, var(--accent-wash) 50% 100%) border-box;
+    linear-gradient(135deg, var(--accent-wash) 0 50%, var(--secondary-wash) 50% 100%) border-box;
 }
 
 .repo-card-header {
@@ -240,8 +240,8 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); }
   padding: 0.12rem 0.32rem;
   color: var(--on-text);
 }
-.compare-badge.badge-a { background: var(--secondary); }
-.compare-badge.badge-b { background: var(--accent); }
+.compare-badge.badge-a { background: var(--accent); }
+.compare-badge.badge-b { background: var(--secondary); }
 
 .repo-card-meta {
   display: flex; align-items: center; justify-content: space-between;
@@ -276,8 +276,8 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); }
 .tree-row-actions { display: flex; gap: 2px; opacity: 0; transition: opacity var(--dur-fast); }
 .tree-row:hover .tree-row-actions, .tree-file.assigned .tree-row-actions { opacity: 1; }
 .tree-row-actions .btn { padding: 1px 6px; font-size: var(--fs-50); min-width: 22px; }
-.tree-row-actions .btn.active-a { background: var(--secondary); border-color: var(--secondary); color: var(--on-text); }
-.tree-row-actions .btn.active-b { background: var(--accent); border-color: var(--accent); color: var(--on-text); }
+.tree-row-actions .btn.active-a { background: var(--accent); border-color: var(--accent); color: var(--on-text); }
+.tree-row-actions .btn.active-b { background: var(--secondary); border-color: var(--secondary); color: var(--on-text); }
 
 /* — Diff sidebar chrome — */
 .diff-sidebar {
@@ -288,23 +288,32 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); }
 .sidebar-header { border-bottom: 1px solid var(--border); }
 .sidebar-title { min-width: 0; }
 .sidebar-sides { font-family: var(--font-mono); font-size: var(--fs-75); color: var(--fg); margin-top: var(--space-1); word-break: break-all; }
-.sidebar-sides .side-a { color: var(--secondary); }
-.sidebar-sides .side-b { color: var(--accent); }
+.sidebar-sides .side-a { color: var(--accent); }
+.sidebar-sides .side-b { color: var(--secondary); }
 .icon-btn { padding: var(--space-1) var(--space-2); font-size: var(--fs-200); line-height: 1; }
 
 .diff-status { padding: var(--space-3) var(--space-5); color: var(--fg-muted); font-size: var(--fs-100); }
 .diff-status.diff-error { color: var(--danger); }
 .diff-status.diff-binary, .diff-status.diff-identical { color: var(--fg-muted); }
+.diff-status.diff-summary { font-family: var(--font-mono); letter-spacing: var(--tracking-wide); }
 .diff-placeholder { padding: var(--space-8) var(--space-5); text-align: center; color: var(--fg-subtle); font-size: var(--fs-100); }
 
 .diff-view { font-family: var(--font-mono); font-size: var(--fs-75); line-height: var(--lh-snug); }
-.diff-line { display: flex; padding: 0 var(--space-5); white-space: pre-wrap; word-break: break-word; }
-.diff-line .diff-gutter { width: 1.4em; flex-shrink: 0; color: var(--fg-subtle); user-select: none; }
+.diff-line { display: flex; padding: 0 var(--space-3) 0 0; white-space: pre-wrap; word-break: break-word; }
+.diff-line .diff-ln {
+  width: 3.2em; flex-shrink: 0; padding: 0 var(--space-2); text-align: right;
+  color: var(--fg-subtle); user-select: none; font-variant-numeric: tabular-nums;
+}
+.diff-line .diff-ln:nth-of-type(2) { border-right: 1px solid var(--border); margin-right: var(--space-2); }
+.diff-line .diff-gutter { width: 1.4em; flex-shrink: 0; text-align: center; color: var(--fg-subtle); user-select: none; }
 .diff-line .diff-text { flex: 1; }
+.diff-word { border-radius: var(--radius-sm); padding: 0 1px; }
 .diff-add  { background: var(--success-wash); }
 .diff-add  .diff-gutter { color: var(--success); }
+.diff-add  .diff-word { background: color-mix(in srgb, var(--success) 30%, transparent); }
 .diff-del  { background: var(--danger-wash); }
 .diff-del  .diff-gutter { color: var(--danger); }
+.diff-del  .diff-word { background: color-mix(in srgb, var(--danger) 28%, transparent); }
 .diff-same { background: transparent; }
 
 .sidebar-footer { border-top: 1px solid var(--border); }
