@@ -153,6 +153,13 @@ function Invoke-Install {
     foreach ($d in $targets) {
         $memberCfg = Get-MemberConfig $cfg $d.Name
 
+        # -All installs only members opted in via a config entry (even an empty {}). A member
+        # absent from config is skipped; use `install -Member <name>` to install it with defaults.
+        if ($All -and $null -eq $memberCfg) {
+            Write-Host "  - skipping $($d.Name): no entry in $ConfigPath" -ForegroundColor Yellow
+            continue
+        }
+
         if (-not (Test-ConfigComplete $d $memberCfg)) {
             $msg = "requires config keys [$($d.RequiredConfig -join ', ')] in $ConfigPath"
             if ($All) {

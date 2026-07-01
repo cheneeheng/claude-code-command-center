@@ -27,10 +27,11 @@ param(
     [int]$IntervalMinutes = 15
 )
 
-# Task folder mirrors this tool's folder name (\file-sync\), so every install of this
-# tool is grouped under one Task Scheduler folder, separate from other tools' tasks.
+# Task folder nests this tool's folder name under the shared \ClaudeAutomation\ root
+# (\ClaudeAutomation\file-sync\), grouping every install of this tool together and separate
+# from other tools' tasks.
 $toolName   = Split-Path -Leaf $PSScriptRoot
-$taskFolder = "\$toolName\"
+$taskFolder = "\ClaudeAutomation\$toolName\"
 
 function Get-SyncIdentity {
     # Map the (file, folder pair) to a stable identity (task name + launcher path) derived

@@ -156,7 +156,10 @@ Write-Host "      $ConfigFile" -ForegroundColor Green
 # 4. Register Task Scheduler task
 # ---------------------------------------------------------------------------
 $TaskName   = "SessionDigest-DailySummary"
-$TaskFolder = "\ScheduledSessionDigests\"
+# Subfolder = this member's folder name (the parent of each digest's own folder), so every
+# digest task nests under \ClaudeAutomation\<member>\ and stays self-identifying to the member.
+$MemberName = Split-Path -Leaf (Split-Path -Parent $PSScriptRoot)
+$TaskFolder = "\ClaudeAutomation\$MemberName\"
 $Script     = "$ScriptsDir\daily-summary-trigger.ps1"
 
 if ($WantCron) {

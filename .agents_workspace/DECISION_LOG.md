@@ -907,3 +907,69 @@ moved), so the no-cross-member-dependency invariant holds. Docs (member README +
 CLAUDE.md) updated for the new paths.
 **Outcome:** App runs from the new layout — smoke test on :8098 returns 200 for /,
 /dashboard.css, /dashboard.js, /api/data with identical asset sizes.
+
+### Entry 31
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-01T00:00:00Z
+**Task:** Nest all scheduled tasks under `\ClaudeAutomation\`, and expose the statusline-hook
+config-dir override in the setup registry.
+
+**Context:** Two issues. (1) The CLAUDE.md convention puts every Task Scheduler task under the
+shared `\ClaudeAutomation` root, but `file-sync` registered at `\file-sync\` and the three session
+digests at `\ScheduledSessionDigests\` — both outside the root. (2) `statusline-hook-setup.ps1`
+accepts `-ClaudeDir`, but the `setup/registry.ps1` descriptor never forwarded it, so an orchestrator
+install could not target a non-default config dir the way a direct script call can.
+**Decision:**
+- Task folders: `file-sync` → `\ClaudeAutomation\file-sync\` (added the missing leading `\` on the
+  user's in-progress edit); the three digests → `\ClaudeAutomation\<member>\`, where `<member>` is
+  derived at runtime from the member folder name (`Split-Path -Leaf (Split-Path -Parent
+  $PSScriptRoot)`, since each digest's `install.ps1` sits one level below the member root) rather
+  than a hardcoded `ScheduledSessionDigests` — mirroring file-sync's `Split-Path -Leaf $PSScriptRoot`
+  so the subfolder is self-identifying and survives a member rename. Resolves to
+  `\ClaudeAutomation\scheduled-session-digests\`. Kept the per-tool subfolder rather than flattening
+  tasks directly under the root, matching the CLAUDE.md "subfolders such as the case for file sync"
+  allowance. Updated the `file-sync` Detect probe in
+  `registry.ps1` to the new path and the file-sync CLAUDE.md invariant text. Digest uninstall/detect
+  match by task name (path-agnostic), so they needed no change; `git-sync` registers no task.
+- statusline: registry `Install` now forwards `-ClaudeDir` from `$Config.claudeDir` and records it;
+  `Uninstall` and `Detect` replay the recorded `claudeDir`. Documented the key in the config example.
+**Impact / Risk:** Behavior change — tasks previously installed at the old paths are orphaned; users
+should uninstall via the prior script revision (or delete the old Task Scheduler folders) before
+reinstalling. Cross-member touch of `setup/registry.ps1` stays pure delegation, so the
+no-cross-member-dependency invariant holds.
+**Outcome:** All five edited PowerShell scripts parse clean (AST parse-check); not run against a live
+Task Scheduler.
+
+### Entry 32
+
+**Type:** Decision
+**Mode:** Interactive (user-directed)
+**Timestamp:** 2026-07-01T00:00:00Z
+**Task:** statusline-hook multi-dir install support, and redefine `install -All` scope to the
+config's opt-in list.
+
+**Context:** Two follow-ups from using the orchestrator. (1) statusline-hook could only wire into
+one config dir per install — the descriptor took a scalar `claudeDir` and the manifest keys one
+entry per member, so a second install overwrote the first. (2) `install -All` installed every
+registered member whose *required* config was satisfied, so members with no required config
+(`scheduled-session-digests`) installed with defaults even when absent from `config.json`, which the
+user found surprising.
+**Decision:**
+- statusline-hook: reworked the `registry.ps1` descriptor to the file-sync `instances` pattern —
+  `Install` normalizes config to a list (an `instances:[...]` array, or a single `{variant,
+  claudeDir}` object for back-compat), installs each dir, and records `{instances:[...]}` for
+  replay; `Uninstall` loops the recorded instances (legacy single-form entries still handled);
+  `Detect` probes every recorded dir's `settings.json` and reports installed if any has `statusLine`.
+- `install -All` scope: now installs only members with an entry in `config.json` (even an empty
+  `{}`); a member absent from config is skipped with a note. Chose key-presence as the opt-in signal
+  (user picked "only members listed in config" over keeping the old behavior). Guarded by `$All`, so
+  `install -Member <name>` still installs a single member with defaults and no config entry. This
+  reverses the prior `setup/CLAUDE.md` invariant, which was updated along with the README.
+**Impact / Risk:** Behavior change to `-All` — anyone relying on it to install config-less members
+without listing them must now add a `{}` entry or use `install -Member`. Confined to `setup/`; still
+pure delegation, so the no-cross-member-dependency invariant holds.
+**Outcome:** `command-center.ps1` and `registry.ps1` parse clean; dry-runs confirm the statusline
+array resolves to 2 instances (legacy object → 1) and `-All` against the user's config installs the
+4 listed members and skips the unlisted `scheduled-session-digests`. Not run against a live install.

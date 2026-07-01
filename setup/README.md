@@ -25,15 +25,17 @@ Apps, `usage-report`, and libs are **not** managed here — they are run on dema
 ./setup/command-center.ps1 status     # manifest vs what's actually on this machine
 
 ./setup/command-center.ps1 install -Member statusline-hook
-./setup/command-center.ps1 install -All            # everything; reads config.json
+./setup/command-center.ps1 install -All            # members listed in config.json
 ./setup/command-center.ps1 uninstall -Member file-sync
 ./setup/command-center.ps1 uninstall -All
 ```
 
-`install -All` installs every member whose required config is present and **skips** (with a note)
-any member still missing required config. Only `file-sync` requires config (folder pairs).
-`file-sync` and `scheduled-session-digests` register Windows Task Scheduler jobs — run an elevated
-shell if their setup scripts ask for it.
+`install -All` installs only the members you opted in by giving them an entry in `config.json`
+(even an empty `{}`); members absent from the config are **skipped** (with a note), as are members
+present but still missing their required config — the run never fails on a skip. Use
+`install -Member <name>` to install a single member with defaults without adding it to the config.
+Only `file-sync` requires config (folder pairs). `file-sync` and `scheduled-session-digests`
+register Windows Task Scheduler jobs — run an elevated shell if their setup scripts ask for it.
 
 ## Config
 
@@ -45,8 +47,10 @@ cp ./setup/command-center.config.example.jsonc ~/.claude-command-center/config.j
 # edit config.json
 ```
 
-Override the path with `-Config <path>`. Members not listed in the config install with their
-defaults (e.g. `statusline-hook` → `ps1`, digests → skill-based under `~/claude-meta`).
+Override the path with `-Config <path>`. Under `-All`, only members with an entry here are
+installed; a listed member that omits optional keys uses its defaults (e.g. `statusline-hook`
+→ `ps1`, digests → skill-based under `~/claude-meta`). To install an unlisted member with its
+defaults, target it directly with `install -Member <name>`.
 
 ## Manifest
 
