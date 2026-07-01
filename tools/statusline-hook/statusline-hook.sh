@@ -97,11 +97,8 @@ case "$(echo "${C4_STATUSLINE_EXPORT:-}" | tr '[:upper:]' '[:lower:]')" in
   *) exit 0 ;;
 esac
 
-if [ -n "$C4_CLAUDE_DIR" ]; then
-  CLAUDE_BASE=$(echo "$C4_CLAUDE_DIR" | cut -d: -f1)
-else
-  CLAUDE_BASE="$HOME/.claude"
-fi
+# This hook is installed into the Claude config dir, so its own location is that dir.
+CLAUDE_BASE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 
 SESSION_ID=$(echo "$input" | jq -r '.session_id // "__unknown__"')
 CWD=$(echo "$input" | jq -r '.cwd // ""')

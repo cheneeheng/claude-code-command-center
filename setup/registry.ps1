@@ -59,22 +59,56 @@ function Get-CommandCenterRegistry {
         RequiredConfig = @()
         Install        = {
             param($SetupScript, $Config)
-            $variant = if ($Config -and $Config.variant) { $Config.variant } else { 'ps1' }
-            & $SetupScript -Action install -Variant $variant | Out-Null
-            @{ variant = $variant }
+            # Accept either an {instances:[...]} array (install into N dirs) or a single
+            # {variant, claudeDir} object, mirroring file-sync. Normalize to a list.
+            $instances = if ($Config -and $Config.instances) { @($Config.instances) }
+                         elseif ($Config) { @($Config) }
+                         else { @($null) }
+            $used = @()
+            foreach ($i in $instances) {
+                $variant = if ($i -and $i.variant) { $i.variant } else { 'ps1' }
+                $splat = @{ Action = 'install'; Variant = $variant }
+                if ($i -and $i.claudeDir) { $splat.ClaudeDir = $i.claudeDir }
+                & $SetupScript @splat | Out-Null
+                $used += @{ variant = $variant; claudeDir = $(if ($i) { $i.claudeDir }) }
+            }
+            @{ instances = $used }
         }
-        Uninstall      = { param($SetupScript, $Entry) & $SetupScript -Action uninstall | Out-Null }
+        Uninstall      = {
+            param($SetupScript, $Entry)
+            # Entry is new-form {instances:[...]} or a legacy single {variant, claudeDir}.
+            $instances = if ($Entry -and $Entry.instances) { @($Entry.instances) }
+                         elseif ($Entry) { @($Entry) }
+                         else { @($null) }
+            foreach ($i in $instances) {
+                $splat = @{ Action = 'uninstall' }
+                if ($i -and $i.claudeDir) { $splat.ClaudeDir = $i.claudeDir }
+                & $SetupScript @splat | Out-Null
+            }
+        }
         Detect         = {
             param($Entry)
-            $dir = if ($env:C4_CLAUDE_DIR) { ($env:C4_CLAUDE_DIR -split [IO.Path]::PathSeparator)[0] }
-                   else { Join-Path $env:USERPROFILE '.claude' }
-            $settings = Join-Path $dir 'settings.json'
-            if (Test-Path $settings) {
-                $raw = Get-Content -Raw $settings
-                if ($raw.Trim()) {
-                    return (($raw | ConvertFrom-Json).PSObject.Properties.Name -contains 'statusLine')
+            $hasStatusLine = {
+                param($dir)
+                $settings = Join-Path $dir 'settings.json'
+                if (Test-Path $settings) {
+                    $raw = Get-Content -Raw $settings
+                    if ($raw.Trim()) {
+                        return (($raw | ConvertFrom-Json).PSObject.Properties.Name -contains 'statusLine')
+                    }
                 }
+                $false
             }
+            # Probe the recorded instance dirs, a legacy single dir, or the default ~/.claude.
+            $default = Join-Path $env:USERPROFILE '.claude'
+            $dirs = if ($Entry -and $Entry.instances) {
+                        @($Entry.instances) | ForEach-Object { if ($_.claudeDir) { $_.claudeDir } else { $default } }
+                    } elseif ($Entry -and $Entry.claudeDir) {
+                        @($Entry.claudeDir)
+                    } else {
+                        @($default)
+                    }
+            foreach ($d in $dirs) { if (& $hasStatusLine $d) { return $true } }
             $false
         }
     }
@@ -126,7 +160,7 @@ function Get-CommandCenterRegistry {
         }
         Detect         = {
             param($Entry)
-            [bool](Get-ScheduledTask -TaskPath '\file-sync\' -ErrorAction SilentlyContinue)
+            [bool](Get-ScheduledTask -TaskPath '\ClaudeAutomation\file-sync\' -ErrorAction SilentlyContinue)
         }
     }
 

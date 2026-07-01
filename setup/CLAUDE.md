@@ -33,8 +33,10 @@ See README.md for full usage. `./setup/command-center.ps1 <list|status|install|u
 - **The manifest at `~/.claude-command-center/manifest.json` is the source of truth for uninstall.**
   `file-sync` and digest uninstalls **replay** the recorded params, so install must record exactly
   the params needed to reverse it. Do not break that replay contract.
-- **`install -All` skips (with a note) any member missing required config** rather than failing.
-  Preserve graceful skipping.
+- **`install -All` installs only members opted in via a config entry** (a key in `config.json`,
+  even an empty `{}`); members absent from config are skipped with a note, as are members present
+  but **missing required config** — never failing the whole run. `install -Member <name>` bypasses
+  the opt-in check and installs a single member with defaults. Preserve graceful skipping.
 - **`status` compares manifest vs live detection** (PATH entry, `settings.json` key, scheduled
   tasks). Keep `Detect` probes accurate when adding/altering members.
 

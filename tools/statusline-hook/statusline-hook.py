@@ -88,13 +88,8 @@ def export_enabled() -> bool:
     return os.environ.get("C4_STATUSLINE_EXPORT", "").strip().lower() in {"1", "true", "yes"}
 
 def claude_base() -> Path:
-    """Return the Claude config dir, honouring the first $C4_CLAUDE_DIR entry."""
-    raw = os.environ.get("C4_CLAUDE_DIR")
-    if raw:
-        first = raw.split(os.pathsep)[0].strip()
-        if first:
-            return Path(first)
-    return Path.home() / ".claude"
+    """Return the Claude config dir — the dir this hook is installed in."""
+    return Path(__file__).resolve().parent
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
