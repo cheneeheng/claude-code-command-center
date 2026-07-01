@@ -1,0 +1,64 @@
+/* Tidewater theme (aligned to tmp.css, ITER_19 refinement) — terracotta / teal,
+   light + dark. Flat, border-led depth: radius token hierarchy, --shadow-sm only,
+   no atmosphere or entrance choreography. An alias layer below maps the shared
+   tokens onto the legacy names this dashboard's markup already uses. */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* --- Foundation: fonts + radius hierarchy; light fallback palette --- */
+:root {
+  --font-ui:      "Hanken Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --radius-lg: 10px; --radius-md: 6px; --radius-sm: 4px;
+
+  --bg:#F0F5F3; --surface:#FFFFFF; --surface-2:#F3F8F6;
+  --fg:#143230; --fg-muted:#5F7E7A; --border:#DCEAE6; --border-strong:#C7DBD6;
+  --accent:#CB6442; --accent-hi:#E27A50; --accent-wash:#FAEDE6;
+  --secondary:#0E7E77; --secondary-hi:#14938C; --secondary-wash:#E2F1EF;
+  --on-text:#fff;
+  --shadow-sm:0 1px 2px rgba(15,50,48,.06),0 1px 3px rgba(15,50,48,.05);
+
+  /* Semantic chart colors (model families + token categories) */
+  --green:#22c55e; --blue:#3b82f6; --purple:#a855f7; --red:#ef4444;
+
+  /* --- Alias layer: legacy dashboard token names --- */
+  --text:    var(--fg);
+  --muted:   var(--fg-muted);
+  --border2: var(--border-strong);
+  --accent2: var(--accent);
+  --sans:    var(--font-ui);
+  --mono:    var(--font-mono);
+}
+
+/* --- Dark via OS preference (when no explicit theme chosen) --- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg:#0C1F1D; --surface:#122A27; --surface-2:#163230;
+    --fg:#E7F1EE; --fg-muted:#7C9590; --border:#203F3A; --border-strong:#2D544D;
+    --accent:#E98A62; --accent-hi:#F4A37D; --accent-wash:rgba(233,138,98,.11);
+    --secondary:#2FB3A8; --secondary-hi:#45C7BC; --secondary-wash:rgba(47,179,168,.12);
+    --on-text:#06201e;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+  }
+}
+
+/* --- Explicit theme overrides --- */
+:root[data-theme="light"] {
+  --bg:#F0F5F3; --surface:#FFFFFF; --surface-2:#F3F8F6;
+  --fg:#143230; --fg-muted:#5F7E7A; --border:#DCEAE6; --border-strong:#C7DBD6;
+  --accent:#CB6442; --accent-hi:#E27A50; --accent-wash:#FAEDE6;
+  --secondary:#0E7E77; --secondary-hi:#14938C; --secondary-wash:#E2F1EF;
+  --on-text:#fff;
+  --shadow-sm:0 1px 2px rgba(15,50,48,.06),0 1px 3px rgba(15,50,48,.05);
+}
+
+:root[data-theme="dark"] {
+  --bg:#0C1F1D; --surface:#122A27; --surface-2:#163230;
+  --fg:#E7F1EE; --fg-muted:#7C9590; --border:#203F3A; --border-strong:#2D544D;
+  --accent:#E98A62; --accent-hi:#F4A37D; --accent-wash:rgba(233,138,98,.11);
+  --secondary:#2FB3A8; --secondary-hi:#45C7BC; --secondary-wash:rgba(47,179,168,.12);
+  --on-text:#06201e;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+}

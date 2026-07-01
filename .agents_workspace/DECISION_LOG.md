@@ -857,3 +857,26 @@ and (2) whether the sample target repos are real git repos.
 `list_plans` returns all three plans as `ready`, and a manual `set_status` writes a git-ignored
 sidecar.
 **Outcome:** Example runs; docs and README consistent with the shipped CLI.
+
+### Entry 29
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-01T00:00:00Z
+**Task:** Split usage-dashboard's dashboard.js and dashboard.css into smaller files.
+
+**Context:** The dashboard serves plain (non-module) browser JS and CSS via a no-bundler
+Python `http.server`. Splitting the sources into smaller files could be done either by
+serving each part separately (multiple `<link>`/`<script>` tags + a generic static route)
+or by concatenating ordered parts at serve time into the existing single responses.
+**Decision:** Chose serve-time concatenation. `dashboard_server.py` now reads ordered
+`_CSS_PARTS` / `_JS_PARTS` lists from `css/` and `js/` and joins them into the same
+`/dashboard.css` and `/dashboard.js` responses. This needs zero HTML changes, adds no new
+routes or path-traversal surface, and preserves the single global scope the inline
+`onclick`/`onchange` handlers and shared top-level state (`lastData`, `sessionPage`) rely
+on — so runtime output is byte-identical (verified: 0 code-line diffs for both bundles).
+The JS bootstrap (`js/app.js`) must stay last in the list since order = concat order.
+**Impact / Risk:** A future reader editing browser code must edit the split sources, not a
+served file; the served bundle appears as one file in devtools. Mitigated by notes in the
+member CLAUDE.md and README. No behavior change.
+**Outcome:** py_compile + import + node --check + verbatim-diff checks all pass.

@@ -28,8 +28,14 @@ independent sources:
   `statusline-hook` tool): `live_statusline.py` reads live per-session state (5h/7d rate limits,
   context %, model name, **actual** cost). Recent live sessions only.
 - `merge.py` reconciles them into the `/api/data` payload; `dashboard_server.py` is HTTP transport
-  only; `dashboard.{html,css,js}` render the payload and compute nothing. `dashboard_config.py`
-  holds runtime config only (the pricing table lives in `claude-usage`).
+  only; `dashboard.html` plus the split `css/` and `js/` sources render the payload and compute
+  nothing. `dashboard_config.py` holds runtime config only (the pricing table lives in
+  `claude-usage`).
+
+The browser CSS and JS are split into small single-concern files under `css/` and `js/`;
+`dashboard_server.py` concatenates each in a fixed order (see `_CSS_PARTS` / `_JS_PARTS`) into the
+one `/dashboard.css` and `/dashboard.js` responses. The JS parts are plain (non-module) scripts
+sharing one global scope, so `js/app.js` (the bootstrap) must stay last in that list.
 
 ## Invariants — do not break these
 
@@ -38,13 +44,13 @@ independent sources:
   scatter cost-override logic elsewhere.
 - **The cost-by-model breakdown is always the estimate** — the statusline does not attribute cost
   per model. Do not try to overlay actual cost there.
-- **All computation is server-side.** `dashboard.js` is pure display. New aggregate stats go in
-  `session_stats.summarize_sessions`; new live fields in `live_statusline`; then render. Never move
-  computation into the browser.
-- **The payload contract `{stats, sessions, live}` couples server and `dashboard.js`** — change both
-  ends together.
+- **All computation is server-side.** The `js/` browser code is pure display. New aggregate stats
+  go in `session_stats.summarize_sessions`; new live fields in `live_statusline`; then render. Never
+  move computation into the browser.
+- **The payload contract `{stats, sessions, live}` couples server and the `js/` render code** —
+  change both ends together.
 - **Pricing is not owned here.** New model / new price → edit `claude_usage.MODEL_COSTS` (and
-  `model_family` if needed); keep `dashboard.js` (`modelFamily`, `MODEL_SHADES`, `modelShort`) in
+  `model_family` if needed); keep `js/models.js` (`modelFamily`, `MODEL_SHADES`, `modelShort`) in
   step. If estimated and actual diverge, the pricing table is stale — not a parsing bug.
 - The statusline export is optional; the dashboard reads it if present and shows "Hook not set up"
   if not. Do not make it a hard dependency.

@@ -111,8 +111,8 @@ usage-dashboard.py                  ← entry point (CLI, starts HTTP server)
 ```
 
 One sentence: **two log sources go in, `merge.py` overlays real cost on live
-sessions and aggregates everything, the server ships it as JSON, and
-`dashboard.js` just draws it.**
+sessions and aggregates everything, the server ships it as JSON, and the
+`js/` browser code just draws it.**
 
 ---
 
@@ -126,7 +126,7 @@ sessions and aggregates everything, the server ships it as JSON, and
 | `live_statusline.py` | **Source 2.** Reads the statusline logs into live per-session state (rate limits, context %, *actual* cost); also `trim_statusline_logs` to bound disk growth. |
 | `merge.py` | Reconciles the two sources into the `/api/data` payload. Owns the estimated-vs-actual cost override. |
 | `dashboard_server.py` | HTTP transport only: serves the static assets and the `merge.build_payload` JSON. |
-| `dashboard.html` / `.css` / `.js` | The UI. `dashboard.js` renders the payload, draws the charts, and handles the client-side controls (refresh, theme, pagination, session timeout). |
+| `dashboard.html` + `css/` + `js/` | The UI. The `js/` scripts render the payload, draw the charts, and handle the client-side controls (refresh, theme, pagination, session timeout); `css/` holds the styles. Both are split into small single-concern files and concatenated by `dashboard_server.py` into one `/dashboard.css` and one `/dashboard.js` response. |
 
 ---
 
@@ -201,11 +201,11 @@ scheduled-task installer:
 - **New model / new pricing:** edit `claude_usage.MODEL_COSTS` (in the `claude-usage`
   library). If the family detection in `claude_usage.model_family` doesn't catch the id,
   adjust it there. The UI's
-  matching color/label logic lives in `dashboard.js` (`modelFamily`, `MODEL_SHADES`,
+  matching color/label logic lives in `js/models.js` (`modelFamily`, `MODEL_SHADES`,
   `modelShort`) and must be kept in step.
 - **New aggregate stat:** add it in `session_stats.summarize_sessions`, then render
-  it in `dashboard.js`. Keep all computation server-side.
+  it in `js/render.js`. Keep all computation server-side.
 - **New live field:** surface it in `live_statusline._live_session`, then render it.
 
 The payload contract (`{stats, sessions, live}` and their keys) is what couples
-the server to `dashboard.js` — change both ends together.
+the server to the `js/` render code — change both ends together.
