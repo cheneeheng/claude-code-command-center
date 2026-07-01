@@ -37,7 +37,9 @@ changed file (`uv run python -m py_compile src/claude_plugins/<file>.py`); lint/
   (a Python library can't serve that surface). It is a registered intentional duplicate — keep the
   two in sync and see `../../docs/shared-plugin-logic.md` when changing parsing behaviour.
 - **Missing/unreadable registry → empty buckets**, not an exception. Preserve graceful degradation.
-- **Honour `$C4_CLAUDE_DIR`** (first pathsep entry) via `plugins_base`.
+- **Default claude dir is `~/.claude`.** `plugins_base`, `loose_bases`, and `load_installed_plugins`
+  take an optional explicit `claude_dir` that overrides it (the `claude-component-browser` passes
+  one). No environment variable is read.
 
 ## Conventions
 

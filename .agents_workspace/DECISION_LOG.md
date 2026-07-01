@@ -1008,3 +1008,41 @@ installs are unaffected except the settings.json command string changes to an ab
 reinstall. The export path contract with `usage-dashboard` still holds for the default dir.
 **Outcome:** All statusline PS scripts parse clean; `statusline-hook.py` compiles; `statusline-hook.sh`
 passes `bash -n`; no `C4_CLAUDE_DIR` reads remain in the tool. Not run against a live Claude session.
+
+### Entry 34
+
+**Type:** Decision
+**Mode:** Interactive (user-directed)
+**Timestamp:** 2026-07-01T00:00:00Z
+**Task:** Move the Claude dir and project dir selection in `claude-component-browser` out of
+startup (env/CLI) and into the UI; the server takes only `--host`/`--port`.
+
+**Context:** The browser resolved its Claude dir from `$C4_CLAUDE_DIR` (first pathsep entry, via
+`claude-plugins`) and its project root from `--project-dir`/cwd, all fixed at launch. The
+first-entry-only behavior was opaque to the user. User chose (via prompt): a single Claude dir and
+single project dir, entered in the UI, and to drop `$C4_CLAUDE_DIR` from the browser entirely
+(prefill `~/.claude` + cwd instead). Two design forks were mine to resolve.
+
+**Decision:**
+- **Library threading (fork 1):** added an optional `claude_dir: Path | None = None` to
+  `plugins_base`, `loose_bases`, and `load_installed_plugins` in `claude-plugins`, defaulting to
+  the existing env resolution (extracted to a private `_default_claude_dir`). Backward-compatible:
+  `per-project-plugin-toggler` (only other consumer, calls `load_installed_plugins(project_root)`)
+  is untouched and still honors `$C4_CLAUDE_DIR`. Rejected removing the env default from the library
+  — that would break the toggler and exceed the browser's scope. The browser now always passes an
+  explicit dir and never reads the env var.
+- **Server state (fork 2):** `/api/members` takes `claude_dir` + `project_dir` query params, scans
+  on demand, and stores the result in the class-level `Handler.members` cache; `/api/member?id=N`
+  still indexes that cache (path never crosses the wire — traversal guard preserved). Single shared
+  cache, no per-request keying: this is a localhost single-user tool, so last-scan-wins is fine and
+  a mid-rescan id fetch degrading to 404 is acceptable. Added `/api/config` returning `~/.claude` +
+  cwd for UI prefill. Blank/missing/nonexistent dirs fall back to defaults and scan to empty
+  (library already degrades gracefully) — no hard validation.
+- **UI:** two text inputs + Scan button, values persisted per browser in `localStorage`.
+
+**Impact / Risk:** `claude-plugins` public API gains optional params (semver minor; not bumped —
+no release requested). Browser behavior change: `$C4_CLAUDE_DIR` no longer affects it; users pick
+the dir in the UI. Everything is still bound to `127.0.0.1`.
+**Outcome:** `claude-plugins` and `server.py` pass py_compile + ruff + mypy strict. Smoke-tested
+live: `/api/config` returns native Windows paths; scanning with an explicit Claude dir populates
+the cache; `/api/member?id=0` loads the body from it; nonexistent dirs return an empty list.

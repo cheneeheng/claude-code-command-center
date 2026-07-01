@@ -21,6 +21,13 @@ Reads installed plugins from `~/.claude/plugins/installed_plugins.json` (global,
 
 Both surfaces use the same read/merge/write logic (implemented independently in Python and Node.js). `server.py` is stdlib-only. The VSCode extension has no npm runtime dependencies.
 
+> **Future work — selectable Claude config dir.** Both surfaces currently hardcode `~/.claude` as
+> the user-scope config dir (reads and writes). If we ever need to target a different dir (multiple
+> installs/profiles, or a relocated config), the low-effort, low-risk move is to honor Claude Code's
+> own `CLAUDE_CONFIG_DIR` env var (fallback `~/.claude`) in both the Python and Node paths — writes
+> then land where Claude actually reads. A free-form UI dir picker is deliberately deferred: this
+> tool *writes* enablement state, so pointing it at a dir Claude isn't using is a silent footgun.
+
 ## Quick start
 
 **HTML version** — run from the root of the project you want to manage:

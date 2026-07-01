@@ -162,7 +162,36 @@ resizer.addEventListener('keydown', e => {
   else if (e.key === 'ArrowRight') { setListWidth(listEl.offsetWidth + 16); e.preventDefault(); }
 });
 
-fetch('/api/members')
+// Component sources: the Claude dir and project dir are entered here, not fixed at
+// server start. Values persist per browser via localStorage.
+const dirsForm = document.getElementById('dirs');
+const claudeDirEl = document.getElementById('claude-dir');
+const projectDirEl = document.getElementById('project-dir');
+
+async function scan() {
+  localStorage.setItem('claudeDir', claudeDirEl.value);
+  localStorage.setItem('projectDir', projectDirEl.value);
+  const qs = new URLSearchParams({
+    claude_dir: claudeDirEl.value,
+    project_dir: projectDirEl.value,
+  });
+  try {
+    const res = await fetch(`/api/members?${qs}`);
+    members = await res.json();
+    render(searchEl.value);
+  } catch {
+    countEl.textContent = 'Failed to load items.';
+  }
+}
+
+dirsForm.addEventListener('submit', e => { e.preventDefault(); scan(); });
+
+// Prefill from saved values (falling back to the server's defaults), then scan.
+fetch('/api/config')
   .then(r => r.json())
-  .then(data => { members = data; render(''); })
-  .catch(() => { countEl.textContent = 'Failed to load items.'; });
+  .then(cfg => {
+    claudeDirEl.value = localStorage.getItem('claudeDir') ?? cfg.claude_dir;
+    projectDirEl.value = localStorage.getItem('projectDir') ?? cfg.project_dir;
+    scan();
+  })
+  .catch(() => { countEl.textContent = 'Failed to load config.'; });
