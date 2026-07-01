@@ -27,7 +27,7 @@ jobs:
           - libs/claude-plugins
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - name: ruff check
@@ -51,7 +51,7 @@ jobs:
             target: server.py
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - name: mypy
@@ -66,7 +66,7 @@ jobs:
         working-directory: apps/multi-repo-plan-runner
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - name: ruff format check
