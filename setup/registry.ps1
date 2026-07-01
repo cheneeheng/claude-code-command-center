@@ -178,14 +178,14 @@ function Get-CommandCenterRegistry {
         Name           = 'usage-dashboard'
         DisplayName    = 'Usage dashboard'
         Category       = 'apps'
-        SetupScript    = Join-Path $udDir 'usage-dashboard-setup.ps1'
+        SetupScript    = Join-Path (Join-Path $udDir 'scripts') 'usage-dashboard-setup.ps1'
         Version        = Read-MemberVersion $udDir
         RequiredConfig = @()
         Install        = { param($SetupScript, $Config) & $SetupScript -Action install | Out-Null; @{} }
         Uninstall      = { param($SetupScript, $Entry)  & $SetupScript -Action uninstall | Out-Null }
         Detect         = {
             param($Entry)
-            [bool](Get-ScheduledTask -TaskName 'StartStatuslineServer' -TaskPath '\ClaudeAutomation\' -ErrorAction SilentlyContinue)
+            [bool](Get-ScheduledTask -TaskName 'usage-dashboard' -TaskPath '\ClaudeAutomation\' -ErrorAction SilentlyContinue)
         }
     }
 

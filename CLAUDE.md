@@ -63,6 +63,9 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
+- **Scheduled tasks:** a member that registers a Windows Task Scheduler task uses its own folder
+  name as the task name (e.g. `usage-dashboard`), registered under the shared task folder
+  `\ClaudeAutomation`. This keeps task names collision-free and self-identifying to the member.
 - **Docs:** **one `README.md` per member** (apps/tools/libs/setup) plus the root README,
   which is the catalog. Deeper end-user docs live under a member's `docs/` (e.g.
   `multi-repo-plan-runner/docs/guide/`, `per-project-plugin-toggler/docs/user-guide-*.md`) and the
@@ -80,10 +83,16 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   `.agents_workspace/archive/decision-log.md`).
 - **Releases:** two independent axes with non-overlapping tag namespaces. A *component* release is
   a SemVer tag prefixed with the component's short alias (e.g. `pppt-vX.Y.Z` for
-  `per-project-plugin-toggler`) and triggers only that component's release workflow. A *whole-repo*
-  release is a bare `vX.Y.Z` tag. The bare `v*` namespace never collides with a prefixed
-  `<alias>-v*` one, so the axes coexist. See `docs/releasing.md` for the prefix→component table and
-  the per-component release steps.
+  `per-project-plugin-toggler`) and triggers only that component's release workflow — the plugin
+  toggler's is `.github/workflows/release-extension.yml`, which asserts the tag matches
+  `vscode-extension/package.json`, builds `skills-toggle.vsix` on Ubuntu, and attaches it to a
+  GitHub release (it does NOT publish to the VSCode Marketplace). A *whole-repo* release is a bare
+  `vX.Y.Z` tag; that namespace is reserved but not yet wired (no `release-repo.yml` / root
+  `CHANGELOG.md` yet), deferred until the first repo-wide release. The bare `v*` namespace never
+  collides with a prefixed `<alias>-v*` one, so the axes coexist. To cut a component release: bump
+  the manifest version, update that component's `CHANGELOG.md`, merge via PR, then
+  `git tag -a <alias>-vX.Y.Z` on `main` and push the tag — the workflow does the rest. See
+  `docs/releasing.md` for the prefix→component table and the per-component release steps.
 
 ## Scope discipline
 

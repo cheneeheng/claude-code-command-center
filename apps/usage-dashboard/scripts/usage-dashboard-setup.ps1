@@ -11,10 +11,10 @@ param(
 )
 
 $taskFolder = "\ClaudeAutomation"
-$taskName   = "StartStatuslineServer"
+$taskName   = "usage-dashboard"
 $wrapperPath = Join-Path $PSScriptRoot "usage-dashboard-start-once.ps1"
 
-function Install-StatuslineServerTask {
+function Install-UsageDashboardTask {
     # Ensure the task folder exists
     $svc = New-Object -ComObject Schedule.Service
     $svc.Connect()
@@ -43,7 +43,7 @@ function Install-StatuslineServerTask {
         -Trigger     $trigger `
         -Settings    $settings `
         -RunLevel    Limited `
-        -Description "Starts the Claude Code statusline dashboard server at logon and on resume from sleep/hibernate" `
+        -Description "Starts the Claude Code usage dashboard server at logon and on resume from sleep/hibernate" `
         -Force
 
     # Add an event trigger for resume from sleep/hibernate (Event ID 1 from Power-Troubleshooter).
@@ -66,7 +66,7 @@ function Install-StatuslineServerTask {
     Write-Host "Wrapper:   $wrapperPath"
 }
 
-function Uninstall-StatuslineServerTask {
+function Uninstall-UsageDashboardTask {
     $existing = Get-ScheduledTask -TaskName $taskName -TaskPath "$taskFolder\" -ErrorAction SilentlyContinue
     if ($existing) {
         Unregister-ScheduledTask -TaskName $taskName -TaskPath "$taskFolder\" -Confirm:$false
@@ -77,6 +77,6 @@ function Uninstall-StatuslineServerTask {
 }
 
 switch ($Action) {
-    'install'   { Install-StatuslineServerTask }
-    'uninstall' { Uninstall-StatuslineServerTask }
+    'install'   { Install-UsageDashboardTask }
+    'uninstall' { Uninstall-UsageDashboardTask }
 }

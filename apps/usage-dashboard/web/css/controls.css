@@ -1,0 +1,101 @@
+/* --- Refresh info --- */
+.refresh-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 0 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.timeout-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 12px;
+  border-right: 1px solid var(--border);
+  padding-right: 12px;
+}
+
+.timeout-control label {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.timeout-input {
+  width: 60px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 5px;
+  text-align: right;
+  outline: none;
+}
+
+.timeout-input:focus { border-color: var(--secondary); }
+
+.page-btn {
+  background: var(--surface);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.page-btn:hover:not(:disabled) { color: var(--fg); border-color: var(--secondary); }
+.page-btn:disabled { opacity: 0.4; cursor: default; }
+
+.timeout-unit {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.spinner {
+  width: 10px; height: 10px;
+  border: 1.5px solid var(--border2);
+  border-top-color: var(--secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+
+.spinner.active { display: block; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- Rate limit card --- */
+.rl-card { margin-bottom: 12px; }
+
+/* --- Empty state --- */
+.empty {
+  text-align: center;
+  padding: 60px 0;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 2;
+}
+
+.empty code {
+  color: var(--accent2);
+  background: var(--border);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

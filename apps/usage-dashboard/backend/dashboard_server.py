@@ -10,9 +10,31 @@ from http.server import BaseHTTPRequestHandler
 
 from merge import build_payload
 
-HTML = (Path(__file__).parent / "dashboard.html").read_text(encoding="utf-8")
-CSS = (Path(__file__).parent / "dashboard.css").read_text(encoding="utf-8")
-JS = (Path(__file__).parent / "dashboard.js").read_text(encoding="utf-8")
+_ASSET_DIR = Path(__file__).parent.parent / "web"
+
+# The CSS and JS are split into small, single-concern source files under css/ and
+# js/ for readability, then concatenated in load order into one response each. The
+# JS parts are plain (non-module) scripts sharing one global scope, so order is the
+# concatenation order and the bootstrap part (app.js) must come last.
+_CSS_PARTS = ["css/tokens.css", "css/base.css", "css/components.css", "css/controls.css"]
+_JS_PARTS = [
+    "js/format.js",
+    "js/models.js",
+    "js/charts.js",
+    "js/rate-limit.js",
+    "js/render.js",
+    "js/settings.js",
+    "js/app.js",
+]
+
+
+def _bundle(parts: list[str]) -> str:
+    return "\n".join((_ASSET_DIR / p).read_text(encoding="utf-8") for p in parts)
+
+
+HTML = (_ASSET_DIR / "dashboard.html").read_text(encoding="utf-8")
+CSS = _bundle(_CSS_PARTS)
+JS = _bundle(_JS_PARTS)
 
 
 class Handler(BaseHTTPRequestHandler):
