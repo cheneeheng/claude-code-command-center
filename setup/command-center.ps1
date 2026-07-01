@@ -138,6 +138,17 @@ function Invoke-Status {
         $color = if ($recorded -eq $detected) { 'Gray' }
                  elseif ($detected -eq 'installed') { 'Yellow' } else { 'Red' }
         Write-Host ("  {0,-28} {1,-12} {2,-12} {3}" -f $d.Name, $recorded, $detected, $ver) -ForegroundColor $color
+
+        # Multi-instance members (file-sync, statusline-hook) record an `instances` array;
+        # list each as an indented sub-row of its non-empty fields, member-agnostically.
+        if ($entry -and $entry.instances) {
+            foreach ($inst in @($entry.instances)) {
+                $fields = ($inst.PSObject.Properties | Sort-Object Name |
+                    Where-Object { $null -ne $_.Value -and "$($_.Value)" -ne '' } |
+                    ForEach-Object { "$($_.Name)=$($_.Value)" }) -join ', '
+                Write-Host ("      - $fields") -ForegroundColor DarkGray
+            }
+        }
     }
     Write-Host ''
     Write-Host "  Manifest: $ManifestPath" -ForegroundColor DarkGray
@@ -157,6 +168,7 @@ function Invoke-Install {
         # absent from config is skipped; use `install -Member <name>` to install it with defaults.
         if ($All -and $null -eq $memberCfg) {
             Write-Host "  - skipping $($d.Name): no entry in $ConfigPath" -ForegroundColor Yellow
+            Write-Host ''
             continue
         }
 
@@ -164,6 +176,7 @@ function Invoke-Install {
             $msg = "requires config keys [$($d.RequiredConfig -join ', ')] in $ConfigPath"
             if ($All) {
                 Write-Host "  - skipping $($d.Name): $msg" -ForegroundColor Yellow
+                Write-Host ''
                 continue
             }
             throw "$($d.Name) $msg"
