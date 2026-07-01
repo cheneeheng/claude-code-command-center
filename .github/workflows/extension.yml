@@ -94,13 +94,16 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.11'
+          enable-cache: true
+      # html/server.py imports the in-repo claude-plugins library; `uv run`
+      # syncs it (path dependency) and puts the venv python on PATH, which the
+      # smoke scripts invoke as python3 / python.
       - name: Run smoke test (Linux/macOS)
         if: runner.os != 'Windows'
-        run: bash tests/smoke.sh
+        run: uv run bash tests/smoke.sh
       - name: Run smoke test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ./tests/smoke.ps1
+        run: uv run pwsh -File tests/smoke.ps1
