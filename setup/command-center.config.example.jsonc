@@ -4,7 +4,7 @@
 {
   // statusline-hook: which implementation to wire into settings.json.
   // "ps1" (Windows), "sh" (bash + jq), or "py" (python3). Optional; defaults to ps1.
-  // claudeDir overrides the config dir (default ~/.claude, or $C4_CLAUDE_DIR); optional.
+  // claudeDir sets the config dir to install into (default ~/.claude); optional.
   "statusline-hook": { "variant": "ps1" },
   // To wire the hook into more than one config dir, use an instances array instead
   // (one entry per dir); the single-object form above stays valid for a single dir:

@@ -85,12 +85,8 @@ Write-Output "$model | ${ctxColor}${bar} ${pct}%${Reset} | $runtime | $costFmt |
 # Export is off unless C4_STATUSLINE_EXPORT is 1/true/yes.
 if ($env:C4_STATUSLINE_EXPORT -notmatch '^(?i:1|true|yes)$') { return }
 
-$claudeDir = if ($env:C4_CLAUDE_DIR) {
-    # Use the first dir if multiple are specified (pathsep-separated)
-    ($env:C4_CLAUDE_DIR -split [System.IO.Path]::PathSeparator)[0].Trim()
-} else {
-    Join-Path $env:USERPROFILE ".claude"
-}
+# This hook is installed into the Claude config dir, so its own location is that dir.
+$claudeDir = $PSScriptRoot
 
 $sessionId = if ($data.session_id) { $data.session_id } else { "__unknown__" }
 $cwd       = if ($data.cwd) { $data.cwd } else { $null }

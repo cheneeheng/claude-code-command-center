@@ -37,9 +37,12 @@ uv run mypy statusline-hook.py
   `1`/`true`/`yes`. Unset → print the status line and write nothing. Do not make the export
   unconditional; the dashboard treats it as optional.
 - **Export record shape is `{session_id, ts, data}`** at
-  `~/.claude/statusline/<project>/<session_id>.jsonl` — this is the contract `usage-dashboard`
-  reads. Change both ends together.
-- **Honour `$C4_CLAUDE_DIR`** (pathsep-separated) for the base config dir; `-ClaudeDir` overrides.
+  `<config-dir>/statusline/<project>/<session_id>.jsonl` (default `~/.claude/statusline/...`) — this
+  is the contract `usage-dashboard` reads. Change both ends together.
+- **The hook derives its config dir from its own script location** (the dir it is installed into),
+  not from `$C4_CLAUDE_DIR` or any env var. The setup script's `-ClaudeDir` (default `~/.claude`)
+  chooses that dir at install time; keep all three variants self-locating so each install exports
+  under its own copy.
 - **Nothing beyond the script is required to run the hook.** Keep the Python variant stdlib-only.
 
 ## Conventions

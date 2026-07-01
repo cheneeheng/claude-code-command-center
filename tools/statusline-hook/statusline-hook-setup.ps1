@@ -16,26 +16,19 @@ param(
     [ValidateSet('ps1', 'sh', 'py')]
     [string]$Variant = 'ps1',
 
-    # Claude config dir (defaults to ~/.claude, honouring $C4_CLAUDE_DIR's first entry).
-    [string]$ClaudeDir
+    # Claude config dir to install into (defaults to ~/.claude).
+    [string]$ClaudeDir = (Join-Path $env:USERPROFILE ".claude")
 )
 
-# Resolve the config dir: explicit arg > first entry of $C4_CLAUDE_DIR > ~/.claude.
-if (-not $ClaudeDir) {
-    $ClaudeDir = if ($env:C4_CLAUDE_DIR) { ($env:C4_CLAUDE_DIR -split [IO.Path]::PathSeparator)[0] }
-                 else { Join-Path $env:USERPROFILE ".claude" }
-}
 $settingsPath = Join-Path $ClaudeDir "settings.json"
 $scriptName   = "statusline-hook.$Variant"
 $destScript   = Join-Path $ClaudeDir $scriptName
 $source       = Join-Path $PSScriptRoot $scriptName
 
-# The statusLine command Claude Code runs each turn (it expands ~).
-$commandFor = @{
-    ps1 = "pwsh -NoProfile -File ~/.claude/statusline-hook.ps1"
-    sh  = "bash ~/.claude/statusline-hook.sh"
-    py  = "python3 ~/.claude/statusline-hook.py"
-}
+# The statusLine command Claude Code runs each turn — points at the installed hook so
+# each install (any config dir) runs and exports from its own copy.
+$runnerFor = @{ ps1 = "pwsh -NoProfile -File"; sh = "bash"; py = "python3" }
+$command   = '{0} "{1}"' -f $runnerFor[$Variant], $destScript
 
 function Read-Settings {
     if (Test-Path $settingsPath) {
@@ -63,10 +56,10 @@ function Install-StatusLine {
     Write-Host "Installed hook to $destScript"
 
     $settings = Read-Settings
-    $value = [pscustomobject]@{ type = "command"; command = $commandFor[$Variant] }
+    $value = [pscustomobject]@{ type = "command"; command = $command }
     $settings | Add-Member -NotePropertyName statusLine -NotePropertyValue $value -Force
     Save-Settings $settings
-    Write-Host "Wired statusLine -> $($commandFor[$Variant]) in $settingsPath"
+    Write-Host "Wired statusLine -> $command in $settingsPath"
 
     if ($Variant -eq 'sh') { Write-Host "Note: the .sh hook requires 'jq' on PATH." }
 }

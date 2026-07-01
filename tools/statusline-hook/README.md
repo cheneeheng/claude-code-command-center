@@ -33,8 +33,9 @@ key in `settings.json` (preserving your other settings):
 ./statusline-hook-setup.ps1 -Action uninstall
 ```
 
-It honours `$C4_CLAUDE_DIR` (or pass `-ClaudeDir`). This tool is also managed by the repo-wide
-[`setup/`](../../setup/) installer (`command-center.ps1 install -Member statusline-hook`).
+Installs into `~/.claude` by default; pass `-ClaudeDir <dir>` to install into another config dir.
+This tool is also managed by the repo-wide [`setup/`](../../setup/) installer
+(`command-center.ps1 install -Member statusline-hook`).
 
 Or wire it up by hand — add the hook to `~/.claude/settings.json` (PowerShell shown; use
 `.sh`/`.py` analogously):
@@ -48,9 +49,9 @@ Or wire it up by hand — add the hook to `~/.claude/settings.json` (PowerShell 
 }
 ```
 
-The base config dir defaults to `~/.claude`; set `$C4_CLAUDE_DIR` (pathsep-separated) to override.
-To enable the JSONL export, set `C4_STATUSLINE_EXPORT=1` in the environment Claude Code runs the
-hook in.
+The hook writes its JSONL export under the config dir it lives in — it derives that dir from its
+own script location, so installing into a different `-ClaudeDir` exports there with no extra config.
+To enable the export, set `C4_STATUSLINE_EXPORT=1` in the environment Claude Code runs the hook in.
 
 ## Why the `pyproject.toml`?
 

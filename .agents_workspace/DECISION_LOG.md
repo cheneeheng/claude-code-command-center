@@ -973,3 +973,38 @@ pure delegation, so the no-cross-member-dependency invariant holds.
 **Outcome:** `command-center.ps1` and `registry.ps1` parse clean; dry-runs confirm the statusline
 array resolves to 2 instances (legacy object → 1) and `-All` against the user's config installs the
 4 listed members and skips the unlisted `scheduled-session-digests`. Not run against a live install.
+
+### Entry 33
+
+**Type:** Decision
+**Mode:** Interactive (user-directed)
+**Timestamp:** 2026-07-01T00:00:00Z
+**Task:** Drop `C4_CLAUDE_DIR` from statusline-hook; make the config dir an install arg (default
+`~/.claude`) and have each hook variant self-locate its config dir.
+
+**Context:** statusline-hook resolved its base config dir from `$C4_CLAUDE_DIR` in all three variants,
+the setup script, and the registry `Detect` probe. The user wanted the dir supplied explicitly at
+install time (defaulting to `~/.claude`) and the hooks to derive it from where they are installed —
+since the setup script copies each hook into the chosen config dir, the script's own folder *is* that
+dir. This also makes the multi-instance install (Entry 32) self-consistent: each installed copy
+exports under its own dir with no shared env var.
+**Decision:**
+- Variants self-locate: ps1 `$PSScriptRoot`, sh `cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd`,
+  py `Path(__file__).resolve().parent`. Removed all `C4_CLAUDE_DIR` reads from the three hooks.
+- Setup script: `-ClaudeDir` now defaults to `~/.claude` via a param default; removed the
+  `$C4_CLAUDE_DIR` fallback block entirely.
+- **Wired command now points at the actual installed script** (`$destScript`) instead of a hardcoded
+  `~/.claude/statusline-hook.<v>`. This was a latent bug — a custom `-ClaudeDir` install copied the
+  hook to the new dir but wired settings.json to run the home copy. Trade-off: the stored command is
+  now an absolute, quoted path rather than the portable `~/…` form; correctness across dirs (and the
+  multi-instance feature) outweighs settings.json portability for a personal tool.
+- Registry `Detect` default dropped its `C4_CLAUDE_DIR` fallback → plain `~/.claude`.
+- Left `C4_CLAUDE_DIR` untouched for its other consumers (`usage-report`, `usage-dashboard`,
+  `claude-usage`, `claude-plugins`, `claude-component-browser`, `setup/`); updated only statusline
+  docs and removed statusline from the root README's consumer list.
+**Impact / Risk:** Behavior change — a prior custom install driven purely by `$C4_CLAUDE_DIR` (no
+`-ClaudeDir`) now lands in `~/.claude`; users must pass `-ClaudeDir`/`claudeDir`. Existing default
+installs are unaffected except the settings.json command string changes to an absolute path on
+reinstall. The export path contract with `usage-dashboard` still holds for the default dir.
+**Outcome:** All statusline PS scripts parse clean; `statusline-hook.py` compiles; `statusline-hook.sh`
+passes `bash -n`; no `C4_CLAUDE_DIR` reads remain in the tool. Not run against a live Claude session.

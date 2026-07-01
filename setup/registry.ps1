@@ -99,9 +99,8 @@ function Get-CommandCenterRegistry {
                 }
                 $false
             }
-            # Probe the recorded instance dirs, a legacy single dir, or the default.
-            $default = if ($env:C4_CLAUDE_DIR) { ($env:C4_CLAUDE_DIR -split [IO.Path]::PathSeparator)[0] }
-                       else { Join-Path $env:USERPROFILE '.claude' }
+            # Probe the recorded instance dirs, a legacy single dir, or the default ~/.claude.
+            $default = Join-Path $env:USERPROFILE '.claude'
             $dirs = if ($Entry -and $Entry.instances) {
                         @($Entry.instances) | ForEach-Object { if ($_.claudeDir) { $_.claudeDir } else { $default } }
                     } elseif ($Entry -and $Entry.claudeDir) {
