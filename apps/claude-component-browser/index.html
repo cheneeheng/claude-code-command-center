@@ -13,6 +13,15 @@
     <input id="search" type="search" placeholder="Search skills, agents, hooks…"
            aria-label="Search skills, agents, and hooks">
   </header>
+  <form id="dirs" aria-label="Component sources">
+    <label for="claude-dir">Claude dir</label>
+    <input id="claude-dir" type="text" spellcheck="false" autocapitalize="off"
+           placeholder="~/.claude">
+    <label for="project-dir">Project dir</label>
+    <input id="project-dir" type="text" spellcheck="false" autocapitalize="off"
+           placeholder="project root">
+    <button type="submit">Scan</button>
+  </form>
   <main>
     <nav id="list" aria-label="Skills, agents, and hooks"></nav>
     <div id="resizer" role="separator" aria-orientation="vertical" tabindex="0"

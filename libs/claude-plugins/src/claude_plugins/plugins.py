@@ -7,7 +7,6 @@ the file Claude Code writes to record which plugins are installed at which scope
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 __all__ = [
@@ -20,28 +19,28 @@ __all__ = [
 
 
 def claude_dir() -> Path:
-    """Return the Claude config dir, honouring the first ``$C4_CLAUDE_DIR`` entry.
-
-    ``$C4_CLAUDE_DIR`` may be a pathsep-separated list; only its first entry is used.
-    Falls back to ``~/.claude`` when the variable is unset.
+    """Return the default Claude config dir, ``~/.claude``.
 
     Returns:
         The Claude config directory path.
     """
-    env = os.environ.get("C4_CLAUDE_DIR", "")
-    return Path(env.split(os.pathsep)[0].strip()) if env else Path.home() / ".claude"
+    return Path.home() / ".claude"
 
 
-def plugins_base() -> Path:
+def plugins_base(claude_dir: Path | None = None) -> Path:
     """Return ``<claude_dir>/plugins``.
+
+    Args:
+        claude_dir: Explicit Claude config dir. Defaults to ``~/.claude``.
 
     Returns:
         The plugins directory path.
     """
-    return claude_dir() / "plugins"
+    base = claude_dir if claude_dir is not None else Path.home() / ".claude"
+    return base / "plugins"
 
 
-def loose_bases(project_root: Path) -> dict[str, str]:
+def loose_bases(project_root: Path, claude_dir: Path | None = None) -> dict[str, str]:
     """Map scope to the ``.claude`` base dir holding loose (non-plugin) components.
 
     Loose skills and agents live under ``<base>/skills/<name>/SKILL.md`` and
@@ -53,12 +52,15 @@ def loose_bases(project_root: Path) -> dict[str, str]:
     Args:
         project_root: The project directory whose ``.claude`` dir holds
             project-scope loose components.
+        claude_dir: Explicit Claude config dir for the user-scope base. Defaults
+            to ``~/.claude``.
 
     Returns:
         ``{"user": <claude_dir>, "project": <project_root>/.claude}``.
     """
+    base = claude_dir if claude_dir is not None else Path.home() / ".claude"
     return {
-        "user": str(claude_dir()),
+        "user": str(base),
         "project": str(Path(project_root) / ".claude"),
     }
 
@@ -87,7 +89,9 @@ def normalise_path(p: str) -> str:
         return str(p)
 
 
-def load_installed_plugins(project_root: Path) -> dict[str, list[dict[str, str]]]:
+def load_installed_plugins(
+    project_root: Path, claude_dir: Path | None = None
+) -> dict[str, list[dict[str, str]]]:
     """Bucket installed plugins by scope (local/project/user) for ``project_root``.
 
     Reads ``<plugins_base>/installed_plugins.json`` (schema
@@ -99,6 +103,8 @@ def load_installed_plugins(project_root: Path) -> dict[str, list[dict[str, str]]
 
     Args:
         project_root: The project directory to match local/project entries against.
+        claude_dir: Explicit Claude config dir whose
+            ``plugins/installed_plugins.json`` is read. Defaults to ``~/.claude``.
 
     Returns:
         ``{"local": [...], "project": [...], "user": [...]}``; each entry is
@@ -106,7 +112,7 @@ def load_installed_plugins(project_root: Path) -> dict[str, list[dict[str, str]]
         registry is missing or unreadable.
     """
     buckets: dict[str, list[dict[str, str]]] = {"local": [], "project": [], "user": []}
-    installed_path = plugins_base() / "installed_plugins.json"
+    installed_path = plugins_base(claude_dir) / "installed_plugins.json"
     try:
         raw = json.loads(installed_path.read_text(encoding="utf-8"))["plugins"]
     except (OSError, KeyError, json.JSONDecodeError):

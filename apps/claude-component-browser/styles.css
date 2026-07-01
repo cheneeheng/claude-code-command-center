@@ -62,6 +62,25 @@ header .count { color: var(--fg-muted); font-size: 12px; }
 }
 #search:focus-visible { outline: 2px solid var(--secondary); outline-offset: 1px; }
 
+/* --- Source dirs bar --- */
+#dirs {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--surface);
+}
+#dirs label { color: var(--fg-muted); font-size: 12px; }
+#dirs input {
+  padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-md);
+  font: inherit; min-width: 220px; flex: 1 1 220px; background: var(--bg); color: var(--fg);
+}
+#dirs input:focus-visible { outline: 2px solid var(--secondary); outline-offset: 1px; }
+#dirs button {
+  padding: 6px 14px; border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  font: inherit; font-weight: 600; cursor: pointer;
+  background: var(--secondary); color: var(--on-text);
+}
+#dirs button:hover { background: var(--secondary-hi); }
+#dirs button:focus-visible { outline: 2px solid var(--secondary); outline-offset: 2px; }
+
 /* --- Two-pane layout --- */
 main { display: flex; flex: 1; min-height: 0; }
 #list {

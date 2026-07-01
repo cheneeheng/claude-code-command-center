@@ -3,18 +3,21 @@
 A local web app that lists and searches every **Claude Code component — skill, agent, and hook —
 on this machine**, from **installed plugins** and from **loose** (non-plugin) skills/agents
 authored directly under a `.claude` dir. It reads `~/.claude/plugins/installed_plugins.json`,
-buckets plugins by **scope** (`local` / `project` / `user`, matched against the directory you
-launch it from), enumerates each plugin's `skills/<name>/SKILL.md`, `agents/*.md`, and
-`hooks/hooks.json`, then adds loose skills/agents from `~/.claude` (user) and `<project>/.claude`
-(project), and serves a searchable single-page UI — click an item to read its full details.
+buckets plugins by **scope** (`local` / `project` / `user`, matched against the **project dir** you
+enter), enumerates each plugin's `skills/<name>/SKILL.md`, `agents/*.md`, and
+`hooks/hooks.json`, then adds loose skills/agents from the **Claude dir** (user) and
+`<project>/.claude` (project), and serves a searchable single-page UI — click an item to read its
+full details.
 
 ```bash
-cd /your/project && uv run python /path/to/server.py   # http://127.0.0.1:7780
+uv run python server.py                 # http://127.0.0.1:7780
 uv run python server.py --port 9001
-uv run python server.py --project-dir /your/project     # instead of cd-ing first
+uv run python server.py --host 0.0.0.0  # only host/port are set at startup
 ```
 
-Run it from a project root (or pass `--project-dir`) so `local`/`project`-scope plugins and the
+The **Claude dir** and **project dir** are chosen in the UI (top bar), not at startup — enter them
+and click **Scan**. They prefill to `~/.claude` and the launch directory, persist per browser, and
+can be pointed anywhere. Setting the project dir lets `local`/`project`-scope plugins and the
 project's loose `.claude` skills/agents resolve; `user`-scope members always show. Each item carries a **kind** badge
 (skill / agent / hook), a scope badge, and a `loose` badge for non-plugin components. When a loose
 component and a plugin one share a kind+name, the loose one wins and the other is shown
@@ -25,7 +28,6 @@ component and a plugin one share a kind+name, the loose one wins and the other i
   vendored, offline copy of `markdown-it` with raw HTML escaped); use the **View raw / View
   rendered** toggle to switch. Hooks show a rendered view of their event, matcher, and actions.
 - **Sections** group by plugin (loose components first) and collapse; each shows an item count.
-- Honours `$C4_CLAUDE_DIR` (first entry) to point at a different config dir.
 
 The plugin/skill/agent/hook reading lives in the
 [`claude-plugins`](../../libs/claude-plugins/) library (stdlib only); this app is a thin server +

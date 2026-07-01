@@ -7,15 +7,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A local web app that lists and searches every Claude Code component — skill, agent, and hook — on
 this machine, from installed plugins and from loose (non-plugin) skills/agents authored directly
 under a `.claude` dir. It buckets plugins by scope (`local` / `project` / `user`) against the
-launch directory, enumerates each plugin's members, adds loose skills/agents from `~/.claude` and
-`<project>/.claude`, and serves a searchable single-page UI. A thin server + UI over the
-`claude-plugins` library.
+project dir the user enters, enumerates each plugin's members, adds loose skills/agents from the
+Claude dir and `<project>/.claude`, and serves a searchable single-page UI. A thin server + UI over
+the `claude-plugins` library.
 
 ## Running
 
-See README.md for full usage. Run from a project root (or pass `--project-dir`) so `local`/
-`project`-scope members resolve: `uv run python server.py` (default `http://127.0.0.1:7780`;
-`--port` to override). Honours `$C4_CLAUDE_DIR` (first pathsep entry).
+See README.md for full usage. `uv run python server.py` (default `http://127.0.0.1:7780`; only
+`--host`/`--port` are set at startup). The Claude dir and project dir are chosen in the UI top bar
+(prefilled to `~/.claude` and cwd, persisted per browser via localStorage) and passed to
+`/api/members` — this app does not read `$C4_CLAUDE_DIR`.
 
 For a quick sanity check on an edit, parse/type-check the changed file
 (`uv run python -m py_compile server.py`).

@@ -89,9 +89,9 @@ def _mark_shadowed(members: list[Member]) -> None:
         m.shadowed = _precedence(m) > best[(m.kind, m.name)]
 
 
-def load_members(project_root: Path) -> list[Member]:
+def load_members(project_root: Path, claude_dir: Path) -> list[Member]:
     """Enumerate every skill, agent, and hook across scopes, sorted for display."""
-    buckets = load_installed_plugins(project_root)
+    buckets = load_installed_plugins(project_root, claude_dir)
     members: list[Member] = []
     for scope in ("user", "project", "local"):
         for entry in buckets.get(scope, []):
@@ -116,7 +116,7 @@ def load_members(project_root: Path) -> list[Member]:
                            name, desc, "", _render_hook(hook))
                 )
     # Loose (non-plugin) skills/agents authored directly under a .claude dir.
-    for scope, base in loose_bases(project_root).items():
+    for scope, base in loose_bases(project_root, claude_dir).items():
         for skill in load_plugin_skills(base):
             members.append(
                 Member(0, "skill", scope, "", "", "",
@@ -136,6 +136,15 @@ def load_members(project_root: Path) -> list[Member]:
     for index, member in enumerate(members):
         member.id = index
     return members
+
+
+def default_dirs() -> dict[str, str]:
+    """Prefill values for the UI: user ``~/.claude`` and the launch directory.
+
+    The browser resolves dirs from the UI; these are only starting points the
+    user can override.
+    """
+    return {"claude_dir": str(Path.home() / ".claude"), "project_dir": str(Path.cwd())}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -159,16 +168,31 @@ class Handler(BaseHTTPRequestHandler):
         elif parsed.path in ("/app.js", "/markdown-it.min.js"):
             self._send(200, (HERE / parsed.path.lstrip("/")).read_bytes(),
                        "text/javascript; charset=utf-8")
+        elif parsed.path == "/api/config":
+            self._send(200, json.dumps(default_dirs()).encode("utf-8"), "application/json")
         elif parsed.path == "/api/members":
-            payload = [
-                {k: v for k, v in asdict(m).items() if k not in ("path", "body")}
-                for m in self.members
-            ]
-            self._send(200, json.dumps(payload).encode("utf-8"), "application/json")
+            self._send_members(parse_qs(parsed.query))
         elif parsed.path == "/api/member":
             self._send_member_body(parse_qs(parsed.query))
         else:
             self._send(404, b"not found", "text/plain; charset=utf-8")
+
+    def _send_members(self, query: dict[str, list[str]]) -> None:
+        # Dirs come from the UI; a missing/blank value falls back to the defaults.
+        # Non-existent dirs scan to an empty list (the library degrades gracefully),
+        # so no validation error is needed here.
+        defaults = default_dirs()
+        claude_dir = Path(query.get("claude_dir", [defaults["claude_dir"]])[0].strip()
+                          or defaults["claude_dir"])
+        project_dir = Path(query.get("project_dir", [defaults["project_dir"]])[0].strip()
+                           or defaults["project_dir"])
+        # Cache the scan so /api/member can index it by id (no path crosses the wire).
+        type(self).members = load_members(project_dir.resolve(), claude_dir.resolve())
+        payload = [
+            {k: v for k, v in asdict(m).items() if k not in ("path", "body")}
+            for m in self.members
+        ]
+        self._send(200, json.dumps(payload).encode("utf-8"), "application/json")
 
     def _send_member_body(self, query: dict[str, list[str]]) -> None:
         # id indexes our own scan results — no user-supplied path, so no traversal.
@@ -200,21 +224,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="claude-component-browser")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=7780)
-    parser.add_argument(
-        "--project-dir",
-        type=Path,
-        default=None,
-        help="Project root to resolve project-scoped components from (default: cwd).",
-    )
     args = parser.parse_args()
 
-    project_root = (args.project_dir or Path.cwd()).resolve()
-    Handler.members = load_members(project_root)
-    kinds = {m.kind for m in Handler.members}
-    by_kind = ", ".join(f"{sum(m.kind == k for m in Handler.members)} {k}s" for k in sorted(kinds))
-    print(f"  Plugin Component Browser — {len(Handler.members)} members indexed ({by_kind or 'none'})")
-    print(f"  Project root: {project_root}")
+    # The Claude dir and project dir are chosen in the UI, not at startup.
+    print("  Plugin Component Browser")
     print(f"  Open: http://{args.host}:{args.port}  (Ctrl+C to stop)")
+    print("  Set the Claude dir and project dir in the browser, then Scan.")
     try:
         ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
     except KeyboardInterrupt:
