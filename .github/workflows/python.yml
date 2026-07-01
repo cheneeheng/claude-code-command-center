@@ -26,7 +26,7 @@ jobs:
           - libs/claude-usage
           - libs/claude-plugins
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
@@ -50,7 +50,7 @@ jobs:
           - member: apps/claude-component-browser
             target: server.py
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
@@ -65,7 +65,7 @@ jobs:
       run:
         working-directory: apps/multi-repo-plan-runner
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true

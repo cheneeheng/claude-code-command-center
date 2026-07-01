@@ -19,7 +19,7 @@ jobs:
     name: Build and attach .vsix
     runs-on: ubuntu-latest   # .vsix is platform-independent JS/webview — build once
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
