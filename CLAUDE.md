@@ -54,6 +54,18 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
 - **Python:** every Python member is managed with `uv` (`pyproject.toml` + `uv.lock`). Run code
   with `uv run …`; never edit `uv.lock` by hand. Lint/format with `ruff` (line length 88).
   Stdlib-only tools keep `dependencies = []` and `[tool.uv] package = false`.
+- **Testing:** a member earns a **smoke test** when it has a runtime surface the static checks
+  (`ruff`/`mypy`/`py_compile`) can't verify — it boots a process/serves endpoints, exposes a CLI
+  entrypoint, or imports another member at runtime. The smoke starts the real thing and asserts the
+  happy path only (it boots and one endpoint/exit code responds); this is the class of failure
+  static analysis misses (a green `mypy` that still won't run). Prefer a smoke test over a unit
+  suite for thin stdlib-glue apps/tools, whose risk is wiring not logic. **Libraries** (`libs/`)
+  have no boot surface — cover their public API with **unit tests** instead. Members with real
+  branching logic want unit tests regardless (`multi-repo-plan-runner` is the worked example:
+  `pytest` with a 100% coverage gate). Trivial static glue with no runtime surface stays on the
+  static checks only — do not add ceremony. Whatever tests a member has, **wire them as a required
+  check** so they gate merges; an un-required test that can go red without blocking manufactures
+  false confidence.
 - **Naming:** member folders are descriptive (a newcomer should know what each does from the
   name). Files inside members keep their original names.
 - **Env vars:** every environment variable this repo defines and reads is prefixed `C4_`
