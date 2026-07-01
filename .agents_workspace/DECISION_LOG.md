@@ -880,3 +880,30 @@ The JS bootstrap (`js/app.js`) must stay last in the list since order = concat o
 served file; the served bundle appears as one file in devtools. Mitigated by notes in the
 member CLAUDE.md and README. No behavior change.
 **Outcome:** py_compile + import + node --check + verbatim-diff checks all pass.
+
+### Entry 30
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-01T00:00:00Z
+**Task:** Reorganize the usage-dashboard folder for navigability.
+
+**Context:** The member root mixed 6 Python modules, the frontend (html/css/js), 2
+PowerShell scripts, and config files flat. User chose "full grouping" over "light
+grouping" when asked.
+**Decision:** Moved (via `git mv`, history preserved) the 5 non-entry Python modules
+into `backend/`, the UI into `web/` (dashboard.html + css/ + js/), and the two `.ps1`
+into `scripts/`. `usage-dashboard.py` (entry) and config stay at root. Path fixes:
+entry puts `backend/` on `sys.path` (keeps the backend's flat cross-imports working);
+`dashboard_server.py` asset dir → `../web`; `usage-dashboard-start-once.ps1` computes
+the app root as `Split-Path $PSScriptRoot -Parent` for its uv `--project`/entry paths.
+Also fixed `setup/registry.ps1`: its `SetupScript` path now points into `scripts/`, and
+its `Detect` probe now looks for the task name `usage-dashboard` (not the stale
+`StartStatuslineServer`) — the latter was a latent bug from the earlier task rename in
+this branch, surfaced while editing the same descriptor.
+**Impact / Risk:** Cross-member touch of `setup/registry.ps1` was required because the
+reorg moved the setup script it delegates to; still pure delegation (no install logic
+moved), so the no-cross-member-dependency invariant holds. Docs (member README +
+CLAUDE.md) updated for the new paths.
+**Outcome:** App runs from the new layout — smoke test on :8098 returns 200 for /,
+/dashboard.css, /dashboard.js, /api/data with identical asset sizes.

@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler
 
 from merge import build_payload
 
-_ASSET_DIR = Path(__file__).parent
+_ASSET_DIR = Path(__file__).parent.parent / "web"
 
 # The CSS and JS are split into small, single-concern source files under css/ and
 # js/ for readability, then concatenated in load order into one response each. The

@@ -48,14 +48,14 @@ That single override lives in `merge.py._apply_actual_cost` and nowhere else.
 usage-dashboard.py                  ← entry point (CLI, starts HTTP server)
 │
 ├── claude-usage (library)          ← transcript parsing + pricing (load_sessions, estimated_cost)
-├── dashboard_config.py             ← CLAUDE_DIRS, live-session timeout
+├── backend/dashboard_config.py     ← CLAUDE_DIRS, live-session timeout
 │
-├── session_stats.py    ─┐
-├── live_statusline.py  ─┤── the two data sources + the reconciler
-├── merge.py            ─┘
+├── backend/session_stats.py    ─┐
+├── backend/live_statusline.py  ─┤── the two data sources + the reconciler
+├── backend/merge.py            ─┘
 │
-├── dashboard_server.py             ← HTTP transport only
-└── dashboard.{html,css,js}         ← UI (renders the payload, computes nothing)
+├── backend/dashboard_server.py     ← HTTP transport only
+└── web/{dashboard.html, css/, js/} ← UI (renders the payload, computes nothing)
 ```
 
 ## Data flow — request to pixels
@@ -116,17 +116,27 @@ sessions and aggregates everything, the server ships it as JSON, and the
 
 ---
 
+## Layout
+
+```
+usage-dashboard.py     entry point (CLI, starts the server)
+backend/               Python: config + the two sources + reconciler + HTTP handler
+web/                   the UI: dashboard.html + split css/ and js/
+scripts/               Windows Task Scheduler install + launch helpers
+```
+
 ## Module responsibilities
 
 | File | Responsibility |
 |------|----------------|
 | `usage-dashboard.py` | Entry point. CLI args (`--host/--port/--claude-dir`), trims statusline logs on startup, starts the HTTP server. |
-| `dashboard_config.py` | Runtime config only: `CLAUDE_DIRS` (overridable via `--claude-dir`) and the live-session timeout. Parsing and the pricing table live in the `claude-usage` library. |
-| `session_stats.py` | **Source 1.** Loads per-session token/cost summaries from `claude-usage` and aggregates them (`summarize_sessions`) into totals and the by-day / by-project / by-model breakdowns. |
-| `live_statusline.py` | **Source 2.** Reads the statusline logs into live per-session state (rate limits, context %, *actual* cost); also `trim_statusline_logs` to bound disk growth. |
-| `merge.py` | Reconciles the two sources into the `/api/data` payload. Owns the estimated-vs-actual cost override. |
-| `dashboard_server.py` | HTTP transport only: serves the static assets and the `merge.build_payload` JSON. |
-| `dashboard.html` + `css/` + `js/` | The UI. The `js/` scripts render the payload, draw the charts, and handle the client-side controls (refresh, theme, pagination, session timeout); `css/` holds the styles. Both are split into small single-concern files and concatenated by `dashboard_server.py` into one `/dashboard.css` and one `/dashboard.js` response. |
+| `backend/dashboard_config.py` | Runtime config only: `CLAUDE_DIRS` (overridable via `--claude-dir`) and the live-session timeout. Parsing and the pricing table live in the `claude-usage` library. |
+| `backend/session_stats.py` | **Source 1.** Loads per-session token/cost summaries from `claude-usage` and aggregates them (`summarize_sessions`) into totals and the by-day / by-project / by-model breakdowns. |
+| `backend/live_statusline.py` | **Source 2.** Reads the statusline logs into live per-session state (rate limits, context %, *actual* cost); also `trim_statusline_logs` to bound disk growth. |
+| `backend/merge.py` | Reconciles the two sources into the `/api/data` payload. Owns the estimated-vs-actual cost override. |
+| `backend/dashboard_server.py` | HTTP transport only: serves the static assets and the `merge.build_payload` JSON. |
+| `web/dashboard.html` + `web/css/` + `web/js/` | The UI. The `js/` scripts render the payload, draw the charts, and handle the client-side controls (refresh, theme, pagination, session timeout); `css/` holds the styles. Both are split into small single-concern files and concatenated by `dashboard_server.py` into one `/dashboard.css` and one `/dashboard.js` response. |
+| `scripts/*.ps1` | Windows Task Scheduler helpers: `usage-dashboard-setup.ps1` (install/uninstall the logon + resume task) and `usage-dashboard-start-once.ps1` (the task action; launches the server only if the port is free). |
 
 ---
 
@@ -183,8 +193,8 @@ To run it automatically on Windows (logon + resume from sleep), use the
 scheduled-task installer:
 
 ```powershell
-.\usage-dashboard-setup.ps1              # install
-.\usage-dashboard-setup.ps1 -Action uninstall
+.\scripts\usage-dashboard-setup.ps1              # install
+.\scripts\usage-dashboard-setup.ps1 -Action uninstall
 ```
 
 ### Environment variables

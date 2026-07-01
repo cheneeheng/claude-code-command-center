@@ -12,13 +12,13 @@ Usage:
     python3 usage-dashboard.py --claude-dir ~/.claude ~/work/.claude
 
 Module layout:
-    claude-usage (lib)   - transcript parsing + pricing (load_sessions, estimated_cost)
-    dashboard_config.py  - runtime config (CLAUDE_DIRS, live-session timeout)
-    session_stats.py     - source 1: session usage (via claude-usage) -> tokens + estimated cost
-    live_statusline.py   - source 2: statusline logs -> rate limits + actual cost
-    merge.py             - reconcile the two sources into the /api/data payload
-    dashboard_server.py  - HTTP handler (serves assets + payload)
-    dashboard.{html,css,js} - dashboard UI
+    claude-usage (lib)          - transcript parsing + pricing (load_sessions, estimated_cost)
+    backend/dashboard_config.py - runtime config (CLAUDE_DIRS, live-session timeout)
+    backend/session_stats.py    - source 1: session usage (via claude-usage) -> tokens + estimated cost
+    backend/live_statusline.py  - source 2: statusline logs -> rate limits + actual cost
+    backend/merge.py            - reconcile the two sources into the /api/data payload
+    backend/dashboard_server.py - HTTP handler (serves assets + payload)
+    web/dashboard.html + css/ + js/ - dashboard UI
 See README.md for the full data-flow and provenance notes.
 """
 
@@ -27,8 +27,9 @@ import argparse
 from pathlib import Path
 from http.server import HTTPServer
 
-# Ensure sibling modules are importable when launched by absolute path.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# The backend modules use flat imports of each other; put backend/ on the path so
+# both this entry point and those cross-imports resolve when launched by any path.
+sys.path.insert(0, str(Path(__file__).resolve().parent / "backend"))
 
 import dashboard_config
 from live_statusline import trim_statusline_logs
