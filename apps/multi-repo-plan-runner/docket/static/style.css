@@ -24,6 +24,7 @@ header h1 {
 .batch-bar { display: flex; align-items: center; gap: var(--space-3); }
 .notice { color: var(--fg-muted); font-size: var(--fs-100); }
 .notice.error { color: var(--danger); }
+#theme-toggle { margin-left: auto; }
 
 main {
   flex: 1;

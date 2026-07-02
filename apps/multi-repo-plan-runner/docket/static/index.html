@@ -1,9 +1,15 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>docket</title>
+  <script>
+    // Apply the saved theme before first paint to avoid a flash; with no saved
+    // choice we leave data-theme unset so brand.css follows the OS preference.
+    const t = localStorage.getItem("docket-theme");
+    if (t) document.documentElement.dataset.theme = t;
+  </script>
   <link rel="stylesheet" href="/static/brand.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -14,6 +20,7 @@
       <button id="implement-selected" class="btn btn-primary" disabled>Implement selected</button>
       <span id="notice" class="notice"></span>
     </div>
+    <button id="theme-toggle" class="btn btn-ghost btn-sm" title="Switch light/dark theme"></button>
   </header>
 
   <main>

@@ -11,11 +11,46 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
+from textual.theme import Theme
 from textual.widgets import Footer, Header, Input, RichLog, Static, Tree
 
 from docket import core, tracker
 
 _BADGE = {"ready": "○", "running": "▶", "implemented": "●"}
+
+# The Tidewater design system, translated to Textual's theme variables so the TUI
+# matches the browser UI. Terminals can't carry the display font or the active-edge,
+# so the palette is the faithful part: teal primary, terracotta accent, minty ground.
+# Both variants register at mount; the dark one is reachable from Textual's built-in
+# theme picker (Ctrl+P → "Change theme"), giving the TUI the same light/dark choice.
+TIDEWATER_LIGHT = Theme(
+    name="tidewater",
+    primary="#0E7E77",  # teal — headers, borders, primary action
+    secondary="#CB6442",  # terracotta accent
+    accent="#CB6442",
+    foreground="#143230",
+    background="#F0F5F3",
+    surface="#FFFFFF",
+    panel="#C7DBD6",  # border-strong — pane dividers ($panel in the CSS)
+    success="#2E8B57",
+    warning="#B5791F",
+    error="#C0392B",
+    dark=False,
+)
+TIDEWATER_DARK = Theme(
+    name="tidewater-dark",
+    primary="#2FB3A8",
+    secondary="#E98A62",
+    accent="#E98A62",
+    foreground="#E7F1EE",
+    background="#0C1F1D",
+    surface="#122A27",
+    panel="#2D544D",
+    success="#5FB985",
+    warning="#E0A94B",
+    error="#E36B5E",
+    dark=True,
+)
 
 
 class PlanTree(Tree):
@@ -85,6 +120,9 @@ class DocketApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        self.register_theme(TIDEWATER_LIGHT)
+        self.register_theme(TIDEWATER_DARK)
+        self.theme = "tidewater"
         self._projects = core.load_registry(self._registry_path).projects
         reset = tracker.reset_stale_runs(self._projects)
         if reset:

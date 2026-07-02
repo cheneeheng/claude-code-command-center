@@ -279,7 +279,32 @@ async function stopActive() {
   }
 }
 
+// --- theme -----------------------------------------------------------------
+
+// Active theme = explicit data-theme if set, else the OS preference.
+function activeTheme() {
+  return (
+    document.documentElement.dataset.theme ||
+    (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+  );
+}
+
+// The button labels the theme it switches TO.
+function syncThemeButton() {
+  $("theme-toggle").textContent = activeTheme() === "dark" ? "Light" : "Dark";
+}
+
+function toggleTheme() {
+  const next = activeTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("docket-theme", next);
+  syncThemeButton();
+}
+
 // --- wire up ---------------------------------------------------------------
+
+$("theme-toggle").addEventListener("click", toggleTheme);
+syncThemeButton();
 
 $("btn-runmyself").addEventListener("click", runMyself);
 $("btn-mark").addEventListener("click", () => manual("/api/implemented"));
