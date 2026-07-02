@@ -336,6 +336,20 @@ async def test_stop_without_proc(tui_registry, monkeypatch):
         assert any("no active run" in m for m in msgs)
 
 
+# --- theme --------------------------------------------------------------------
+
+
+async def test_toggle_theme_flips_dark_and_back(tui_registry):
+    reg, _ = tui_registry
+    app = DocketApp(registry=reg)
+    async with app.run_test():
+        assert app.theme == "tidewater"
+        app.action_toggle_theme()
+        assert app.theme == "tidewater-dark"
+        app.action_toggle_theme()
+        assert app.theme == "tidewater"
+
+
 # --- run_tui entry point ------------------------------------------------------
 
 

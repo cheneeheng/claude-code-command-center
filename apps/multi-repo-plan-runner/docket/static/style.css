@@ -24,7 +24,15 @@ header h1 {
 .batch-bar { display: flex; align-items: center; gap: var(--space-3); }
 .notice { color: var(--fg-muted); font-size: var(--fs-100); }
 .notice.error { color: var(--danger); }
-#theme-toggle { margin-left: auto; }
+#theme-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1);
+  color: var(--fg-muted);
+}
+#theme-toggle:hover { color: var(--fg); }
+#theme-toggle svg { display: block; }
 
 main {
   flex: 1;

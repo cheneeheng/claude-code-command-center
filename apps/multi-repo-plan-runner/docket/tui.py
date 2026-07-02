@@ -99,6 +99,7 @@ class DocketApp(App):
         ("o", "reopen", "Reopen"),
         ("space", "toggle_select", "Select for batch"),
         ("s", "stop", "Stop"),
+        ("d", "toggle_theme", "Dark/Light"),
         ("q", "quit", "Quit"),
     ]
 
@@ -291,6 +292,9 @@ class DocketApp(App):
                     break
                 finally:
                     self.call_from_thread(self._refresh)
+
+    def action_toggle_theme(self) -> None:
+        self.theme = "tidewater" if self.theme == "tidewater-dark" else "tidewater-dark"
 
     def action_stop(self) -> None:
         if self._proc is not None:
