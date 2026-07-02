@@ -79,17 +79,47 @@ jobs:
         run: uv run docket init --dry-run
 
   smoke:
-    name: Smoke test (claude-component-browser)
+    name: Smoke test (${{ matrix.member }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        member:
+          - apps/claude-component-browser
+          - apps/usage-dashboard
+          - tools/usage-report
+          - tools/statusline-hook
     defaults:
       run:
-        working-directory: apps/claude-component-browser
+        working-directory: ${{ matrix.member }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      # `uv run` syncs the app (incl. the claude-plugins path dep) and puts the
-      # venv python on PATH, which tests/smoke.sh invokes as python3.
+      # `uv run` syncs the member (incl. any path deps) and puts the venv python
+      # and console scripts on PATH, which tests/smoke.sh invokes.
       - name: Run smoke test
         run: uv run bash tests/smoke.sh
+
+  libtest:
+    name: pytest (${{ matrix.member }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        member:
+          - libs/claude-usage
+          - libs/claude-plugins
+    defaults:
+      run:
+        working-directory: ${{ matrix.member }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # Libraries have no boot surface: cover the public API with unit tests
+      # behind a 100% coverage gate (configured in each member's pyproject.toml).
+      - name: pytest (100% coverage gate)
+        run: uv run pytest

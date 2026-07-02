@@ -14,6 +14,8 @@ dependencies = []
 dev = [
     "ruff>=0.15",
     "mypy>=1.11",
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -26,3 +28,11 @@ target-version = "py311"
 [tool.mypy]
 python_version = "3.11"
 strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=claude_usage --cov-report=term-missing --cov-fail-under=100"
+
+[tool.coverage.run]
+branch = true
+source = ["claude_usage"]
