@@ -1,16 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>docket</title>
+  <link rel="stylesheet" href="/static/brand.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
     <h1>docket</h1>
     <div class="batch-bar">
-      <button id="implement-selected" disabled>Implement selected</button>
+      <button id="implement-selected" class="btn btn-primary" disabled>Implement selected</button>
       <span id="notice" class="notice"></span>
     </div>
   </header>
@@ -28,16 +29,16 @@
         <span id="plan-status" class="badge"></span>
       </div>
       <div id="plan-controls" class="controls" hidden>
-        <button id="btn-implement" disabled>Implement</button>
-        <button id="btn-runmyself">Run myself</button>
-        <button id="btn-mark">Mark implemented</button>
-        <button id="btn-reopen">Reopen</button>
+        <button id="btn-implement" class="btn btn-primary" disabled>Implement</button>
+        <button id="btn-runmyself" class="btn btn-outline">Run myself</button>
+        <button id="btn-mark" class="btn btn-outline">Mark implemented</button>
+        <button id="btn-reopen" class="btn btn-outline">Reopen</button>
       </div>
       <pre id="plan-body" class="placeholder">No plan selected.</pre>
     </section>
 
     <section id="log-pane" class="pane">
-      <div class="log-head">Run log <button id="btn-stop" hidden>Stop</button></div>
+      <div class="log-head"><span class="eyebrow">Run log</span> <button id="btn-stop" class="btn btn-danger btn-sm" hidden>Stop</button></div>
       <div id="logs"><p class="placeholder">no output yet</p></div>
     </section>
   </main>
