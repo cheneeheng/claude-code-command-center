@@ -478,7 +478,7 @@ def _tool_digest(inp: dict) -> str:
     for key in ("file_path", "path", "pattern", "command", "url"):
         val = inp.get(key)
         if isinstance(val, str):
-            return val.splitlines()[0][:80] if val else ""
+            return val.splitlines()[0] if val else ""
     return ""
 
 
@@ -495,7 +495,7 @@ def run_implement(
     the Popen handle to the caller for stop()."""
     slug = safe_slug(slug)
     rec = tracker.read_record(project, slug)
-    if rec["status"] not in ("ready", "implemented"):
+    if rec["status"] != "ready":
         raise ValueError(f"{project.name}/{slug} is '{rec['status']}', not runnable")
 
     # Preflight the binary BEFORE flipping status / taking the lock — a bad claude_bin
@@ -604,7 +604,7 @@ class RunManager:
                 raise ValueError(f"unknown project: {item.get('project')!r}")
             slug = safe_slug(item.get("slug", ""))
             rec = tracker.read_record(project, slug)
-            if rec["status"] not in ("ready", "implemented"):
+            if rec["status"] != "ready":
                 raise ValueError(
                     f"{project.name}/{slug} is '{rec['status']}', not runnable"
                 )

@@ -16,7 +16,6 @@ VALID_STATUS = ("ready", "running", "implemented")
 
 ALLOWED = {  # (from, to): {triggers}  — the full lifecycle table from SKELETON §02
     ("ready", "running"): {"headless"},
-    ("implemented", "running"): {"headless"},
     ("running", "implemented"): {"headless"},
     ("running", "ready"): {"headless", "startup_reset"},
     ("ready", "implemented"): {"manual"},

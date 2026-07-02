@@ -84,7 +84,10 @@ function planRow(project, plan) {
 
   const cb = document.createElement("input");
   cb.type = "checkbox";
-  cb.title = "select for batch implement";
+  cb.disabled = plan.status !== "ready";
+  cb.title = cb.disabled
+    ? "only ready plans can be batch-implemented"
+    : "select for batch implement";
   cb.addEventListener("click", (e) => e.stopPropagation());
   cb.addEventListener("change", syncBatchButton);
 
@@ -142,10 +145,14 @@ function renderPlan(plan) {
 
   const controls = $("plan-controls");
   controls.hidden = false;
-  const runnable = plan.status === "ready" || plan.status === "implemented";
-  $("btn-implement").disabled = !runnable;
-  $("btn-implement").title = runnable ? "" : "running — stop it first";
-  $("btn-runmyself").disabled = !runnable;
+  $("btn-implement").disabled = plan.status !== "ready";
+  $("btn-implement").title =
+    plan.status === "ready"
+      ? ""
+      : plan.status === "running"
+        ? "running — stop it first"
+        : "already implemented — reopen to run again";
+  $("btn-runmyself").disabled = plan.status === "running";
   $("btn-mark").hidden = plan.status !== "ready";
   $("btn-reopen").hidden = plan.status !== "implemented";
 }

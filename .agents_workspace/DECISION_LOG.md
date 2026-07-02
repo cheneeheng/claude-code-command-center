@@ -1046,3 +1046,27 @@ the dir in the UI. Everything is still bound to `127.0.0.1`.
 **Outcome:** `claude-plugins` and `server.py` pass py_compile + ruff + mypy strict. Smoke-tested
 live: `/api/config` returns native Windows paths; scanning with an explicit Claude dir populates
 the cache; `/api/member?id=0` loads the body from it; nonexistent dirs return an empty list.
+
+### Entry 35
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-02
+**Task:** multi-repo-plan-runner — block Implement (headless + batch) on already-implemented plans in both frontends.
+
+**Context:** `run_implement`, `RunManager.submit`, and both UIs treated `implemented` as
+re-runnable (`status in ("ready","implemented")`). The user wants an implemented plan to be
+non-implementable and non-batch-selectable until explicitly reopened. The lifecycle table
+(`tracker.ALLOWED`) still declared `("implemented","running"): {"headless"}` legal — a
+contradiction with the desired behavior and a latent bypass.
+**Decision:** Enforce `ready`-only at the core entry points (`run_implement`, `submit`), gate the
+UIs to match (webui: Implement button disabled + batch checkbox disabled unless `ready`; TUI:
+`action_implement` and `action_toggle_select` refuse non-`ready` with a log message), AND removed
+the now-unreachable `("implemented","running")` edge from `tracker.ALLOWED` so the state machine
+itself forbids re-implementing. Re-implementing remains possible via the existing manual
+`implemented -> ready` reopen, then `ready -> running`. Did not edit the archived architecture doc
+(frozen history); this entry records the state-machine change.
+**Impact / Risk:** Behavior change — implemented plans must be reopened before re-running.
+`run_myself` (manual, does not go through `run_implement`) intentionally left available for
+implemented plans; only running blocks it, unchanged. No new dependencies.
+**Outcome:** `uv run pytest` green (196 passed) at 100% line+branch coverage; py_compile clean.
