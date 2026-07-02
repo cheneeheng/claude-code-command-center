@@ -150,12 +150,15 @@ Status lives only in the sidecar; the tracker rejects any edge not drawn here.
 stateDiagram-v2
     [*] --> ready
     ready --> running : headless spawn
-    implemented --> running : headless re-run (new session)
     running --> implemented : headless rc==0
     running --> ready : headless fail/stop / startup_reset
     ready --> implemented : manual mark
     implemented --> ready : manual reopen
 ```
+
+Only `ready` is runnable: `run_implement` and `RunManager.submit` reject any other status, and there
+is no `implemented → running` edge. Re-implementing an implemented plan requires a manual reopen
+(`implemented → ready`) first — see the 2026-07-02 decision.
 
 ## Key Decisions
 
@@ -225,9 +228,9 @@ stdin and breaks cross-file references (a plan may reference its SKELETON / earl
 (`.agents_workspace/planning/<slug>.md`); Claude Code opens and reads it (and any siblings)
 itself. The instruction comes from the resolved `project.instruction_template` (config cascade:
 `defaults` → `DEFAULT_INSTRUCTION_TEMPLATE`) with `{path}` substituted, overridable per plan at
-submit time.
-A re-run from `implemented` is a brand-new session with fresh instruction text.
-**Consequences:** Tiny stdin, full sibling-file access, per-plan instructions, clean re-runs.
+submit time. Each headless run is a brand-new session with fresh instruction text (re-running a
+plan first requires a manual reopen — see the 2026-07-02 decision).
+**Consequences:** Tiny stdin, full sibling-file access, per-plan instructions, clean sessions.
 docket builds no message array and manages no context window — Claude Code owns the conversation.
 
 ### 2026-06-20 — In-memory runs, per-project lock, startup reset for recovery
@@ -254,3 +257,24 @@ immediate overwrite with `PermissionError (WinError 5)`.
 to tolerate the transient Windows lock.
 **Consequences:** Crash-safe writes on all platforms; a contended write may block up to ~0.5s
 before raising on Windows. No new dependency.
+
+### 2026-07-02 — Only `ready` is runnable; implemented plans must be reopened to re-run
+
+**Status:** Accepted
+**Context:** `run_implement`, `RunManager.submit`, and both frontends treated `implemented` as
+re-runnable (`status in ("ready", "implemented")`), and the lifecycle table declared
+`("implemented", "running"): {"headless"}` legal. This let a user launch Implement — single or
+batch — on a plan already marked implemented, both from the TUI and the browser, which is
+surprising and risks re-running finished work.
+**Decision:** Make `ready` the sole runnable status. `run_implement` and `submit` now reject any
+non-`ready` status; the `implemented → running` edge was removed from `tracker.ALLOWED` so the
+state machine itself forbids it. The frontends mirror the rule: the webui disables the Implement
+button and the batch checkbox for non-`ready` plans, and the TUI's `action_implement` and
+`action_toggle_select` refuse non-`ready` plans with a log message. Re-implementing is still
+possible via the existing manual reopen (`implemented → ready`), then `ready → running` — this
+reverses the "clean re-runs from implemented" consequence of the 2026-06-20 "pipes instruction"
+decision without touching its core (instruction-not-body still holds).
+**Consequences:** Re-running a finished plan is now a deliberate two-step (reopen, then implement)
+rather than a single click. `run_myself` (manual, never goes through `run_implement`) is
+unaffected and stays available for implemented plans; only `running` disables it. Core is the
+authoritative guard — the UI gating is UX, not the enforcement boundary.
