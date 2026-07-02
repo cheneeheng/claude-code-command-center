@@ -154,7 +154,7 @@ def test_format_event_unknown_type_returns_none():
 # --- _tool_digest -------------------------------------------------------------
 
 
-def test_tool_digest_truncates_and_first_line():
+def test_tool_digest_first_line_only():
     long = "x" * 200
     assert core._tool_digest({"command": f"line1\n{long}"}) == "line1"
 

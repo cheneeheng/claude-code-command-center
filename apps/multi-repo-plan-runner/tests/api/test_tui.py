@@ -188,6 +188,22 @@ async def test_toggle_select_adds_and_removes(tui_registry):
         assert ("repo", "alpha") not in app._selected
 
 
+async def test_toggle_select_rejects_non_ready(tui_registry, project, monkeypatch):
+    reg, _ = tui_registry
+    app = DocketApp(registry=reg)
+    async with app.run_test():
+        tracker.set_status(project, "alpha", "implemented", trigger="manual")
+        tree = app.query_one("#tree", tui.Tree)
+        node = next(
+            n for n in tree.root.children[0].children if n.data == ("repo", "alpha")
+        )
+        tree.move_cursor(node)
+        msgs = _log_spy(app, monkeypatch)
+        app.action_toggle_select()
+        assert ("repo", "alpha") not in app._selected
+        assert any("only ready plans" in m for m in msgs)
+
+
 # --- headless run (worker) ----------------------------------------------------
 
 
@@ -228,6 +244,17 @@ async def test_implement_no_current_is_noop(tui_registry):
     app = DocketApp(registry=reg)
     async with app.run_test():
         app.action_implement()  # returns immediately
+
+
+async def test_implement_non_ready_logs_and_skips(tui_registry, project, monkeypatch):
+    reg, _ = tui_registry
+    app = DocketApp(registry=reg)
+    async with app.run_test():
+        app._current = ("repo", "alpha")
+        tracker.set_status(project, "alpha", "implemented", trigger="manual")
+        msgs = _log_spy(app, monkeypatch)
+        app.action_implement()  # implemented -> not runnable, no modal
+        assert any("reopen to run again" in m for m in msgs)
 
 
 async def test_implement_selected_nothing_logs(tui_registry, monkeypatch):

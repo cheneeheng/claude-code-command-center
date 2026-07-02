@@ -177,13 +177,16 @@ class DocketApp(App):
         if node is None or not node.data:
             return
         key = node.data
+        name, slug = key
         if key in self._selected:
             self._selected.discard(key)
+        elif core.read_plan(self._project(name), slug).status != "ready":
+            self._notify_log("[docket] only ready plans can be selected for batch")
+            return
         else:
             self._selected.add(key)
         # Relabel just this node — a full reload would reset the cursor to the root,
         # making multi-select unusable.
-        name, slug = key
         node.set_label(self._plan_label(core.read_plan(self._project(name), slug), key))
 
     # --- headless run ---------------------------------------------------------
@@ -192,6 +195,9 @@ class DocketApp(App):
         if not self._current:
             return
         name, slug = self._current
+        if core.read_plan(self._project(name), slug).status != "ready":
+            self._notify_log("[docket] not runnable — reopen to run again")
+            return
         default = core.resolve_instruction(self._project(name), slug, None)
 
         def go(instruction: str | None) -> None:
