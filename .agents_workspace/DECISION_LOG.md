@@ -1097,3 +1097,51 @@ live_statusline (un-annotated defaultdicts) left untouched — not introduced by
 **Outcome:** Verified end-to-end in Chrome (both themes): heatmap renders, sort works, CSV
 downloads with attachment headers. Fixed one collision found in verification: heatmap pad cells
 named `.empty` inherited the dashboard empty-state padding; renamed to `.pad`.
+
+### Entry 37
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-03T20:15:00+02:00
+**Task:** Plan usage-dashboard v4 (insight layer) — cost policy
+
+**Context:** User excluded the pricing-staleness feature stating "the live pricing is not reliable. The one calculated from pricing table is more reliable." The existing invariant ("actual cost wins for live sessions", merge.py overlay) directly contradicts that judgment, and v4's new aggregates (deltas, range totals, plan value) need one canonical cost.
+**Decision:** v4 makes the pricing-table estimate canonical everywhere; ITER_02_v4 removes merge._apply_actual_cost and rewrites the CLAUDE.md/README invariant. Actual cost stays visible only informationally in the live card's per-session table.
+**Impact / Risk:** Totals for currently-live sessions shift slightly (estimate vs statusline figure). Reverses a documented invariant — flagged to the user in the planning summary for veto before implementation.
+**Outcome:** Planned in ITER_02_v4; not yet implemented.
+
+### Entry 38
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-03T20:15:00+02:00
+**Task:** Plan usage-dashboard v4 — live-card freshness transport
+
+**Context:** The approved feature list said "SSE push for the live card". SSE on the stdlib threading server adds connection-lifecycle code for a single local client; the underlying goal is ~10s freshness for rate limits.
+**Decision:** Deliver the goal via a cheap GET /api/live endpoint (statusline files only, no transcript parse) polled every 10s; full payload stays at 60s. True SSE recorded as out-of-MVP upgrade path (payload shape is transport-agnostic).
+**Impact / Risk:** Slightly higher request churn than SSE; negligible locally. If the user insists on SSE, ITER_05_v4 §04 is the only artifact to revise.
+**Outcome:** Planned in ITER_05_v4; user confirmed fast-poll on 2026-07-03.
+
+### Entry 39
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-03T20:15:00+02:00
+**Task:** Plan usage-dashboard v4 — plan family location and naming
+
+**Context:** User said "put the plans under v4". Existing planning/ uses version subfolders (v1..v3) with untagged filenames; the plan-build-review skill's canonical form is a _vN filename suffix, which the implement-from-plan step keys on.
+**Decision:** Both: .agents_workspace/planning/v4/ folder (repo convention) with _v4-suffixed stems inside (SKELETON_v4.md, ITER_01_v4..ITER_05_v4.md) so depends_on stems and the implementation skill's version detection work unambiguously.
+**Impact / Risk:** None; prior v1–v3 artifacts untouched.
+**Outcome:** Six artifacts written.
+
+### Entry 40
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-04T00:35:00+02:00
+**Task:** Implement usage-dashboard v4 (SKELETON_v4 → ITER_05_v4) — stat-card trend deltas
+
+**Context:** ITER_03_v4 § 05 says the Total Tokens, Est. Cost, *and* Cache Savings cards each get a delta line "from `stats.delta`". But the payload contract (SKELETON_v4 § 02) defines `delta` with only `{tokens_pct, cost_pct, sessions_pct}` — there is no savings delta, and computing one client-side would need the previous window's savings (not sent) and would violate the "all computation server-side" invariant.
+**Decision:** Render the delta line only where the payload carries a matching metric: Total Tokens ← `tokens_pct`, Est. API Cost ← `cost_pct`. Cache Savings shows no delta line. `sessions_pct` stays in the contract for future use.
+**Impact / Risk:** One of the three named cards lacks its delta line; faithful to the payload contract and avoids fabricating a figure in the browser. Upgrade path: add `savings_pct` to `summarize_sessions._delta` and the payload if a savings trend is later wanted.
+**Outcome:** Deltas render correctly (verified in-browser: ▲/▼ green/red with "vs prev <N>").
