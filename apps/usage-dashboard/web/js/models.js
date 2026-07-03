@@ -31,6 +31,11 @@ function buildModelColors(models) {
   return map;
 }
 
+// Base shade per model *family* id (e.g. "claude-opus"), for the model-mix chart.
+function familyColor(fam) {
+  return MODEL_SHADES[modelFamily(fam)][0];
+}
+
 function modelShort(m) {
   if (!m) return '–';
   const l = m.toLowerCase();

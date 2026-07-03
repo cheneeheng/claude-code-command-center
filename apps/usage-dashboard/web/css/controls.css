@@ -75,8 +75,39 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* --- Time range selector (segmented, styled like the theme toggle) --- */
+.range-toggle {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.range-btn {
+  background: var(--surface);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.25rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.range-btn:hover { color: var(--fg); border-color: var(--secondary); }
+.range-btn.active { border-color: var(--secondary); color: var(--secondary); background: var(--secondary-wash); }
+.range-btn:focus-visible { outline: 2px solid var(--secondary); outline-offset: 1px; }
+
 /* --- Rate limit card --- */
 .rl-card { margin-bottom: 12px; }
+.rl-spark { display: block; width: 100%; height: 36px; margin-top: 8px; }
+.rl-note {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
 
 /* --- Empty state --- */
 .empty {
