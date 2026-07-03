@@ -3,6 +3,8 @@
 The JSON payload itself is assembled in merge.py, which reconciles the two data
 sources (session_stats + live_statusline). This module is transport only."""
 
+import csv
+import io
 import json
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -21,6 +23,7 @@ _JS_PARTS = [
     "js/format.js",
     "js/models.js",
     "js/charts.js",
+    "js/heatmap.js",
     "js/rate-limit.js",
     "js/render.js",
     "js/settings.js",
@@ -35,6 +38,23 @@ def _bundle(parts: list[str]) -> str:
 HTML = (_ASSET_DIR / "dashboard.html").read_text(encoding="utf-8")
 CSS = _bundle(_CSS_PARTS)
 JS = _bundle(_JS_PARTS)
+
+_CSV_COLUMNS = [
+    "session_id", "project", "models", "input_tokens", "output_tokens",
+    "cache_write_tokens", "cache_read_tokens", "total_tokens", "cost_usd",
+    "message_count", "first_ts", "last_ts",
+]
+
+
+def _sessions_csv(sessions: list[dict]) -> str:
+    """Render the per-session rows as CSV (models joined with ';')."""
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(_CSV_COLUMNS)
+    for s in sessions:
+        row = {**s, "models": ";".join(s.get("models") or [])}
+        writer.writerow(row.get(c, "") for c in _CSV_COLUMNS)
+    return buf.getvalue()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -64,6 +84,23 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
             self.wfile.write(JS.encode("utf-8"))
+
+        elif parsed.path == "/api/export.csv":
+            try:
+                body = _sessions_csv(build_payload(None)["sessions"])
+                self.send_response(200)
+                self.send_header("Content-Type", "text/csv; charset=utf-8")
+                self.send_header(
+                    "Content-Disposition",
+                    'attachment; filename="claude-code-usage.csv"',
+                )
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                self.wfile.write(body.encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
 
         elif parsed.path == "/api/data":
             try:
