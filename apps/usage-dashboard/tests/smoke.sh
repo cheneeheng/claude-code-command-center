@@ -44,4 +44,15 @@ curl -sf "http://127.0.0.1:$PORT/" | grep -qi '<html' || fail "/ did not serve H
 curl -sf "http://127.0.0.1:$PORT/dashboard.css" >/dev/null || fail "/dashboard.css"
 curl -sf "http://127.0.0.1:$PORT/dashboard.js" >/dev/null || fail "/dashboard.js"
 
+# Live fast-poll endpoint: statusline only, must return a JSON object.
+curl -sf "http://127.0.0.1:$PORT/api/live" | python3 -c "
+import sys, json
+p = json.load(sys.stdin)
+assert 'available' in p, p
+" || fail "/api/live payload shape"
+
+# Markdown report: 200 with a non-empty body carrying the report title.
+curl -sf "http://127.0.0.1:$PORT/api/report.md" | grep -q '# Claude Code Usage Report' \
+  || fail "/api/report.md body"
+
 echo "PASS"
