@@ -1,12 +1,14 @@
 # Claude Code Usage Dashboard
 
-An HTTP server that reads Claude Code's local logs and serves a single-page
-dashboard of token usage, cost, and live rate limits: totals, cache savings in
-USD, month-to-date cost with a month-end projection, a 12-month activity
-heatmap, daily token/cost charts, per-project and per-model breakdowns, and a
-sortable session table with CSV export. Its one dependency is the local
-[`claude-usage`](../../libs/claude-usage/) library (transcript parsing +
-pricing); run it with `uv run python usage-dashboard.py`.
+An HTTP server that reads Claude Code's local logs and serves a single-page,
+interactive insight dashboard of token usage, cost, and live rate limits:
+range/project scoping, plan ROI, week-over-week trend deltas, a 12-month
+activity heatmap, model-mix / hour-of-week / tool profiles, daily token/cost
+charts, per-project and per-model breakdowns, drill-down with shareable URLs,
+per-session economics ($/hr, cache hit %), a live rate-limit trajectory with cap
+ETA and reset countdowns, and Markdown / CSV report export. Its one dependency
+is the local [`claude-usage`](../../libs/claude-usage/) library (transcript
+parsing + pricing); run it with `uv run python usage-dashboard.py`.
 
 ```
 http://localhost:8080
@@ -31,17 +33,19 @@ Keeping them straight is the whole point of the module layout.
 | **Written by** | Claude Code itself, every turn | The `statusline-hook.ps1` / `.sh` hook, every prompt |
 | **Module** | `session_stats.py` | `live_statusline.py` |
 | **Gives us** | Exact token counts per session (input / output / cache) for **all** sessions, ever | Live state for **currently active** sessions: rate limits (5h / 7d), context-window %, and the model display name |
-| **Cost** | **Estimated** — token counts × the `claude-usage` pricing table | **Actual** — the real `total_cost_usd` Anthropic reported |
+| **Cost** | **Estimated** — token counts × the `claude-usage` pricing table (**canonical** in v4) | **Actual** — the real `total_cost_usd` Anthropic reported (informational only) |
 | **History** | Full history | Only recent (sessions idle past the timeout are dropped) |
 
-These two notions of "cost" are the only place the sources overlap, and it is
-the historical source of confusion in this code. The rule is simple:
+The sources overlap only on "cost", historically the source of confusion here.
+The v4 rule is simple:
 
-> **Actual cost wins when it's available.** For a session that is currently
-> live, `merge.py` overlays the statusline's actual cost on top of the token
-> estimate. Every other (historical) session keeps its estimate.
+> **The pricing-table estimate is canonical** for every aggregate and every
+> session row. There is no cost overlay. The statusline's actual per-session cost
+> is shown only in the live rate-limit card (`live.sessions[].session_cost`),
+> informational, never merged into `stats` or `sessions`.
 
-That single override lives in `merge.py._apply_actual_cost` and nowhere else.
+The statusline's `total_cost_usd` was judged unreliable, so v4 removed the
+former `merge.py._apply_actual_cost` overlay outright.
 
 ---
 
@@ -50,8 +54,8 @@ That single override lives in `merge.py._apply_actual_cost` and nowhere else.
 ```
 usage-dashboard.py                  ← entry point (CLI, starts HTTP server)
 │
-├── claude-usage (library)          ← transcript parsing + pricing (load_sessions, estimated_cost)
-├── backend/dashboard_config.py     ← CLAUDE_DIRS, live-session timeout
+├── claude-usage (library)          ← transcript parsing + pricing (load_usage, estimated_cost)
+├── backend/dashboard_config.py     ← CLAUDE_DIRS, live-session timeout, plan price
 │
 ├── backend/session_stats.py    ─┐
 ├── backend/live_statusline.py  ─┤── the two data sources + the reconciler
@@ -70,28 +74,27 @@ usage-dashboard.py                  ← entry point (CLI, starts HTTP server)
                   ▼                                          ▼
     ┌──────────────────────────────┐         ┌──────────────────────────────┐
     │  session_stats.py            │         │  live_statusline.py          │
-    │  load_sessions()             │         │  read_statusline(timeout)    │
+    │  load_cached() (memoized)    │         │  read_statusline(timeout)    │
     │                              │         │                              │
     │  per-session tokens          │         │  live sessions only:         │
-    │  + ESTIMATED cost            │         │   · 5h / 7d rate limits      │
+    │  + ESTIMATED cost (canonical)│         │   · 5h / 7d rate limits      │
     │    (tokens × pricing table)  │         │   · context-window %         │
-    │                              │         │   · ACTUAL cost (from API)   │
+    │                              │         │   · actual cost (info only)  │
     │  ALL sessions, full history  │         │   · model display name       │
     └──────────────┬───────────────┘         └───────────────┬──────────────┘
                    │                                          │
                    └────────────────────┬─────────────────────┘
                                         ▼
-                        ┌───────────────────────────────────┐
-                        │  merge.py                         │
-                        │  build_payload(live_timeout)      │
-                        │                                   │
-                        │  1. _apply_actual_cost()          │
-                        │     live session?  → actual cost  │   ← the ONLY
-                        │     historical?    → keep estimate│     overlap
-                        │  2. summarize_sessions()          │
-                        │       totals, by_day/project/model│
-                        │  3. strip internal `per_model`    │
-                        └────────────────┬──────────────────┘
+                        ┌─────────────────────────────────────────┐
+                        │  merge.py                               │
+                        │  build_payload(timeout, range, project) │
+                        │                                         │
+                        │  1. load_cached()  (memoized parse)     │
+                        │  2. summarize_sessions(range, project)  │
+                        │       scoped totals, deltas, plan,      │
+                        │       breakdowns, activity series       │
+                        │  3. strip internal `per_model`          │
+                        └────────────────┬────────────────────────┘
                                          ▼
                             { stats, sessions, live }
                                          │
@@ -101,7 +104,9 @@ usage-dashboard.py                  ← entry point (CLI, starts HTTP server)
                         │  GET /            → dashboard.html │
                         │  GET /dashboard.css|.js → assets   │
                         │  GET /api/data    → JSON payload   │
+                        │  GET /api/live    → live block only│
                         │  GET /api/export.csv → session CSV │
+                        │  GET /api/report.md → Markdown     │
                         └────────────────┬──────────────────┘
                                          │  HTTP (localhost:8080)
                                          ▼
@@ -110,13 +115,13 @@ usage-dashboard.py                  ← entry point (CLI, starts HTTP server)
                         │  fetch /api/data → render()       │
                         │  draws charts, tables, gauges     │
                         │  computes NOTHING — pure display  │
-                        │  refresh loop every 60s           │
+                        │  60s full refresh · 10s live poll │
                         └───────────────────────────────────┘
 ```
 
-One sentence: **two log sources go in, `merge.py` overlays real cost on live
-sessions and aggregates everything, the server ships it as JSON, and the
-`js/` browser code just draws it.**
+One sentence: **two log sources go in, `merge.py` aggregates the transcript
+estimates (scoped to the requested range/project) and attaches the live block,
+the server ships it as JSON, and the `js/` browser code just draws it.**
 
 ---
 
@@ -134,34 +139,21 @@ scripts/               Windows Task Scheduler install + launch helpers
 | File | Responsibility |
 |------|----------------|
 | `usage-dashboard.py` | Entry point. CLI args (`--host/--port/--claude-dir`), trims statusline logs on startup, starts the HTTP server. |
-| `backend/dashboard_config.py` | Runtime config only: `CLAUDE_DIRS` (overridable via `--claude-dir`) and the live-session timeout. Parsing and the pricing table live in the `claude-usage` library. |
-| `backend/session_stats.py` | **Source 1.** Loads per-session token/cost summaries from `claude-usage` and aggregates them (`summarize_sessions`) into totals, the by-day / by-project / by-model breakdowns, cache savings in USD (vs the same usage uncached), month-to-date cost + month-end projection, and the 364-day `heatmap` series. |
-| `backend/live_statusline.py` | **Source 2.** Reads the statusline logs into live per-session state (rate limits, context %, *actual* cost); also `trim_statusline_logs` to bound disk growth. |
-| `backend/merge.py` | Reconciles the two sources into the `/api/data` payload. Owns the estimated-vs-actual cost override. |
-| `backend/dashboard_server.py` | HTTP transport only: serves the static assets, the `merge.build_payload` JSON, and the `/api/export.csv` per-session CSV download. |
+| `backend/dashboard_config.py` | Runtime config only: `CLAUDE_DIRS` (overridable via `--claude-dir`), the live-session timeout, and the monthly `PLAN_PRICE_USD`. Parsing and the pricing table live in the `claude-usage` library. |
+| `backend/session_stats.py` | **Source 1.** Loads sessions + the `Activity` rollup from `claude-usage` (via a memoized parse cache), scopes them to the request's `range`/`project`, and aggregates them (`summarize_sessions`) into totals, trend deltas, plan value, top sessions, the by-day / by-project / by-model / model-mix / hour-of-week / tools breakdowns, cache savings, month-to-date cost + projection, and the 364-day `heatmap`. Adds per-session derived economics (duration, $/hr, cache hit %). |
+| `backend/live_statusline.py` | **Source 2.** Reads the statusline logs into live per-session state (rate limits, context %, informational actual cost), plus rate-limit `history` and a cap-ETA `forecast`; also `trim_statusline_logs` to bound disk growth. |
+| `backend/merge.py` | Assembles the `/api/data` payload from the memoized parse + live block. No cost overlay — the estimate is canonical. |
+| `backend/report.py` | Renders the `/api/report.md` Markdown usage report from a built payload (formatting only, no new aggregation). |
+| `backend/dashboard_server.py` | HTTP transport only: serves the static assets, `/api/data` (`range`/`project` scoped), the cheap `/api/live` fast-poll block, the `/api/export.csv` download, and the `/api/report.md` report. |
 | `web/dashboard.html` + `web/css/` + `web/js/` | The UI. The `js/` scripts render the payload, draw the charts, and handle the client-side controls (refresh, theme, pagination, session timeout); `css/` holds the styles. Both are split into small single-concern files and concatenated by `dashboard_server.py` into one `/dashboard.css` and one `/dashboard.js` response. |
 | `scripts/*.ps1` | Windows Task Scheduler helpers: `usage-dashboard-setup.ps1` (install/uninstall the logon + resume task) and `usage-dashboard-start-once.ps1` (the task action; launches the server only if the port is free). |
 
 ---
 
-## Cost: estimated vs actual, in detail
+## Cost: the estimate is canonical
 
-```
-   per session:
-                       is it live RIGHT NOW (in statusline, within timeout)?
-                                  │
-                   ┌──────────────┴──────────────┐
-                  YES                            NO
-                   │                              │
-        use ACTUAL cost from              use ESTIMATED cost
-        statusline (real $ billed)        (tokens × pricing table)
-                   │                              │
-                   └──────────────┬───────────────┘
-                                  ▼
-                    feeds total_cost_usd, daily-cost chart, session rows
-                    (cost-by-model breakdown stays estimate — statusline
-                     doesn't split cost per model)
-```
+Every cost figure on the dashboard — `total_cost_usd`, the daily-cost chart, the
+by-model and by-project breakdowns, and every session row — is the **estimate**:
 
 - **Estimated** (`claude_usage.estimated_cost`): `tokens / 1e6 × per-token price`,
   summed across the four token classes (input, output, cache-write, cache-read)
@@ -169,14 +161,11 @@ scripts/               Windows Task Scheduler install + launch helpers
   keyed by model *family* so `claude-opus-4-7` and `claude-opus-4-8` share a row.
   Update that table when Anthropic changes pricing.
 - **Actual** (`live_statusline`): read straight from `data.cost.total_cost_usd`
-  in the statusline log — the figure Claude Code displayed.
-- **What the UI shows:** `total_cost_usd`, the daily-cost chart, and a live
-  session's row reflect actual cost wherever a live session was matched;
-  everything else is the estimate. The **cost-by-model** breakdown is always the
-  estimate (the statusline doesn't attribute cost per model).
+  in the statusline log. v4 judged this figure unreliable, so it is **no longer
+  merged into any aggregate**. It survives only as the informational `Cost`
+  column in the live rate-limit card, for the sessions active right now.
 
-If estimated and actual diverge, the pricing table is stale — not a bug in the
-parsing.
+There is intentionally no estimated-vs-actual reconciliation left in the code.
 
 ---
 
@@ -207,6 +196,17 @@ scheduled-task installer:
 |----------|---------|--------|
 | `C4_CLAUDE_DIR` | `~/.claude` | One or more config dirs (`os.pathsep`-separated). Overridden by `--claude-dir`. |
 | `C4_STATUSLINE_LIVE_TIMEOUT` | `1800` | Seconds a session may be idle before it drops out of the live view. Also adjustable per-request via the dashboard's "session timeout" control. |
+| `C4_PLAN_PRICE_USD` | *(unset)* | Your monthly Claude subscription price. Set it to light up the **Plan Value** card (month-to-date usage value ÷ plan price). Unset → the card shows a setup hint. |
+
+### Endpoints
+
+| Method / Path | Description |
+|---|---|
+| `GET /`, `/dashboard.css`, `/dashboard.js` | Static shell + concatenated CSS/JS bundles. |
+| `GET /api/data?range=&project=&live_timeout=` | Full `{stats, sessions, live}` payload. `range` ∈ `7d,30d,90d,12m,all` (default `all`); `project` is an exact-match filter. |
+| `GET /api/live?live_timeout=` | The `live` block only (statusline read, no transcript parse) — the 10s fast-poll endpoint. |
+| `GET /api/export.csv?range=&project=` | Range/project-scoped per-session CSV download. |
+| `GET /api/report.md?range=&project=` | Range/project-scoped Markdown usage report download. |
 
 ---
 

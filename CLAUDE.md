@@ -72,7 +72,8 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
   Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir
   for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in),
-  `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout). OS-provided
+  `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout),
+  `C4_PLAN_PRICE_USD` (usage-dashboard monthly plan price for the Plan Value card). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
 - **Scheduled tasks:** a member that registers a Windows Task Scheduler task uses its own folder

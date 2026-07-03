@@ -12,11 +12,11 @@ Usage:
     python3 usage-dashboard.py --claude-dir ~/.claude ~/work/.claude
 
 Module layout:
-    claude-usage (lib)          - transcript parsing + pricing (load_sessions, estimated_cost)
-    backend/dashboard_config.py - runtime config (CLAUDE_DIRS, live-session timeout)
+    claude-usage (lib)          - transcript parsing + pricing (load_usage, estimated_cost)
+    backend/dashboard_config.py - runtime config (CLAUDE_DIRS, live-session timeout, plan price)
     backend/session_stats.py    - source 1: session usage (via claude-usage) -> tokens + estimated cost
-    backend/live_statusline.py  - source 2: statusline logs -> rate limits + actual cost
-    backend/merge.py            - reconcile the two sources into the /api/data payload
+    backend/live_statusline.py  - source 2: statusline logs -> rate limits (+ informational cost)
+    backend/merge.py            - assemble the /api/data payload from the two sources
     backend/dashboard_server.py - HTTP handler (serves assets + payload)
     web/dashboard.html + css/ + js/ - dashboard UI
 See README.md for the full data-flow and provenance notes.
