@@ -146,6 +146,79 @@ tr:hover td { color: var(--fg); }
 
 .ts { color: var(--muted); font-size: 11px; }
 
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { color: var(--fg); }
+.sort-arrow { font-size: 8px; margin-left: 3px; color: var(--secondary); }
+
+.csv-link {
+  color: var(--secondary);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.csv-link:hover { text-decoration: underline; }
+
+/* --- Activity heatmap --- */
+.hm-card { margin-bottom: 12px; }
+
+.hm-scroll { overflow-x: auto; }
+
+.hm-grid {
+  display: flex;
+  gap: 3px;
+  width: max-content;
+  margin: 0 auto;
+}
+
+.hm-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hm-month {
+  height: 14px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hm-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.hm-cell.pad { background: transparent; }
+.hm-cell.l0 { background: var(--border); }
+.hm-cell.l1 { opacity: 0.3; }
+.hm-cell.l2 { opacity: 0.55; }
+.hm-cell.l3 { opacity: 0.8; }
+.hm-cell.l4 { opacity: 1; }
+
+.hm-daylabels .hm-cell {
+  background: transparent;
+  width: 26px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  line-height: 14px;
+}
+
+.hm-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+.hm-legend .hm-cell { margin: 0 1px; }
+
 /* --- Token breakdown donut --- */
 .donut-wrap {
   display: flex;

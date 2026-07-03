@@ -1,8 +1,11 @@
 # Claude Code Usage Dashboard
 
 An HTTP server that reads Claude Code's local logs and serves a single-page
-dashboard of token usage, cost, and live rate limits. Its one dependency is the
-local [`claude-usage`](../../libs/claude-usage/) library (transcript parsing +
+dashboard of token usage, cost, and live rate limits: totals, cache savings in
+USD, month-to-date cost with a month-end projection, a 12-month activity
+heatmap, daily token/cost charts, per-project and per-model breakdowns, and a
+sortable session table with CSV export. Its one dependency is the local
+[`claude-usage`](../../libs/claude-usage/) library (transcript parsing +
 pricing); run it with `uv run python usage-dashboard.py`.
 
 ```
@@ -98,6 +101,7 @@ usage-dashboard.py                  ← entry point (CLI, starts HTTP server)
                         │  GET /            → dashboard.html │
                         │  GET /dashboard.css|.js → assets   │
                         │  GET /api/data    → JSON payload   │
+                        │  GET /api/export.csv → session CSV │
                         └────────────────┬──────────────────┘
                                          │  HTTP (localhost:8080)
                                          ▼
@@ -131,10 +135,10 @@ scripts/               Windows Task Scheduler install + launch helpers
 |------|----------------|
 | `usage-dashboard.py` | Entry point. CLI args (`--host/--port/--claude-dir`), trims statusline logs on startup, starts the HTTP server. |
 | `backend/dashboard_config.py` | Runtime config only: `CLAUDE_DIRS` (overridable via `--claude-dir`) and the live-session timeout. Parsing and the pricing table live in the `claude-usage` library. |
-| `backend/session_stats.py` | **Source 1.** Loads per-session token/cost summaries from `claude-usage` and aggregates them (`summarize_sessions`) into totals and the by-day / by-project / by-model breakdowns. |
+| `backend/session_stats.py` | **Source 1.** Loads per-session token/cost summaries from `claude-usage` and aggregates them (`summarize_sessions`) into totals, the by-day / by-project / by-model breakdowns, cache savings in USD (vs the same usage uncached), month-to-date cost + month-end projection, and the 364-day `heatmap` series. |
 | `backend/live_statusline.py` | **Source 2.** Reads the statusline logs into live per-session state (rate limits, context %, *actual* cost); also `trim_statusline_logs` to bound disk growth. |
 | `backend/merge.py` | Reconciles the two sources into the `/api/data` payload. Owns the estimated-vs-actual cost override. |
-| `backend/dashboard_server.py` | HTTP transport only: serves the static assets and the `merge.build_payload` JSON. |
+| `backend/dashboard_server.py` | HTTP transport only: serves the static assets, the `merge.build_payload` JSON, and the `/api/export.csv` per-session CSV download. |
 | `web/dashboard.html` + `web/css/` + `web/js/` | The UI. The `js/` scripts render the payload, draw the charts, and handle the client-side controls (refresh, theme, pagination, session timeout); `css/` holds the styles. Both are split into small single-concern files and concatenated by `dashboard_server.py` into one `/dashboard.css` and one `/dashboard.js` response. |
 | `scripts/*.ps1` | Windows Task Scheduler helpers: `usage-dashboard-setup.ps1` (install/uninstall the logon + resume task) and `usage-dashboard-start-once.ps1` (the task action; launches the server only if the port is free). |
 

@@ -31,6 +31,21 @@ function onPageChange(page) {
   if (lastData) render(lastData);
 }
 
+// ── Session table sort ─────────────────────────────────────────────────────────
+let sessionSort = { key: 'last_ts', dir: 'desc' };
+// Columns that read most naturally largest/newest-first on the first click.
+const DESC_FIRST_KEYS = ['total_tokens', 'input_tokens', 'output_tokens', 'cost_usd', 'last_ts'];
+
+function onSortChange(key) {
+  if (sessionSort.key === key) {
+    sessionSort.dir = sessionSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sessionSort = { key, dir: DESC_FIRST_KEYS.includes(key) ? 'desc' : 'asc' };
+  }
+  sessionPage = 1;
+  if (lastData) render(lastData);
+}
+
 // ── Live timeout setting ───────────────────────────────────────────────────────
 const TIMEOUT_KEY = 'cc_live_timeout_min';
 

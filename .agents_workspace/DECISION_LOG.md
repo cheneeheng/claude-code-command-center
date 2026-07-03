@@ -1070,3 +1070,30 @@ itself forbids re-implementing. Re-implementing remains possible via the existin
 `run_myself` (manual, does not go through `run_implement`) intentionally left available for
 implemented plans; only running blocks it, unchanged. No new dependencies.
 **Outcome:** `uv run pytest` green (196 passed) at 100% line+branch coverage; py_compile clean.
+
+### Entry 36
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-03
+**Task:** usage-dashboard — feature scope for the "/goal: most sought-after Claude Code metrics dashboard" session.
+
+**Context:** The goal was open-ended ("becomes the most sought after dashboard ... keep the
+current theme") with no feature list. Needed to choose which capabilities to add and where to
+compute them.
+**Decision:** Scoped the release to the headline features popular alternatives (ccusage,
+Claude-Code-Usage-Monitor) are known for, computed server-side per the member invariant:
+(1) cache savings in USD + cost-without-cache (pricing math from per_model tokens, always the
+estimate, independent of the live actual-cost overlay); (2) month-to-date cost + linear month-end
+projection; (3) 12-month GitHub-style activity heatmap (`stats.heatmap`, 364 days; client maps
+tokens to 5 quartile intensity levels — presentational scaling only, kept client-side like
+existing bar-width math); (4) sortable Recent Sessions columns (display-order only, client-side);
+(5) `/api/export.csv` sessions export. Replaced the "Output Tokens" stat card (still visible in
+the Token Breakdown card) with "This Month" and upgraded "Cache Savings" from tokens to USD.
+Heatmap widened from an initial 26 weeks to 52 so the full-width card is visually filled.
+**Impact / Risk:** Payload contract grew (new stats keys + `heatmap`); server and js changed
+together per the invariant. Pre-existing mypy `var-annotated` errors in session_stats/
+live_statusline (un-annotated defaultdicts) left untouched — not introduced by this change.
+**Outcome:** Verified end-to-end in Chrome (both themes): heatmap renders, sort works, CSV
+downloads with attachment headers. Fixed one collision found in verification: heatmap pad cells
+named `.empty` inherited the dashboard empty-state padding; renamed to `.pad`.
