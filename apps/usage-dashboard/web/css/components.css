@@ -9,6 +9,13 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Every standalone top-level card (rate-limit, heatmap, model-mix, activity-profile,
+   recent-sessions) shares the 12px vertical rhythm the grid rows already have. This
+   supersedes the former one-off .rl-card / .hm-card margin rules. Cards nested inside
+   .stats-grid / .charts-row / .bottom-row are not direct children, so their grid gap
+   is unaffected. */
+#main > .card { margin-bottom: 12px; }
+
 .stat-card .label {
   font-size: 11px;
   font-family: var(--font-mono);
@@ -159,8 +166,6 @@ th.sortable:hover { color: var(--fg); }
 .csv-link:hover { text-decoration: underline; }
 
 /* --- Activity heatmap --- */
-.hm-card { margin-bottom: 12px; }
-
 .hm-scroll { overflow-x: auto; }
 
 .hm-grid {

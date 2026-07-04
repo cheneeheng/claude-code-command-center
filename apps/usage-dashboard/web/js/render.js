@@ -5,6 +5,13 @@ function render(data) {
   const main = document.getElementById('main');
 
   const range = getRange();
+  // Suffix for cards whose numbers are scoped to the active range, so a card's
+  // window is legible without reading it off the range toggle. Cards that ignore
+  // the range (This Month, Plan Value, Activity profile, Top Tools) omit it, and
+  // the daily charts / heatmap keep their own accurate "(last N days/12 months)".
+  const RANGE_LABEL = { '7d': 'last 7 days', '30d': 'last 30 days',
+    '90d': 'last 90 days', '12m': 'last 12 months', 'all': 'all time' };
+  const rangeSuffix = ` (${RANGE_LABEL[range] || range})`;
   const htmlEsc = s => String(s).replace(/[&<>"']/g,
     c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   // JS-string-safe arg for inline onclick handlers (values here are folder names,
@@ -151,7 +158,7 @@ function render(data) {
   const q = searchQuery.toLowerCase();
   const filteredSessions = sessions.filter(s =>
     (lookbackDays <= 0 || (s.last_ts && new Date(s.last_ts).getTime() >= cutoff)) &&
-    (!filterModel || (s.models || []).some(m => modelFamily(m) === modelFamily(filterModel))) &&
+    (!filterModel || (s.models || []).some(m => modelMatches(m, filterModel))) &&
     (!filterDay || (s.last_ts && localDay(s.last_ts) === filterDay)) &&
     (!q || (s.session_id || '').toLowerCase().includes(q) || (s.project || '').toLowerCase().includes(q))
   );
@@ -232,19 +239,19 @@ function render(data) {
 
     <div class="stats-grid stats-grid-5">
       <div class="card stat-card">
-        <div class="label">Total Tokens</div>
+        <div class="label">Total Tokens${rangeSuffix}</div>
         <div class="value accent-amber">${fmt.num(stats.total_tokens)}</div>
         <div class="sub">${stats.total_sessions} sessions</div>
         ${deltaLine(delta.tokens_pct)}
       </div>
       <div class="card stat-card">
-        <div class="label">Est. API Cost</div>
+        <div class="label">Est. API Cost${rangeSuffix}</div>
         <div class="value accent-purple">${fmt.usd(stats.total_cost_usd)}</div>
         <div class="sub">based on API pricing</div>
         ${deltaLine(delta.cost_pct)}
       </div>
       <div class="card stat-card">
-        <div class="label">Cache Savings</div>
+        <div class="label">Cache Savings${rangeSuffix}</div>
         <div class="value accent-green">${fmt.usd(stats.cache_savings_usd)}</div>
         <div class="sub">${fmt.usd(stats.cost_without_cache_usd)} without caching</div>
       </div>
@@ -259,7 +266,7 @@ function render(data) {
     ${rateLimitCard(live)}
 
     ${stats.heatmap && stats.heatmap.length ? `
-    <div class="card hm-card">
+    <div class="card">
       <div class="section-title">Activity — daily tokens (last 12 months)</div>
       ${heatmapHTML(stats.heatmap)}
     </div>` : ''}
@@ -270,7 +277,7 @@ function render(data) {
         <canvas id="daily-chart"></canvas>
       </div>
       <div class="card">
-        <div class="section-title">Token Breakdown</div>
+        <div class="section-title">Token Breakdown${rangeSuffix}</div>
         <div class="donut-wrap">
           <canvas id="donut-chart" class="donut-canvas"></canvas>
           <div class="donut-legend">${legendRows}</div>
@@ -291,7 +298,7 @@ function render(data) {
         <canvas id="cost-daily-chart"></canvas>
       </div>
       <div class="card">
-        <div class="section-title">Cost by Model</div>
+        <div class="section-title">Cost by Model${rangeSuffix}</div>
         ${costSlices.length > 0 ? `
         <div class="donut-wrap">
           <canvas id="cost-donut-chart" class="donut-canvas"></canvas>
@@ -316,7 +323,7 @@ function render(data) {
 
     <div class="bottom-row">
       <div class="card">
-        <div class="section-title">Expensive Sessions</div>
+        <div class="section-title">Expensive Sessions${rangeSuffix}</div>
         ${expensiveRows ? `<table>
           <thead><tr><th>Session</th><th>Project</th><th>Model</th><th>Cost</th></tr></thead>
           <tbody>${expensiveRows}</tbody>
@@ -330,18 +337,18 @@ function render(data) {
 
     <div class="bottom-row">
       <div class="card">
-        <div class="section-title">Top Projects by Tokens</div>
+        <div class="section-title">Top Projects by Tokens${rangeSuffix}</div>
         ${projectRows || '<div class="muted-note">No project data</div>'}
       </div>
       <div class="card">
-        <div class="section-title">Usage by Model</div>
+        <div class="section-title">Usage by Model${rangeSuffix}</div>
         ${modelRows || '<div class="muted-note">No model data</div>'}
       </div>
     </div>
 
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div class="section-title" style="margin:0">Recent Sessions</div>
+        <div class="section-title" style="margin:0">Recent Sessions${rangeSuffix}</div>
         <div style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted)">
           <input id="session-search" class="timeout-input search-input" type="search"
             placeholder="search id / project" value="${htmlEsc(searchQuery)}"

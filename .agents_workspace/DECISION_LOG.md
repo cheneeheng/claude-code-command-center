@@ -1145,3 +1145,41 @@ named `.empty` inherited the dashboard empty-state padding; renamed to `.pad`.
 **Decision:** Render the delta line only where the payload carries a matching metric: Total Tokens ← `tokens_pct`, Est. API Cost ← `cost_pct`. Cache Savings shows no delta line. `sessions_pct` stays in the contract for future use.
 **Impact / Risk:** One of the three named cards lacks its delta line; faithful to the payload contract and avoids fabricating a figure in the browser. Upgrade path: add `savings_pct` to `summarize_sessions._delta` and the payload if a savings trend is later wanted.
 **Outcome:** Deltas render correctly (verified in-browser: ▲/▼ green/red with "vs prev <N>").
+
+### Entry 41
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-04T09:00:00Z
+**Task:** usage-dashboard visual glitch pass (5 reported issues).
+
+**Context:** Issue 4 asked that "every card title whose content changes with the range
+filter" show a "(Last X)" window suffix. Ambiguous which surfaces count: stat cards use a
+`.label` not a `.section-title`, and several cards (This Month, Plan Value, Activity profile,
+Top Tools) are deliberately NOT range-scoped. Issues 3 and 5 turned out not to be code bugs.
+
+**Decision:**
+- Added a `rangeSuffix` ("(last 7 days)"…"(all time)") to exactly the range-scoped surfaces:
+  the three range-scoped stat labels (Total Tokens, Est. API Cost, Cache Savings), Token
+  Breakdown, Cost by Model, Expensive Sessions, Top Projects by Tokens, Usage by Model,
+  Recent Sessions. Left the non-range cards (This Month, Plan Value, Activity profile, Top
+  Tools, rate limits) plain, and left the daily charts / heatmap on their existing accurate
+  "(last N days / 12 months)" — those reflect the 90-day chart cap, not the range.
+- Issue 2: model drill-down filtered by *family* (`modelFamily`), so Sonnet-5 pulled in
+  Sonnet-4-6. Switched to `modelMatches()` — exact-id match for specific models (which carry a
+  version digit) and family match only for the bare family keys the model-mix legend emits
+  (`claude-sonnet`, no digit). Digit test chosen over a hardcoded family list to avoid
+  duplicating claude-usage's MODEL_COSTS keys in JS.
+- Issue 1: the two standalone `.card`s (model-mix, activity-profile) were direct #main children
+  with no bottom margin. The two cards that DID space (`.rl-card`, `.hm-card`) each did so via a
+  single-purpose class whose only declaration was `margin-bottom: 12px`. Rather than add a third
+  one-off, generalized to `#main > .card { margin-bottom: 12px }` and deleted the two redundant
+  rules — one mechanism, less CSS. `.rl-card` class stays (it's a JS hook in app.js); `.hm-card`
+  was dropped from markup since it had no other use. Grid-nested cards are unaffected (not direct
+  children).
+
+**Impact / Risk:** Low. JS/CSS only; server payload contract unchanged. Family-legend filtering
+verified still 107 sonnet sessions; specific Sonnet-5 now 1 (was 107).
+
+**Outcome:** All three code fixes verified in-browser. Issues 3 (April/May empty) and 5
+(only ≤90d) are not bugs — see summary.
