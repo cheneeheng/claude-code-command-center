@@ -269,9 +269,15 @@ def test_activity_counts_tool_use_blocks(tmp_path: Path) -> None:
     ]
     str_msg = _assistant("claude-opus-4-8", usage, uuid="a2", ts=_recent_utc(1).isoformat())
     str_msg["message"]["content"] = "just text, no tools"
-    _write_transcript(tmp_path, "p", "sess", [list_msg, str_msg])
+    # A tool_use on a message with no timestamp: counts globally but not per-day.
+    no_ts_msg = _assistant("claude-opus-4-8", usage, uuid="a3")
+    no_ts_msg["message"]["content"] = [{"type": "tool_use", "name": "Grep"}]
+    _write_transcript(tmp_path, "p", "sess", [list_msg, str_msg, no_ts_msg])
     _, activity = load_usage([tmp_path])
-    assert activity.tools == {"Read": 2, "Edit": 1}
+    assert activity.tools == {"Read": 2, "Edit": 1, "Grep": 1}
+    # Per-day buckets hold only the timestamped tools, keyed by local day.
+    day = _recent_utc(1).astimezone().date().isoformat()
+    assert activity.daily_tools == {day: {"Read": 2, "Edit": 1}}
 
 
 def test_activity_per_family_aggregates_versions(tmp_path: Path) -> None:

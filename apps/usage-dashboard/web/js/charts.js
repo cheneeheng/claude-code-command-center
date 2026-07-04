@@ -42,6 +42,8 @@ function makeBarChart(canvas, days, opts) {
     const chartH = H - pad.top - pad.bottom;
     const barW = Math.max(2, (chartW / days.length) - 2);
     const gap  = chartW / days.length;
+    // Cap the x-axis to ~14 labels so long ranges (up to a year) stay readable.
+    const labelStep = Math.max(1, Math.ceil(days.length / 14));
 
     ctx.clearRect(0, 0, W, H);
 
@@ -85,7 +87,7 @@ function makeBarChart(canvas, days, opts) {
         ctx.fill();
       }
 
-      if (i === 0 || i === days.length - 1 || i % 5 === 0) {
+      if (i === 0 || i === days.length - 1 || i % labelStep === 0) {
         ctx.fillStyle = isHovered ? cssVar('--fg') : axisColor;
         ctx.font = "10px 'JetBrains Mono', monospace";
         ctx.textAlign = 'center';
@@ -157,6 +159,8 @@ function makeStackedBarChart(canvas, days, familyColors) {
     const chartH = H - pad.top - pad.bottom;
     const barW = Math.max(2, (chartW / days.length) - 2);
     const gap  = chartW / days.length;
+    // Cap the x-axis to ~14 labels so long ranges (up to a year) stay readable.
+    const labelStep = Math.max(1, Math.ceil(days.length / 14));
 
     ctx.clearRect(0, 0, W, H);
     const gridColor = cssVar('--border');
@@ -192,7 +196,7 @@ function makeStackedBarChart(canvas, days, familyColors) {
         yBottom = y;
       });
 
-      if (i === 0 || i === days.length - 1 || i % 5 === 0) {
+      if (i === 0 || i === days.length - 1 || i % labelStep === 0) {
         ctx.fillStyle = axisColor;
         ctx.font = "10px 'JetBrains Mono', monospace";
         ctx.textAlign = 'center';

@@ -94,12 +94,17 @@ class Activity:
             oldest first.
         hour_dow: A 7x24 token matrix; rows are weekdays (Mon..Sun), columns are
             hours (0..23).
-        tools: ``tool_use`` block counts keyed by tool name.
+        tools: ``tool_use`` block counts keyed by tool name (all-time).
+        daily_tools: ``tool_use`` block counts keyed by local day
+            (``YYYY-MM-DD``) then tool name, holding only days with tool usage.
+            Lets a consumer scope tool counts to a time window; blocks on a
+            message with no parseable timestamp appear in :attr:`tools` only.
     """
 
     daily: list[DayBucket]
     hour_dow: list[list[int]]
     tools: dict[str, int]
+    daily_tools: dict[str, dict[str, int]]
 
 
 def claude_dirs() -> list[Path]:
@@ -184,6 +189,9 @@ class _ActivityAccumulator:
         default_factory=lambda: [[0] * 24 for _ in range(7)]
     )
     tools: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    daily_tools: dict[str, dict[str, int]] = field(
+        default_factory=lambda: defaultdict(lambda: defaultdict(int))
+    )
 
     def add_message(
         self,
@@ -204,10 +212,15 @@ class _ActivityAccumulator:
             self.daily_family[day][model_family(model)] += total
         self.hour_dow[dt.weekday()][dt.hour] += total
 
-    def add_tool(self, name: object) -> None:
-        """Count one ``tool_use`` block by name, skipping missing/empty names."""
+    def add_tool(self, name: object, day: str | None = None) -> None:
+        """Count one ``tool_use`` block by name, skipping missing/empty names.
+
+        Also attributes it to ``day`` (local ``YYYY-MM-DD``) when known, so tool
+        counts can be scoped to a time window."""
         if isinstance(name, str) and name:
             self.tools[name] += 1
+            if day is not None:
+                self.daily_tools[day][name] += 1
 
     def finalize(self) -> Activity:
         """Pad the daily buckets to the trailing window and freeze into an Activity."""
@@ -226,7 +239,13 @@ class _ActivityAccumulator:
             )
             for d in span
         ]
-        return Activity(daily=daily, hour_dow=self.hour_dow, tools=dict(self.tools))
+        daily_tools = {d: dict(t) for d, t in self.daily_tools.items()}
+        return Activity(
+            daily=daily,
+            hour_dow=self.hour_dow,
+            tools=dict(self.tools),
+            daily_tools=daily_tools,
+        )
 
 
 def _summarize(fpath: str, acc: _ActivityAccumulator) -> Session | None:
@@ -286,11 +305,12 @@ def _summarize(fpath: str, acc: _ActivityAccumulator) -> Session | None:
         local = _local_dt(rec.get("timestamp"))
         if local is not None:
             acc.add_message(local, session_id, model, counts)
+        tool_day = local.date().isoformat() if local is not None else None
         content = msg.get("content")
         if isinstance(content, list):
             for block in content:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
-                    acc.add_tool(block.get("name"))
+                    acc.add_tool(block.get("name"), tool_day)
 
     if not per_model:
         return None

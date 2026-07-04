@@ -29,8 +29,7 @@ import claude_usage
 
 import dashboard_config
 
-# Bar charts cap at 90 daily bars; the heatmap covers the full retained year.
-CHART_DAYS = 90
+# The daily series follow the selected range; the heatmap covers the retained year.
 HEATMAP_DAYS = 364
 
 # Closed set of selectable ranges -> lookback days (None = all time).
@@ -278,8 +277,16 @@ def summarize_sessions(
     # Time-series: project-scoping is NOT applied (Activity is not project-bucketed).
     # Accepted, documented limitation — cards/tables are scoped, these show all
     # projects when a project filter is active. Upgrade path: per-project DayBucket.
-    span = min(days or CHART_DAYS, CHART_DAYS)
+    # The window follows the range: N days for 7d/30d/90d, and the full retained
+    # year for 12m/all (slicing past the retained length just yields all of it).
+    span = days if days is not None else len(activity.daily)
     daily = activity.daily[-span:]
+    # Tool counts scoped to the same window as the daily series, so Top Tools
+    # tracks the range filter like the other range-scoped cards.
+    tool_counts: dict[str, int] = defaultdict(int)
+    for b in daily:
+        for name, count in activity.daily_tools.get(b.date, {}).items():
+            tool_counts[name] += count
 
     return {
         "total_sessions":    len(cur),
@@ -300,7 +307,7 @@ def summarize_sessions(
         "model_mix":         [{"date": b.date, "per_family": b.per_family} for b in daily],
         "hour_dow":          activity.hour_dow,
         "tools":             [{"name": n, "count": c} for n, c in
-                              sorted(activity.tools.items(), key=lambda kv: kv[1], reverse=True)[:15]],
+                              sorted(tool_counts.items(), key=lambda kv: kv[1], reverse=True)[:15]],
         "by_project":        _by_project(cur),
         "by_model":          _by_model(cur),
         "top_sessions":      [_strip(s) for s in top_sessions],

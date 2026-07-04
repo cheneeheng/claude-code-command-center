@@ -330,7 +330,7 @@ function render(data) {
         </table>` : '<div class="muted-note">No session data</div>'}
       </div>
       <div class="card">
-        <div class="section-title">Top Tools</div>
+        <div class="section-title">Top Tools${rangeSuffix}</div>
         ${toolRows || '<div class="muted-note">No tool data</div>'}
       </div>
     </div>

@@ -1183,3 +1183,36 @@ verified still 107 sonnet sessions; specific Sonnet-5 now 1 (was 107).
 
 **Outcome:** All three code fixes verified in-browser. Issues 3 (April/May empty) and 5
 (only ≤90d) are not bugs — see summary.
+
+### Entry 42
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-04T10:00:00Z
+**Task:** usage-dashboard — make Top Tools and the daily bar charts honour the range filter.
+
+**Context:** Two follow-ups. (1) Top Tools ignored the range filter because `Activity.tools`
+is a single all-time global counter with no per-day attribution. (2) `by_day` / `model_mix`
+were hard-capped at 90 bars (`CHART_DAYS`), so 12m/all looked identical to 90d.
+
+**Decision:**
+- Added per-day tool buckets (`Activity.daily_tools`, keyed day -> tool -> count) to the shared
+  `claude-usage` library, keeping the existing all-time `Activity.tools` for back-compat (only the
+  dashboard + one library test read `.tools`; `usage-report` does not). The dashboard now windows
+  `daily_tools` over the same day-slice as the daily series, so Top Tools tracks the range.
+  Scoped to RANGE only, not project — the Activity series stay project-agnostic per the existing
+  invariant, and tool blocks carry no project attribution in the accumulator.
+- Lifted the 90-day cap: the daily window now follows the range (N days for 7d/30d/90d, the full
+  retained ~year for 12m/all). Kept the accurate "(last N days)" day-count titles on the daily
+  charts rather than switching to "(all time)", since those charts only ever plot the retained
+  364 days — a day count is honest, "all time" would over-claim.
+- Added a dynamic x-axis label step (~14 labels max) in both bar charts so a year of daily bars
+  stays readable instead of smearing labels.
+
+**Impact / Risk:** Low-moderate. `claude-usage` gains one additive public field (minor semver);
+100% coverage held with an extended tool test (incl. the no-timestamp fallback). Dashboard payload
+shape unchanged. Removed the now-unused `CHART_DAYS`; left the pre-existing unused `HEATMAP_DAYS`
+constant and the pre-existing mypy `buckets` var-annotation gaps alone (not mine to fix here).
+
+**Outcome:** Verified: by_day/model_mix scale 7->7 … 12m/all->364; Top Tools Bash count grows
+696 (7d) -> 2107 (90d+); charts render with clean labels in-browser.
