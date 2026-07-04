@@ -32,7 +32,9 @@ function heatmapHTML(days) {
       const tip = d.tokens > 0
         ? `${d.date} · ${fmt.num(d.tokens)} tok · ${fmt.usd(d.cost)} · ${d.sessions} session${d.sessions === 1 ? '' : 's'}`
         : `${d.date} · no activity`;
-      return `<div class="hm-cell l${level(d.tokens)}" title="${tip}"></div>`;
+      // Button so the day filter is keyboard-reachable (the canvas charts are not).
+      return `<button class="hm-cell l${level(d.tokens)}" title="${tip}"
+        aria-label="filter to ${d.date}" onclick="setDay('${d.date}')"></button>`;
     }).join('');
     return `<div class="hm-week"><div class="hm-month">${label}</div>${cellDivs}</div>`;
   }).join('');
@@ -51,5 +53,37 @@ function heatmapHTML(days) {
       less
       ${[0,1,2,3,4].map(l => `<div class="hm-cell l${l}"></div>`).join('')}
       more
+    </div>`;
+}
+
+// ── Hour × weekday activity profile (fed by stats.hour_dow, a 7×24 matrix) ────
+// Same intensity model as the calendar heatmap: quartiles of the non-zero cells.
+function hourDowHTML(matrix) {
+  if (!matrix || matrix.length !== 7) return '';
+
+  const nz = matrix.flat().filter(v => v > 0).sort((a, b) => a - b);
+  const q = p => nz.length ? nz[Math.min(nz.length - 1, Math.floor(p * nz.length))] : 0;
+  const t1 = q(0.25), t2 = q(0.5), t3 = q(0.75);
+  const level = v => v <= 0 ? 0 : v <= t1 ? 1 : v <= t2 ? 2 : v <= t3 ? 3 : 4;
+
+  const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const rows = matrix.map((row, d) => {
+    const cells = row.map((v, h) => {
+      const hh = String(h).padStart(2, '0');
+      const tip = v > 0 ? `${DOW[d]} ${hh}:00 · ${fmt.num(v)} tok` : `${DOW[d]} ${hh}:00 · no activity`;
+      return `<div class="hm-cell l${level(v)}" title="${tip}"></div>`;
+    }).join('');
+    return `<div class="hd-row"><div class="hd-label">${DOW[d]}</div>${cells}</div>`;
+  }).join('');
+
+  const colLabels = Array.from({ length: 24 }, (_, h) =>
+    `<div class="hd-col">${[0, 6, 12, 18].includes(h) ? h : ''}</div>`).join('');
+
+  return `
+    <div class="hd-scroll">
+      <div class="hd-grid">
+        ${rows}
+        <div class="hd-row hd-axis"><div class="hd-label"></div>${colLabels}</div>
+      </div>
     </div>`;
 }

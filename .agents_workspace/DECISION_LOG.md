@@ -1097,3 +1097,152 @@ live_statusline (un-annotated defaultdicts) left untouched — not introduced by
 **Outcome:** Verified end-to-end in Chrome (both themes): heatmap renders, sort works, CSV
 downloads with attachment headers. Fixed one collision found in verification: heatmap pad cells
 named `.empty` inherited the dashboard empty-state padding; renamed to `.pad`.
+
+### Entry 37
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-03T20:15:00+02:00
+**Task:** Plan usage-dashboard v4 (insight layer) — cost policy
+
+**Context:** User excluded the pricing-staleness feature stating "the live pricing is not reliable. The one calculated from pricing table is more reliable." The existing invariant ("actual cost wins for live sessions", merge.py overlay) directly contradicts that judgment, and v4's new aggregates (deltas, range totals, plan value) need one canonical cost.
+**Decision:** v4 makes the pricing-table estimate canonical everywhere; ITER_02_v4 removes merge._apply_actual_cost and rewrites the CLAUDE.md/README invariant. Actual cost stays visible only informationally in the live card's per-session table.
+**Impact / Risk:** Totals for currently-live sessions shift slightly (estimate vs statusline figure). Reverses a documented invariant — flagged to the user in the planning summary for veto before implementation.
+**Outcome:** Planned in ITER_02_v4; not yet implemented.
+
+### Entry 38
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-03T20:15:00+02:00
+**Task:** Plan usage-dashboard v4 — live-card freshness transport
+
+**Context:** The approved feature list said "SSE push for the live card". SSE on the stdlib threading server adds connection-lifecycle code for a single local client; the underlying goal is ~10s freshness for rate limits.
+**Decision:** Deliver the goal via a cheap GET /api/live endpoint (statusline files only, no transcript parse) polled every 10s; full payload stays at 60s. True SSE recorded as out-of-MVP upgrade path (payload shape is transport-agnostic).
+**Impact / Risk:** Slightly higher request churn than SSE; negligible locally. If the user insists on SSE, ITER_05_v4 §04 is the only artifact to revise.
+**Outcome:** Planned in ITER_05_v4; user confirmed fast-poll on 2026-07-03.
+
+### Entry 39
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-03T20:15:00+02:00
+**Task:** Plan usage-dashboard v4 — plan family location and naming
+
+**Context:** User said "put the plans under v4". Existing planning/ uses version subfolders (v1..v3) with untagged filenames; the plan-build-review skill's canonical form is a _vN filename suffix, which the implement-from-plan step keys on.
+**Decision:** Both: .agents_workspace/planning/v4/ folder (repo convention) with _v4-suffixed stems inside (SKELETON_v4.md, ITER_01_v4..ITER_05_v4.md) so depends_on stems and the implementation skill's version detection work unambiguously.
+**Impact / Risk:** None; prior v1–v3 artifacts untouched.
+**Outcome:** Six artifacts written.
+
+### Entry 40
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-04T00:35:00+02:00
+**Task:** Implement usage-dashboard v4 (SKELETON_v4 → ITER_05_v4) — stat-card trend deltas
+
+**Context:** ITER_03_v4 § 05 says the Total Tokens, Est. Cost, *and* Cache Savings cards each get a delta line "from `stats.delta`". But the payload contract (SKELETON_v4 § 02) defines `delta` with only `{tokens_pct, cost_pct, sessions_pct}` — there is no savings delta, and computing one client-side would need the previous window's savings (not sent) and would violate the "all computation server-side" invariant.
+**Decision:** Render the delta line only where the payload carries a matching metric: Total Tokens ← `tokens_pct`, Est. API Cost ← `cost_pct`. Cache Savings shows no delta line. `sessions_pct` stays in the contract for future use.
+**Impact / Risk:** One of the three named cards lacks its delta line; faithful to the payload contract and avoids fabricating a figure in the browser. Upgrade path: add `savings_pct` to `summarize_sessions._delta` and the payload if a savings trend is later wanted.
+**Outcome:** Deltas render correctly (verified in-browser: ▲/▼ green/red with "vs prev <N>").
+
+### Entry 41
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-04T09:00:00Z
+**Task:** usage-dashboard visual glitch pass (5 reported issues).
+
+**Context:** Issue 4 asked that "every card title whose content changes with the range
+filter" show a "(Last X)" window suffix. Ambiguous which surfaces count: stat cards use a
+`.label` not a `.section-title`, and several cards (This Month, Plan Value, Activity profile,
+Top Tools) are deliberately NOT range-scoped. Issues 3 and 5 turned out not to be code bugs.
+
+**Decision:**
+- Added a `rangeSuffix` ("(last 7 days)"…"(all time)") to exactly the range-scoped surfaces:
+  the three range-scoped stat labels (Total Tokens, Est. API Cost, Cache Savings), Token
+  Breakdown, Cost by Model, Expensive Sessions, Top Projects by Tokens, Usage by Model,
+  Recent Sessions. Left the non-range cards (This Month, Plan Value, Activity profile, Top
+  Tools, rate limits) plain, and left the daily charts / heatmap on their existing accurate
+  "(last N days / 12 months)" — those reflect the 90-day chart cap, not the range.
+- Issue 2: model drill-down filtered by *family* (`modelFamily`), so Sonnet-5 pulled in
+  Sonnet-4-6. Switched to `modelMatches()` — exact-id match for specific models (which carry a
+  version digit) and family match only for the bare family keys the model-mix legend emits
+  (`claude-sonnet`, no digit). Digit test chosen over a hardcoded family list to avoid
+  duplicating claude-usage's MODEL_COSTS keys in JS.
+- Issue 1: the two standalone `.card`s (model-mix, activity-profile) were direct #main children
+  with no bottom margin. The two cards that DID space (`.rl-card`, `.hm-card`) each did so via a
+  single-purpose class whose only declaration was `margin-bottom: 12px`. Rather than add a third
+  one-off, generalized to `#main > .card { margin-bottom: 12px }` and deleted the two redundant
+  rules — one mechanism, less CSS. `.rl-card` class stays (it's a JS hook in app.js); `.hm-card`
+  was dropped from markup since it had no other use. Grid-nested cards are unaffected (not direct
+  children).
+
+**Impact / Risk:** Low. JS/CSS only; server payload contract unchanged. Family-legend filtering
+verified still 107 sonnet sessions; specific Sonnet-5 now 1 (was 107).
+
+**Outcome:** All three code fixes verified in-browser. Issues 3 (April/May empty) and 5
+(only ≤90d) are not bugs — see summary.
+
+### Entry 42
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-04T10:00:00Z
+**Task:** usage-dashboard — make Top Tools and the daily bar charts honour the range filter.
+
+**Context:** Two follow-ups. (1) Top Tools ignored the range filter because `Activity.tools`
+is a single all-time global counter with no per-day attribution. (2) `by_day` / `model_mix`
+were hard-capped at 90 bars (`CHART_DAYS`), so 12m/all looked identical to 90d.
+
+**Decision:**
+- Added per-day tool buckets (`Activity.daily_tools`, keyed day -> tool -> count) to the shared
+  `claude-usage` library, keeping the existing all-time `Activity.tools` for back-compat (only the
+  dashboard + one library test read `.tools`; `usage-report` does not). The dashboard now windows
+  `daily_tools` over the same day-slice as the daily series, so Top Tools tracks the range.
+  Scoped to RANGE only, not project — the Activity series stay project-agnostic per the existing
+  invariant, and tool blocks carry no project attribution in the accumulator.
+- Lifted the 90-day cap: the daily window now follows the range (N days for 7d/30d/90d, the full
+  retained ~year for 12m/all). Kept the accurate "(last N days)" day-count titles on the daily
+  charts rather than switching to "(all time)", since those charts only ever plot the retained
+  364 days — a day count is honest, "all time" would over-claim.
+- Added a dynamic x-axis label step (~14 labels max) in both bar charts so a year of daily bars
+  stays readable instead of smearing labels.
+
+**Impact / Risk:** Low-moderate. `claude-usage` gains one additive public field (minor semver);
+100% coverage held with an extended tool test (incl. the no-timestamp fallback). Dashboard payload
+shape unchanged. Removed the now-unused `CHART_DAYS`; left the pre-existing unused `HEATMAP_DAYS`
+constant and the pre-existing mypy `buckets` var-annotation gaps alone (not mine to fix here).
+
+**Outcome:** Verified: by_day/model_mix scale 7->7 … 12m/all->364; Top Tools Bash count grows
+696 (7d) -> 2107 (90d+); charts render with clean labels in-browser.
+
+### Entry 43
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-04T11:00:00Z
+**Task:** usage-dashboard — weekly rollup for long-range daily charts + cleanups.
+
+**Context:** After uncapping the daily charts (Entry 42), 12m/all rendered ~364 daily bars
+(2px, mostly empty for short-history users). The user asked to roll long ranges up to weekly.
+
+**Decision:**
+- Roll the daily series (by_day + model_mix) into 7-day, oldest-aligned buckets when the window
+  exceeds `DAILY_BAR_LIMIT` (90 days); 7d/30d/90d stay daily. Server exposes the granularity as a
+  new `stats.chart_bucket` ("day"|"week") key rather than having the browser re-derive the
+  threshold — keeps the computation server-side per the payload-contract invariant, rendered in
+  the same change.
+- Titles switch to a "Daily"/"Weekly" prefix + the shared range suffix ("Weekly Token Usage
+  (last 12 months)"), replacing the old bar-count "(last N days)" which read "(last 364 days)".
+- Disabled the per-bar day drill-down on weekly bars: a weekly bar's date is only its first day,
+  so filtering sessions to it would show a misleading 1/7 slice. Daily bars keep the drill-down.
+- Cleanups the user asked for: removed the unused `HEATMAP_DAYS` constant, annotated the two
+  `_by_project`/`_by_model` `buckets` defaultdicts (mypy `var-annotated` gaps now clean), and
+  switched `tests/smoke.sh` from bare `python3` to `uv run python` so the workspace `claude_usage`
+  dep resolves.
+
+**Impact / Risk:** Low. Additive `chart_bucket` key (render + server changed together); by_day /
+model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke test passes.
+
+**Outcome:** Verified in-browser — 30d daily (30 bars), 12m/all weekly (52 bars); smoke `PASS`.

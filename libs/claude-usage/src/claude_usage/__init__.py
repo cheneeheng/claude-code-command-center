@@ -12,18 +12,24 @@ from claude_usage.pricing import (
     model_family,
 )
 from claude_usage.sessions import (
+    Activity,
+    DayBucket,
     Session,
     claude_dirs,
     load_sessions,
+    load_usage,
     transcript_files,
 )
 
 __all__ = [
     "MODEL_COSTS",
+    "Activity",
+    "DayBucket",
     "Session",
     "claude_dirs",
     "estimated_cost",
     "load_sessions",
+    "load_usage",
     "model_costs",
     "model_family",
     "transcript_files",

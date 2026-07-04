@@ -31,6 +31,23 @@ function buildModelColors(models) {
   return map;
 }
 
+// Base shade per model *family* id (e.g. "claude-opus"), for the model-mix chart.
+function familyColor(fam) {
+  return MODEL_SHADES[modelFamily(fam)][0];
+}
+
+// Match a session's raw model id against a drill-down filter value. A filter can
+// be either a specific model id (carries a version number, e.g. claude-sonnet-5)
+// or a bare family key from the model-mix legend (no version, e.g. claude-sonnet).
+// Specific ids filter to that exact model so e.g. Sonnet-5 does not also pull in
+// Sonnet-4-6; family keys still filter the whole family.
+function modelMatches(sessionModel, filterVal) {
+  const familyLevel = !/\d/.test(filterVal);
+  return familyLevel
+    ? modelFamily(sessionModel) === modelFamily(filterVal)
+    : sessionModel === filterVal;
+}
+
 function modelShort(m) {
   if (!m) return '–';
   const l = m.toLowerCase();

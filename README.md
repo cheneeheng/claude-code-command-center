@@ -16,7 +16,7 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 | [`cross-repo-file-diff`](apps/cross-repo-file-diff/) | Survey many local repos from one board; diff and copy files across any two of them. Serverless, no build (Chromium only). |
 | [`multi-repo-plan-runner`](apps/multi-repo-plan-runner/) | A command center over the Claude Code repos you work across: surface every plan and its lifecycle status, and run plans without leaving the tool. |
 | [`per-project-plugin-toggler`](apps/per-project-plugin-toggler/) | Enable/disable Claude Code plugins per project from a browser UI or inside VSCode; browse and install from known marketplaces. |
-| [`usage-dashboard`](apps/usage-dashboard/) | Local web dashboard for token usage, cost by model, rate limits, and sessions. Reads Claude Code transcripts; live rate limits come from the optional `statusline-hook` tool. |
+| [`usage-dashboard`](apps/usage-dashboard/) | Interactive local web dashboard for token usage, cost, and rate limits: range/project scoping, plan ROI, trend deltas, activity/model/tool profiles, drill-down with shareable URLs, session economics, a live rate-limit trajectory with cap ETA, and Markdown/CSV export. Reads Claude Code transcripts; live rate limits come from the optional `statusline-hook` tool. |
 | [`claude-component-browser`](apps/claude-component-browser/) | Local web app to search and read every Claude Code component — skill, agent, and hook — on your machine, from installed plugins and from loose (non-plugin) `.claude` skills/agents, grouped by source. |
 
 ### `tools/` — single-purpose utilities & scripts
@@ -74,6 +74,7 @@ never collides with Claude Code's or the OS's variables:
 | `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). |
 | `C4_STATUSLINE_EXPORT` | `statusline-hook` | Opt-in to the JSONL export when set to `1`/`true`/`yes`. |
 | `C4_STATUSLINE_LIVE_TIMEOUT` | `usage-dashboard` | Seconds a session may be idle before dropping out of the live view (default `1800`). |
+| `C4_PLAN_PRICE_USD` | `usage-dashboard` | Monthly Claude subscription price; lights up the dashboard's Plan Value (ROI) card when set. |
 
 OS-provided variables (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 

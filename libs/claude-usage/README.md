@@ -20,7 +20,10 @@ for s in load_sessions():          # newest first; honours $C4_CLAUDE_DIR
 | Symbol | Purpose |
 |--------|---------|
 | `load_sessions(dirs=None)` | Parse all transcripts into a list of `Session` (newest first). |
+| `load_usage(dirs=None)` | Single parse pass returning `(sessions, Activity)` — the sessions above plus per-message rollups. |
 | `Session` | Dataclass: tokens (input/output/cache), `total_tokens`, estimated `cost_usd`, `models`, `project`, timestamps. |
+| `Activity` | Dataclass: `daily` (364 `DayBucket`s, local time), `hour_dow` (7×24 token matrix, Mon..Sun), `tools` (tool_use counts by name). |
+| `DayBucket` | Dataclass: one local day's `date`, `tokens`, estimated `cost`, distinct `sessions`, `per_family` tokens. |
 | `claude_dirs()` | Resolve the Claude config dirs (honours pathsep-separated `$C4_CLAUDE_DIR`). |
 | `transcript_files(dirs=None)` | The raw transcript paths, deduped and sorted. |
 | `estimated_cost(per_model)` | USD estimate from per-model token counts and `MODEL_COSTS`. |

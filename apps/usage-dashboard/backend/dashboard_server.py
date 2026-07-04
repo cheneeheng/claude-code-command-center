@@ -10,7 +10,10 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler
 
+import dashboard_config
 from merge import build_payload
+from live_statusline import read_statusline
+from report import render_report
 
 _ASSET_DIR = Path(__file__).parent.parent / "web"
 
@@ -42,8 +45,16 @@ JS = _bundle(_JS_PARTS)
 _CSV_COLUMNS = [
     "session_id", "project", "models", "input_tokens", "output_tokens",
     "cache_write_tokens", "cache_read_tokens", "total_tokens", "cost_usd",
+    "duration_secs", "cost_per_hour", "cache_hit_pct",
     "message_count", "first_ts", "last_ts",
 ]
+
+
+def _scope_params(qs: dict) -> tuple[str, str | None]:
+    """Extract (range_key, project) from a parsed query string."""
+    range_key = qs.get("range", ["all"])[0]
+    project = qs.get("project", [None])[0]
+    return range_key, project
 
 
 def _sessions_csv(sessions: list[dict]) -> str:
@@ -87,12 +98,55 @@ class Handler(BaseHTTPRequestHandler):
 
         elif parsed.path == "/api/export.csv":
             try:
-                body = _sessions_csv(build_payload(None)["sessions"])
+                range_key, project = _scope_params(parse_qs(parsed.query))
+                body = _sessions_csv(build_payload(None, range_key, project)["sessions"])
                 self.send_response(200)
                 self.send_header("Content-Type", "text/csv; charset=utf-8")
                 self.send_header(
                     "Content-Disposition",
                     'attachment; filename="claude-code-usage.csv"',
+                )
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                self.wfile.write(body.encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
+
+        elif parsed.path == "/api/live":
+            # Cheap fast-poll: statusline only, no transcript parse or build_payload.
+            try:
+                qs = parse_qs(parsed.query)
+                live_timeout = None
+                if "live_timeout" in qs:
+                    try:
+                        live_timeout = max(1, int(qs["live_timeout"][0]))
+                    except (ValueError, IndexError):
+                        pass
+                live = read_statusline(timeout=live_timeout)
+                live["timeout"] = (live_timeout if live_timeout is not None
+                                   else dashboard_config.LIVE_SESSION_TIMEOUT_SECS)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                self.wfile.write(json.dumps(live).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
+
+        elif parsed.path == "/api/report.md":
+            try:
+                range_key, project = _scope_params(parse_qs(parsed.query))
+                payload = build_payload(None, range_key, project)
+                body = render_report(payload, range_key, project)
+                self.send_response(200)
+                self.send_header("Content-Type", "text/markdown; charset=utf-8")
+                self.send_header(
+                    "Content-Disposition",
+                    'attachment; filename="claude-code-usage-report.md"',
                 )
                 self.send_header("Cache-Control", "no-cache")
                 self.end_headers()
@@ -111,7 +165,8 @@ class Handler(BaseHTTPRequestHandler):
                         live_timeout = max(1, int(qs["live_timeout"][0]))
                     except (ValueError, IndexError):
                         pass
-                payload = json.dumps(build_payload(live_timeout))
+                range_key, project = _scope_params(qs)
+                payload = json.dumps(build_payload(live_timeout, range_key, project))
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Cache-Control", "no-cache")

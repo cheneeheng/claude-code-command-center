@@ -45,18 +45,31 @@ function rateLimitCard(live) {
       <div class="bar-fill" style="width:${Math.min(pct,100)}%;background:${color}"></div>
     </div>`;
 
-  const limitCols = (fh, sd) => `
+  const history = live.history || {};
+  const forecast = live.forecast || {};
+
+  const limitCol = (label, obj, sparkId, hist, etaTs) => {
+    if (!obj) return '<div></div>';
+    const c = pctColor(obj.used_pct);
+    const spark = (hist || []).length >= 2 ? `<canvas class="rl-spark" id="${sparkId}"></canvas>` : '';
+    const eta = etaTs != null
+      ? `<div class="rl-note">at current pace: cap ~${new Date(etaTs * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>`
+      : '';
+    const reset = obj.resets_at
+      ? `<div class="rl-note">resets in ${fmt.until(obj.resets_at)}</div>`
+      : '';
+    return `<div>
+      <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">${label}</div>
+      <div style="font-size:20px;font-family:var(--mono);font-weight:500;color:${c};line-height:1.2">${obj.used_pct.toFixed(0)}%</div>
+      ${miniBar(obj.used_pct, c)}
+      ${spark}${eta}${reset}
+    </div>`;
+  };
+
+  const limitCols = () => `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      ${fh ? `<div>
-        <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">5-HOUR</div>
-        <div style="font-size:20px;font-family:var(--mono);font-weight:500;color:${pctColor(fh.used_pct)};line-height:1.2">${fh.used_pct.toFixed(0)}%</div>
-        ${miniBar(fh.used_pct, pctColor(fh.used_pct))}
-      </div>` : '<div></div>'}
-      ${sd ? `<div>
-        <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">7-DAY</div>
-        <div style="font-size:20px;font-family:var(--mono);font-weight:500;color:${pctColor(sd.used_pct)};line-height:1.2">${sd.used_pct.toFixed(0)}%</div>
-        ${miniBar(sd.used_pct, pctColor(sd.used_pct))}
-      </div>` : '<div></div>'}
+      ${limitCol('5-HOUR', live.five_hour, 'rl-spark-5h', history.five_hour, forecast.five_hour_eta_ts)}
+      ${limitCol('7-DAY', live.seven_day, 'rl-spark-7d', history.seven_day, forecast.seven_day_eta_ts)}
     </div>`;
 
   const sessions = live.sessions || [];
@@ -88,7 +101,7 @@ function rateLimitCard(live) {
         </div>
       </div>
     </div>
-    ${limitCols(live.five_hour, live.seven_day)}
+    ${limitCols()}
     ${multiSession ? `
     <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:14px">
       <div style="font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px">Per Session</div>
@@ -106,4 +119,14 @@ function rateLimitCard(live) {
       </table>
     </div>` : ''}
   </div>`;
+}
+
+// Draw the rate-limit history sparklines after the card HTML is in the DOM.
+// Called by render() (full refresh) and the 10s live poll (card-only swap).
+function drawRateLimitCharts(live) {
+  const hist = (live && live.history) || {};
+  const c5 = document.getElementById('rl-spark-5h');
+  if (c5 && (hist.five_hour || []).length >= 2) makeLineChart(c5, hist.five_hour, { color: cssVar('--secondary') });
+  const c7 = document.getElementById('rl-spark-7d');
+  if (c7 && (hist.seven_day || []).length >= 2) makeLineChart(c7, hist.seven_day, { color: cssVar('--accent') });
 }
