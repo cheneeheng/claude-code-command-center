@@ -242,7 +242,7 @@ CWD: $cwd
 
     # ---- Invoke Claude ----
     Set-Location $MetaDir
-    claude --print "$Prompt"
+    claude --model sonnet --effort medium --print "$Prompt"
 
     # ---- Move or stub the output ----
     if ((Test-Path $LessonsStaging) -and (Get-Item $LessonsStaging).Length -gt 0) {

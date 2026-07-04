@@ -9,6 +9,12 @@ The prepare script collects every per-session lessons file written since the las
 harvest into one input file. You read it, distil the project-generic lessons into
 the master file, advance the cursor, and commit. No `claude --print` is used.
 
+This is a single inline analysis job — there is no subagent to pin a model on, so it
+runs on whatever model and effort this coordinator session uses. The cron trigger runs
+this harvest on `opus` at `--effort high` because the dedup/generalisation judgement is
+the hardest step and pollutes the permanent master file if done poorly; for parity, run
+this session on Opus at high effort.
+
 ## Step 1 — Run the prepare script
 
 `C4_CLAUDE_META_DIR` must be set (the scheduler's `~/.claude/claude-scheduler.env`

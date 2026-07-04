@@ -277,7 +277,7 @@ EOF
 
     # ---- Invoke Claude ----
     cd "$META_DIR"
-    claude --print "$PROMPT"
+    claude --model sonnet --effort medium --print "$PROMPT"
 
     # ---- Move or stub the output ----
     if [[ -f "$LESSONS_STAGING" ]] && [[ -s "$LESSONS_STAGING" ]]; then
