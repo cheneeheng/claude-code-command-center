@@ -138,7 +138,7 @@ $Prompt = Get-Content $PromptFile -Raw
 
 try {
     Set-Location $MetaDir
-    claude --print $Prompt
+    claude --model opus --effort high --print $Prompt
 
     # Update cursor to the newest processed file's mtime - only on success so a
     # crash causes the same files to be retried next run.

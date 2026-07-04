@@ -44,7 +44,8 @@ Read the `MANIFEST` file. It is a JSON array; each entry is:
 ## Step 4 — Fan out to subagents
 
 For each manifest entry, spawn a `general-purpose` subagent **on the `haiku` model**
-(set the Agent `model` to `haiku` — summarisation is cheap and high-frequency). Run
+(set the Agent `model` to `haiku` — summarisation is cheap and high-frequency; it
+mirrors the cron trigger's `--effort low`, keep the reasoning light). Run
 them in parallel in batches of up to 5 (multiple Agent calls in one message), waiting
 for each batch before starting the next. Give every subagent this task, substituting
 the entry's `input` and `output`:

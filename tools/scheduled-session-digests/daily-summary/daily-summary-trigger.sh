@@ -267,7 +267,7 @@ EOF
 
     # ---- Invoke Claude ----
     cd "$META_DIR"
-    claude --model haiku --print "$PROMPT"
+    claude --model haiku --effort low --print "$PROMPT"
 
     rm -f "$INPUT_FILE"
     PROCESSED=$((PROCESSED + 1))

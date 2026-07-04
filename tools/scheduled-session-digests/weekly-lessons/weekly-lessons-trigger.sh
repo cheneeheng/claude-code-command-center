@@ -152,7 +152,7 @@ log "[weekly-lessons] Collected ${#LESSONS_FILES[@]} file(s). Passing to Claude.
 PROMPT=$(cat "$PROMPT_FILE")
 
 cd "$META_DIR"
-claude --print "$PROMPT"
+claude --model opus --effort high --print "$PROMPT"
 
 # Update cursor to the newest processed file's mtime - only reached on success
 # (set -euo pipefail exits on non-zero above), so a crash skips this and the

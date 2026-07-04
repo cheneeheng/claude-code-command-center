@@ -227,7 +227,7 @@ Output: $outFile
 
     # ---- Invoke Claude ----
     Set-Location $MetaDir
-    claude --model haiku --print $Prompt
+    claude --model haiku --effort low --print $Prompt
 
     Remove-Item $InputFile -ErrorAction SilentlyContinue
     $Processed++
