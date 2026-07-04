@@ -25,7 +25,7 @@ cat > "$CDIR/projects/smoke-project/sess1234abcd.jsonl" <<'EOF'
 {"type":"assistant","uuid":"a1","timestamp":"2026-01-01T00:00:00Z","message":{"model":"claude-opus-4-8","usage":{"input_tokens":100,"output_tokens":200,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
 EOF
 
-python3 usage-dashboard.py --port "$PORT" --claude-dir "$CDIR" &
+uv run python usage-dashboard.py --port "$PORT" --claude-dir "$CDIR" &
 SERVER_PID=$!
 
 for _ in $(seq 1 10); do
@@ -33,7 +33,7 @@ for _ in $(seq 1 10); do
   sleep 1
 done
 
-curl -sf "http://127.0.0.1:$PORT/api/data" | python3 -c "
+curl -sf "http://127.0.0.1:$PORT/api/data" | uv run python -c "
 import sys, json
 p = json.load(sys.stdin)
 assert set(p) >= {'stats', 'sessions', 'live'}, p.keys()
@@ -45,7 +45,7 @@ curl -sf "http://127.0.0.1:$PORT/dashboard.css" >/dev/null || fail "/dashboard.c
 curl -sf "http://127.0.0.1:$PORT/dashboard.js" >/dev/null || fail "/dashboard.js"
 
 # Live fast-poll endpoint: statusline only, must return a JSON object.
-curl -sf "http://127.0.0.1:$PORT/api/live" | python3 -c "
+curl -sf "http://127.0.0.1:$PORT/api/live" | uv run python -c "
 import sys, json
 p = json.load(sys.stdin)
 assert 'available' in p, p

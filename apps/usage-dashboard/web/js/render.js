@@ -232,7 +232,10 @@ function render(data) {
         <div class="sub">set C4_PLAN_PRICE_USD to see plan ROI</div>
       </div>`;
 
-  const chartDays = (stats.by_day || []).length;
+  // Long ranges arrive pre-rolled into weekly buckets (server decides); the
+  // title word and the per-bar day drill-down follow that granularity.
+  const weekly = stats.chart_bucket === 'week';
+  const seriesWord = weekly ? 'Weekly' : 'Daily';
 
   main.innerHTML = `
     ${header}
@@ -273,7 +276,7 @@ function render(data) {
 
     <div class="charts-row">
       <div class="card">
-        <div class="section-title">Daily Token Usage (last ${chartDays} days)</div>
+        <div class="section-title">${seriesWord} Token Usage${rangeSuffix}</div>
         <canvas id="daily-chart"></canvas>
       </div>
       <div class="card">
@@ -294,7 +297,7 @@ function render(data) {
 
     <div class="charts-row">
       <div class="card">
-        <div class="section-title">Daily Cost (last ${chartDays} days)</div>
+        <div class="section-title">${seriesWord} Cost${rangeSuffix}</div>
         <canvas id="cost-daily-chart"></canvas>
       </div>
       <div class="card">
@@ -310,7 +313,7 @@ function render(data) {
     </div>
 
     <div class="card">
-      <div class="section-title">Model mix over time (last ${chartDays} days)</div>
+      <div class="section-title">Model mix over time${rangeSuffix}</div>
       ${hasMix
         ? `<div class="mix-legend">${mixLegend}</div><canvas id="model-mix-chart"></canvas>`
         : '<div class="muted-note">No model data</div>'}
@@ -409,8 +412,11 @@ function render(data) {
   }
 
   requestAnimationFrame(() => {
+    // Day drill-down only makes sense on daily bars; a weekly bar's date is just
+    // the week's first day, so filtering to it would show a misleading slice.
+    const dayClick = weekly ? undefined : d => setDay(d.date);
     const dc = document.getElementById('daily-chart');
-    if (dc) makeBarChart(dc, stats.by_day, { valueKey: 'tokens', onBarClick: d => setDay(d.date) });
+    if (dc) makeBarChart(dc, stats.by_day, { valueKey: 'tokens', onBarClick: dayClick });
 
     const costDc = document.getElementById('cost-daily-chart');
     if (costDc) makeBarChart(costDc, stats.by_day, {
@@ -419,7 +425,7 @@ function render(data) {
       hoverColor: cssVar('--secondary-hi'),
       formatTip:  d => d.date + ': ' + fmt.usd(d.cost || 0),
       formatY:    v => v >= 1 ? '$'+v.toFixed(1) : v >= 0.01 ? '$'+v.toFixed(2) : v > 0 ? '<$0.01' : '$0',
-      onBarClick: d => setDay(d.date),
+      onBarClick: dayClick,
     });
 
     const donut = document.getElementById('donut-chart');

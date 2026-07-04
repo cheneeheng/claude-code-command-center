@@ -1216,3 +1216,33 @@ constant and the pre-existing mypy `buckets` var-annotation gaps alone (not mine
 
 **Outcome:** Verified: by_day/model_mix scale 7->7 … 12m/all->364; Top Tools Bash count grows
 696 (7d) -> 2107 (90d+); charts render with clean labels in-browser.
+
+### Entry 43
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-04T11:00:00Z
+**Task:** usage-dashboard — weekly rollup for long-range daily charts + cleanups.
+
+**Context:** After uncapping the daily charts (Entry 42), 12m/all rendered ~364 daily bars
+(2px, mostly empty for short-history users). The user asked to roll long ranges up to weekly.
+
+**Decision:**
+- Roll the daily series (by_day + model_mix) into 7-day, oldest-aligned buckets when the window
+  exceeds `DAILY_BAR_LIMIT` (90 days); 7d/30d/90d stay daily. Server exposes the granularity as a
+  new `stats.chart_bucket` ("day"|"week") key rather than having the browser re-derive the
+  threshold — keeps the computation server-side per the payload-contract invariant, rendered in
+  the same change.
+- Titles switch to a "Daily"/"Weekly" prefix + the shared range suffix ("Weekly Token Usage
+  (last 12 months)"), replacing the old bar-count "(last N days)" which read "(last 364 days)".
+- Disabled the per-bar day drill-down on weekly bars: a weekly bar's date is only its first day,
+  so filtering sessions to it would show a misleading 1/7 slice. Daily bars keep the drill-down.
+- Cleanups the user asked for: removed the unused `HEATMAP_DAYS` constant, annotated the two
+  `_by_project`/`_by_model` `buckets` defaultdicts (mypy `var-annotated` gaps now clean), and
+  switched `tests/smoke.sh` from bare `python3` to `uv run python` so the workspace `claude_usage`
+  dep resolves.
+
+**Impact / Risk:** Low. Additive `chart_bucket` key (render + server changed together); by_day /
+model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke test passes.
+
+**Outcome:** Verified in-browser — 30d daily (30 bars), 12m/all weekly (52 bars); smoke `PASS`.

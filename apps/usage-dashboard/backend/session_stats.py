@@ -29,11 +29,12 @@ import claude_usage
 
 import dashboard_config
 
-# The daily series follow the selected range; the heatmap covers the retained year.
-HEATMAP_DAYS = 364
-
 # Closed set of selectable ranges -> lookback days (None = all time).
 RANGE_DAYS: dict[str, int | None] = {"7d": 7, "30d": 30, "90d": 90, "12m": 365, "all": None}
+
+# Above this many days the daily bar charts switch to weekly buckets so the bar
+# count (and x-axis) stays readable over long ranges.
+DAILY_BAR_LIMIT = 90
 
 # ── Parse cache ──────────────────────────────────────────────────────────────
 # Interactive range/project switching re-fetches /api/data per click; without a
@@ -185,7 +186,9 @@ def _month_costs(sessions: list[dict]) -> tuple[float, float]:
 
 def _by_project(sessions: list[dict]) -> list[dict]:
     """Top 10 projects by token volume (cost carried alongside)."""
-    buckets = defaultdict(lambda: {"tokens": 0, "cost": 0.0, "sessions": 0})
+    buckets: defaultdict[str, dict[str, float]] = defaultdict(
+        lambda: {"tokens": 0, "cost": 0.0, "sessions": 0}
+    )
     for s in sessions:
         p = s["project"] or "unknown"
         buckets[p]["tokens"]   += s["total_tokens"]
@@ -197,7 +200,9 @@ def _by_project(sessions: list[dict]) -> list[dict]:
 
 def _by_model(sessions: list[dict]) -> list[dict]:
     """Tokens / estimated cost per raw model id (versions kept distinct)."""
-    buckets = defaultdict(lambda: {"tokens": 0, "cost": 0.0})
+    buckets: defaultdict[str, dict[str, float]] = defaultdict(
+        lambda: {"tokens": 0, "cost": 0.0}
+    )
     for s in sessions:
         for m, tok in (s.get("per_model") or {}).items():
             buckets[m]["tokens"] += tok["input"] + tok["output"] + tok["cache_write"] + tok["cache_read"]
@@ -234,6 +239,34 @@ def _delta(cur: list[dict], prev: list[dict]) -> dict:
 def _daybucket(b: claude_usage.DayBucket) -> dict:
     """A DayBucket as the {date, tokens, cost, sessions} shape the charts expect."""
     return {"date": b.date, "tokens": b.tokens, "cost": b.cost, "sessions": b.sessions}
+
+
+def _chart_series(daily: list[claude_usage.DayBucket], weekly: bool) -> list[dict]:
+    """Daily-chart buckets carrying {date, tokens, cost, sessions, per_family}.
+
+    One bucket per day, or one per 7-day week (oldest-aligned) when ``weekly`` so
+    long ranges stay readable. ``date`` is the bucket's first (oldest) day."""
+    if not weekly:
+        return [
+            {"date": b.date, "tokens": b.tokens, "cost": b.cost,
+             "sessions": b.sessions, "per_family": dict(b.per_family)}
+            for b in daily
+        ]
+    out: list[dict] = []
+    for i in range(0, len(daily), 7):
+        chunk = daily[i:i + 7]
+        fam: defaultdict[str, int] = defaultdict(int)
+        for b in chunk:
+            for f, v in b.per_family.items():
+                fam[f] += v
+        out.append({
+            "date": chunk[0].date,
+            "tokens": sum(b.tokens for b in chunk),
+            "cost": sum(b.cost for b in chunk),
+            "sessions": sum(b.sessions for b in chunk),
+            "per_family": dict(fam),
+        })
+    return out
 
 
 def summarize_sessions(
@@ -281,6 +314,9 @@ def summarize_sessions(
     # year for 12m/all (slicing past the retained length just yields all of it).
     span = days if days is not None else len(activity.daily)
     daily = activity.daily[-span:]
+    # Long ranges roll the daily bars up to weekly so the chart stays readable.
+    weekly = span > DAILY_BAR_LIMIT
+    series = _chart_series(daily, weekly)
     # Tool counts scoped to the same window as the daily series, so Top Tools
     # tracks the range filter like the other range-scoped cards.
     tool_counts: dict[str, int] = defaultdict(int)
@@ -302,9 +338,11 @@ def summarize_sessions(
         "month_projected_usd":    month_projected,
         "delta":             delta,
         "plan":              plan,
-        "by_day":            [_daybucket(b) for b in daily],
+        "by_day":            [{k: b[k] for k in ("date", "tokens", "cost", "sessions")}
+                              for b in series],
+        "chart_bucket":      "week" if weekly else "day",
         "heatmap":           [_daybucket(b) for b in activity.daily],
-        "model_mix":         [{"date": b.date, "per_family": b.per_family} for b in daily],
+        "model_mix":         [{"date": b["date"], "per_family": b["per_family"]} for b in series],
         "hour_dow":          activity.hour_dow,
         "tools":             [{"name": n, "count": c} for n, c in
                               sorted(tool_counts.items(), key=lambda kv: kv[1], reverse=True)[:15]],
