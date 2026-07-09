@@ -14,10 +14,10 @@ parallel to sync different files or folder pairs at once.
 
 | File | Role | Description |
 |------|------|-------------|
-| `sync-engine.ps1` | base | Generic newer-wins sync of one file. `-FileA`/`-FileB`, `-Strategy raw\|json-merge`, `-ExcludePaths` (comma-separated, json-merge only). |
+| `sync-engine.ps1` | base | Generic newer-wins sync of one file. `-FileA`/`-FileB`, `-Strategy raw\|json-merge`, `-ExcludePaths` (comma-separated, json-merge only; dot-notation with optional `[n]` array indices, e.g. `hooks.PreToolUse[0].hooks[0].command`). |
 | `sync-setup.ps1` | base | Generic install/uninstall (Task Scheduler + hidden VBS). Adds `-FileName`, `-Strategy`, `-ExcludePaths` on top of `-FolderA`/`-FolderB`/`-IntervalMinutes`. |
 | `claude-md-sync-setup.ps1` | specialization | Thin wrapper fixing `-FileName CLAUDE.md -Strategy raw`. |
-| `settings-sync-setup.ps1` | specialization | Thin wrapper fixing `-FileName settings.json -Strategy json-merge` (default exclude `statusLine.command`). |
+| `settings-sync-setup.ps1` | specialization | Thin wrapper fixing `-FileName settings.json -Strategy json-merge` (default exclude `statusLine.command,hooks.PreToolUse[0].hooks[0].command`). |
 | `hidden.vbs` | template | Reference copy of the generated launcher. Install writes one `file-sync-<hash>-hidden.vbs` per (file, folder pair) — gitignored, as it embeds resolved local paths. Do not edit manually. |
 
 The two `*-setup.ps1` wrappers are the specializations: each fixes the file name and strategy and

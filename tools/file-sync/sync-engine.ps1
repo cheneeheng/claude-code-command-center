@@ -6,8 +6,9 @@
 #   json-merge  Copy the newer JSON over the older, but preserve $ExcludePaths keys
 #               (dot-notation) from the destination — for machine-specific settings.
 #
-# $ExcludePaths is comma-separated (json-merge only), e.g.:
-#   "statusLine.command,userId,settings.local.theme"
+# $ExcludePaths is comma-separated (json-merge only), dot-notation with optional
+# [n] array indices, e.g.:
+#   "statusLine.command,userId,hooks.PreToolUse[0].hooks[0].command"
 
 param(
     [Parameter(Mandatory)][string]$FileA,
@@ -26,42 +27,86 @@ $ErrorActionPreference = "Stop"
 
 # --- json-merge helpers ---
 
+# Parses a dot-notation path into steps, each a Prop (object key) or an
+# Index (array position), so paths can reach into arrays, e.g.
+# "hooks.PreToolUse[0].hooks[0].command".
+function ConvertTo-PathSteps {
+    param([string]$Path)
+    $steps = @()
+    foreach ($segment in $Path -split '\.') {
+        if ($segment -notmatch '^([^\[\]]+)((?:\[\d+\])*)$') {
+            throw "Invalid ExcludePaths segment: '$segment'"
+        }
+        $steps += [pscustomobject]@{ Type = 'Prop'; Name = $matches[1] }
+        foreach ($idx in [regex]::Matches($matches[2], '\[(\d+)\]')) {
+            $steps += [pscustomobject]@{ Type = 'Index'; Index = [int]$idx.Groups[1].Value }
+        }
+    }
+    return $steps
+}
+
 function Get-NestedValue {
-    param($obj, [string[]]$keys)
+    param($obj, $steps)
     $cur = $obj
-    foreach ($k in $keys) {
-        if ($null -eq $cur -or -not $cur.PSObject.Properties[$k]) { return $null }
-        $cur = $cur.$k
+    foreach ($step in $steps) {
+        if ($null -eq $cur) { return $null }
+        if ($step.Type -eq 'Prop') {
+            if (-not $cur.PSObject.Properties[$step.Name]) { return $null }
+            $cur = $cur.($step.Name)
+        } else {
+            if ($step.Index -ge $cur.Count) { return $null }
+            $cur = $cur[$step.Index]
+        }
     }
     return $cur
 }
 
 function Set-NestedValue {
-    param($obj, [string[]]$keys, $value)
+    param($obj, $steps, $value)
     $cur = $obj
-    for ($i = 0; $i -lt $keys.Count - 1; $i++) {
-        $k = $keys[$i]
-        if (-not $cur.PSObject.Properties[$k]) {
-            $cur | Add-Member -NotePropertyName $k -NotePropertyValue ([pscustomobject]@{}) -Force
+    for ($i = 0; $i -lt $steps.Count - 1; $i++) {
+        $step = $steps[$i]
+        if ($step.Type -eq 'Prop') {
+            if (-not $cur.PSObject.Properties[$step.Name]) {
+                $cur | Add-Member -NotePropertyName $step.Name -NotePropertyValue ([pscustomobject]@{}) -Force
+            }
+            $cur = $cur.($step.Name)
+        } else {
+            # Arrays are not auto-vivified — the index must already exist.
+            if ($step.Index -ge $cur.Count) { return }
+            $cur = $cur[$step.Index]
         }
-        $cur = $cur.$k
     }
-    $last = $keys[-1]
-    $cur | Add-Member -NotePropertyName $last -NotePropertyValue $value -Force
+    $last = $steps[-1]
+    if ($last.Type -eq 'Prop') {
+        $cur | Add-Member -NotePropertyName $last.Name -NotePropertyValue $value -Force
+    } elseif ($last.Index -lt $cur.Count) {
+        $cur[$last.Index] = $value
+    }
 }
 
 function Remove-NestedKey {
-    param($obj, [string[]]$keys)
+    param($obj, $steps)
     $cur = $obj
-    for ($i = 0; $i -lt $keys.Count - 1; $i++) {
-        $k = $keys[$i]
-        if ($null -eq $cur -or -not $cur.PSObject.Properties[$k]) { return }
-        $cur = $cur.$k
+    for ($i = 0; $i -lt $steps.Count - 1; $i++) {
+        $step = $steps[$i]
+        if ($null -eq $cur) { return }
+        if ($step.Type -eq 'Prop') {
+            if (-not $cur.PSObject.Properties[$step.Name]) { return }
+            $cur = $cur.($step.Name)
+        } else {
+            if ($step.Index -ge $cur.Count) { return }
+            $cur = $cur[$step.Index]
+        }
     }
-    $last = $keys[-1]
-    if ($cur.PSObject.Properties[$last]) {
-        $cur.PSObject.Properties.Remove($last)
+    $last = $steps[-1]
+    if ($last.Type -eq 'Prop') {
+        if ($cur.PSObject.Properties[$last.Name]) {
+            $cur.PSObject.Properties.Remove($last.Name)
+        }
     }
+    # Array elements are left as-is: removing by index would shift positions,
+    # and Set-NestedValue overwrites the slot afterwards when a value exists.
 }
 
 # --- pick newer (shared by every strategy) ---
@@ -96,26 +141,26 @@ $dst = Get-Content $dstPath -Raw | ConvertFrom-Json
 # Parse exclude paths once (skip blanks from empty / trailing-comma input)
 $parsedPaths = $ExcludePaths -split ',' |
     Where-Object { $_.Trim() } |
-    ForEach-Object { ,($_.Trim() -split '\.') }
+    ForEach-Object { $_.Trim() }
 
 # Snapshot excluded values from destination
 $snapshots = @{}
-foreach ($keys in $parsedPaths) {
-    $val = Get-NestedValue -obj $dst -keys $keys
-    $snapshots[$keys -join '.'] = $val
+foreach ($path in $parsedPaths) {
+    $steps = ConvertTo-PathSteps -Path $path
+    $snapshots[$path] = @{ Steps = $steps; Value = (Get-NestedValue -obj $dst -steps $steps) }
 }
 
 # Deep-clone source, strip excluded keys, restore destination values
 $merged = $src | ConvertTo-Json -Depth 100 | ConvertFrom-Json
 
-foreach ($keys in $parsedPaths) {
-    Remove-NestedKey -obj $merged -keys $keys
+foreach ($path in $parsedPaths) {
+    Remove-NestedKey -obj $merged -steps $snapshots[$path].Steps
 }
 
-foreach ($keys in $parsedPaths) {
-    $val = $snapshots[$keys -join '.']
+foreach ($path in $parsedPaths) {
+    $val = $snapshots[$path].Value
     if ($null -ne $val) {
-        Set-NestedValue -obj $merged -keys $keys -value $val
+        Set-NestedValue -obj $merged -steps $snapshots[$path].Steps -value $val
     }
 }
 

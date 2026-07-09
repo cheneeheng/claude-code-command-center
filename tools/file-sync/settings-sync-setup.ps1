@@ -13,7 +13,7 @@ param(
     [ValidateRange(1, 1439)]
     [int]$IntervalMinutes = 15,
     # Comma-separated dot-notation keys to keep from the destination.
-    [string]$ExcludePaths = 'statusLine.command'
+    [string]$ExcludePaths = 'statusLine.command,hooks.PreToolUse[0].hooks[0].command'
 )
 
 & "$PSScriptRoot\sync-setup.ps1" `
