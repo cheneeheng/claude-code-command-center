@@ -1246,3 +1246,37 @@ constant and the pre-existing mypy `buckets` var-annotation gaps alone (not mine
 model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke test passes.
 
 **Outcome:** Verified in-browser — 30d daily (30 bars), 12m/all weekly (52 bars); smoke `PASS`.
+
+### Entry 44
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-10T00:00:00Z
+**Task:** Plan the v5 family (planning/v5/) — roundtable, the turn-based multi-repo workspace succeeding multi-repo-plan-runner.
+
+**Context:** User chose the stack (stdlib Python + vanilla JS) and member framing (new app) via AskUserQuestion; the remaining forks inside the plan were left to me. "Try not to defer anything" set the MVP-boundary bias.
+**Decision:**
+- Member/naming: `apps/multi-repo-workspace/`, internal name `roundtable` (descriptive folder per repo convention; short internal name mirroring docket's pattern).
+- Reuse strategy: fork-and-adapt docket's registry/tracker/plans/runner machinery rather than extracting a `libs/` member — the copies diverge at birth (new registry keys, sessions, persisted run output), and extraction would force an out-of-scope docket refactor. The one kept-in-sync contract is the implementation-sidecar JSON format, registered in `docs/shared-plugin-logic.md` with Cross-reference comments in both trackers (single sanctioned docket edit, planned in ITER_01_v5). Lib extraction revisited only on a third consumer.
+- Freshness model: board/round pages poll (5s/3s); SSE only for live token streams (session turns, order runs) — usage-dashboard v4 fast-poll precedent.
+- Concurrency: one per-project lock shared by planning turns and implement runs; planning turns acquire non-blocking (409 repo_busy to the user), the executor blocks (orders queue). Prevents plan/implement interleaving in one repo.
+- MVP boundary under "defer nothing": git **commit** is inside the MVP (safe, locally reversible, closes the review loop); push/branch/PR automation stays out. Browser-only (no TUI), zero runtime deps.
+- Round model: exactly one non-done round; closing a round auto-opens the next and carries forward follow-up notes (unaddressed carried items roll again).
+**Impact / Risk:** Plan-level only (no code yet). Fork-not-lib accepts deliberate duplication of ~4 small modules; the sidecar-format contract keeps docket and roundtable interoperable on the same repos. Trigger vocabularies differ (`headless` vs `round`) — treated as opaque display strings by both.
+**Outcome:** Family delivered: planning/v5/SKELETON_v5.md + ITER_01..04_v5.md; ITER_04_v5 is the mvp:true terminator.
+
+### Entry 45
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-10T00:00:00Z
+**Task:** v5 family scope expansion — user pulled per-run cost metrics, in-app file editing, and full markdown rendering into the MVP.
+
+**Context:** The three items were on ITER_04_v5's deferred list; the user asked for them in-MVP, suggesting claude-usage reuse for costs. Forks: where to land them (edit the hours-old unbuilt family in place vs append an ITER_05 grab-bag), how to source cost (parse transcripts vs the stream-json result event), and how to get "full markdown" without a framework.
+**Decision:**
+- Edited the family in place: each item lands in its natural iteration (editing + markdown in ITER_01, cost capture in ITER_02 via a new costs.py, order/round costs in ITER_03, cost surfacing in ITER_04). No artifact is built yet, so the delivered-artifact immutability rule does not bind; an ITER_05 of three unrelated leftovers would have been worse decomposition.
+- Cost source: the result event's token counts fed to claude_usage.estimated_cost (roundtable = the lib's third consumer, uv path dep; no transcript parsing). Estimate-canonical, reported total_cost_usd informational — inherits the usage-dashboard v4 cost policy. Unknown model => null, rendered n/a, never 0.
+- File editing: PUT file route guarded by the existing traversal check + 1 MB cap + binary reject + repo-lock 409 + expect_mtime optimistic-concurrency 409 (no server-side merge). UI is a plain textarea (structured editor deferred). Required rewording the SKELETON "plans app-read-only" paragraph into a repo-write policy: no autonomous writes; explicit user actions (file save, commit) and Claude sessions are the only repo writers.
+- Full markdown: vendored pinned single-file marked.min.js + dompurify.min.js under static/vendor/ (no npm, no build step) replacing the planned minimal md.js — hand-rolling CommonMark would be more code than the wrapper, violating write-less-code.
+**Impact / Risk:** "Zero runtime deps" claim softened to "one in-repo stdlib-only dep + two vendored JS assets". File editing widens the app's write surface; mitigations above keep it explicit-user-action-only. Deferred list updated (analytics layer, structured editor, tree-level file management remain out).
+**Outcome:** All five v5 artifacts updated in place; cross-iteration audit re-run mentally (no forward refs introduced; costs.py declared in SKELETON tree [02], consumed 02/03/04; vendor assets declared in SKELETON §03, landing in 01).
