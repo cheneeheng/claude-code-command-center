@@ -43,12 +43,24 @@ class StaleFile(Exception):
         self.mtime = mtime
 
 
+def git_env(repo: str) -> dict[str, str]:
+    """Confine git repo discovery to REPO itself.
+
+    Without a ceiling, git walks up from a registered path that is not a repo and
+    answers with the first ancestor repo it finds — e.g. the repo the server runs
+    from — silently showing (or committing to!) the wrong repository.
+    """
+    ceiling = os.path.dirname(os.path.realpath(repo))
+    return {**os.environ, "GIT_CEILING_DIRECTORIES": ceiling}
+
+
 def _run(repo: str, *args: str) -> str:
     """Run one git command; return stripped stdout or raise GitError."""
     try:
         proc = subprocess.run(
             ["git", *args],
             cwd=repo,
+            env=git_env(repo),
             capture_output=True,
             text=True,
             encoding="utf-8",

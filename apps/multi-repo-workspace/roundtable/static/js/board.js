@@ -10,7 +10,7 @@ RT.views.board = function boardView(main) {
   function card(p) {
     const head = h("h3", {}, p.name);
     if (p.sessions && p.sessions.streaming > 0) {
-      head.append(h("span", { class: "pulse", title: "planning session streaming", "aria-label": "planning session streaming" }));
+      head.append(h("span", { class: "dot dot-live", title: "planning session streaming", "aria-label": "planning session streaming" }));
     }
     if (p.stub) head.append(h("span", { class: "stub-badge" }, "stub"));
     const el = h("div", {
@@ -38,7 +38,7 @@ RT.views.board = function boardView(main) {
     if (p.round && p.round.orders > 0) {
       const chip = h("span", { class: "chip state-queued" },
         `${p.round.orders} order${p.round.orders === 1 ? "" : "s"} this round`);
-      if (p.round.running > 0) chip.prepend(h("span", { class: "pulse", "aria-hidden": "true" }), " ");
+      if (p.round.running > 0) chip.prepend(h("span", { class: "dot dot-live", "aria-hidden": "true" }), " ");
       chips.append(chip);
     }
     if (chips.childNodes.length) el.append(chips);

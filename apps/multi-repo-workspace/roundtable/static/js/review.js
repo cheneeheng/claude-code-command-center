@@ -19,7 +19,7 @@ RT.views.reviewPanel = function reviewPanel(wrap, rnd, { readOnly = false } = {}
     // confirmation mechanism, so no extra confirm dialog.
     if (rnd.orders.length && rnd.orders.every((o) => o.reviewed)) {
       closeSlot.append(h("button", {
-        class: "primary",
+        class: "btn-primary",
         onclick: async () => {
           await RT.api.post("/api/rounds/current/close");
           RT.pollBoard();

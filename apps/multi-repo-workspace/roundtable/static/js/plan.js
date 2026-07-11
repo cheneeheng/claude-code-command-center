@@ -18,7 +18,7 @@ RT.views.plan = async function planView(main, { name, slug }) {
       },
     }, "Mark implemented"));
     if (RT.roundOpen()) {
-      actions.append(h("button", { class: "primary", onclick: () => RT.addToRound(name, slug) }, "Add to round"));
+      actions.append(h("button", { class: "btn-primary", onclick: () => RT.addToRound(name, slug) }, "Add to round"));
     }
   } else if (plan.status === "implemented") {
     actions.append(h("button", {

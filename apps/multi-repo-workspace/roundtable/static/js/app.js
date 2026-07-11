@@ -24,10 +24,10 @@ RT.renderRoundBar = function renderRoundBar(data) {
   bar.append(link);
   if (rnd.status === "executing") {
     bar.append(h("span", { class: "dim" },
-      h("span", { class: "pulse", "aria-hidden": "true" }), ` executing ${rnd.terminal}/${rnd.orders}…`));
+      h("span", { class: "dot dot-live", "aria-hidden": "true" }), ` executing ${rnd.terminal}/${rnd.orders}…`));
   } else if (rnd.status === "open" && rnd.orders > 0) {
     bar.append(h("button", {
-      class: "primary",
+      class: "btn-primary",
       onclick: async (ev) => {
         ev.preventDefault();
         await RT.api.post("/api/rounds/current/end-turn");

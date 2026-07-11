@@ -38,3 +38,12 @@ def test_git_failure_raises_giterror(tmp_path):
 def test_git_error_in_plain_dir(tmp_path):
     with pytest.raises(GitError):
         gitwrite.commit(str(tmp_path), "msg")  # not a git repo -> nonzero rc
+
+
+def test_commit_never_reaches_ancestor_repo(gitrepo):
+    """A non-repo dir nested inside a repo must not commit to the ancestor."""
+    nested = Path(gitrepo.path) / "nested"
+    nested.mkdir()
+    (nested / "f.txt").write_text("x", encoding="utf-8")
+    with pytest.raises(GitError):
+        gitwrite.commit(str(nested), "msg")

@@ -58,7 +58,7 @@ RT.views.repo = function repoView(main, { name }) {
       promptBox,
       h("div", { class: "bar", style: "margin:8px 0" },
         h("button", {
-          class: "primary",
+          class: "btn-primary",
           onclick: async () => {
             const prompt = promptBox.value.trim();
             if (!prompt) return;
@@ -154,6 +154,13 @@ RT.views.repo = function repoView(main, { name }) {
     }
     await level("", 0, treePane);
 
+    // A pending open request (e.g. a plan link on the Round tab) lands here.
+    const pending = sessionStorage.getItem(`rt-open:${name}`);
+    if (pending) {
+      sessionStorage.removeItem(`rt-open:${name}`);
+      await openFile(pending);
+    }
+
     async function openFile(rel) {
       filePane.replaceChildren(h("div", { class: "busy" }, `loading ${rel}…`));
       let res;
@@ -236,7 +243,7 @@ RT.views.repo = function repoView(main, { name }) {
       });
 
       const bar = h("div", { class: "bar" },
-        h("button", { class: "primary", onclick: save }, "Save"),
+        h("button", { class: "btn-primary", onclick: save }, "Save"),
         h("button", { onclick: () => { currentMtime === null && !dirty ? filePane.replaceChildren(h("div", { class: "empty" }, "select a file")) : openFileAgain(); } }, "Cancel"),
         dirtyDot);
       async function openFileAgain() { await openFile(rel); }
@@ -266,7 +273,14 @@ RT.views.repo = function repoView(main, { name }) {
   // --- History tab ---------------------------------------------------------------
 
   async function renderHistory() {
-    const res = await RT.api.get(`/api/repos/${encodeURIComponent(name)}/log`);
+    let res;
+    try {
+      res = await RT.api.get(`/api/repos/${encodeURIComponent(name)}/log`);
+    } catch (err) {
+      RT.banner.hide();
+      panel.replaceChildren(h("div", { class: "empty" }, `git error: ${err.message}`));
+      return;
+    }
     if (!res.commits.length) { panel.replaceChildren(h("div", { class: "empty" }, "no commits")); return; }
     panel.replaceChildren(h("table", {},
       h("thead", {}, h("tr", {}, ["Hash", "When", "Subject"].map((c) => h("th", {}, c)))),
@@ -280,7 +294,14 @@ RT.views.repo = function repoView(main, { name }) {
   // --- Diff tab --------------------------------------------------------------------
 
   async function renderDiff() {
-    const res = await RT.api.get(`/api/repos/${encodeURIComponent(name)}/diff`);
+    let res;
+    try {
+      res = await RT.api.get(`/api/repos/${encodeURIComponent(name)}/diff`);
+    } catch (err) {
+      RT.banner.hide();
+      panel.replaceChildren(h("div", { class: "empty" }, `git error: ${err.message}`));
+      return;
+    }
     const wrap = h("div", {});
     if (!res.patch && !res.untracked.length) {
       wrap.append(h("div", { class: "empty" }, "working tree clean"));

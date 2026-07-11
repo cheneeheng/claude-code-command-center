@@ -69,29 +69,45 @@ RT.views.session = async function sessionView(main, { id }) {
     controls.replaceChildren();
     if (meta.status === "streaming") {
       controls.append(h("button", {
-        class: "danger",
+        class: "btn-danger",
         onclick: async () => { await RT.api.post(`/api/sessions/${encodeURIComponent(id)}/stop`); },
       }, "Stop"));
     } else if (meta.status === "idle") {
       const box = h("textarea", { rows: "3", placeholder: "Follow-up message…" });
-      controls.append(box,
-        h("div", {},
-          h("button", {
-            class: "primary",
-            onclick: async () => {
-              const prompt = box.value.trim();
-              if (!prompt) return;
-              await RT.api.post(`/api/sessions/${encodeURIComponent(id)}/message`, { prompt });
-              RT.views.session(main, { id });
-            },
-          }, "Send"),
-          " ",
-          h("button", {
-            onclick: async () => {
-              await RT.api.post(`/api/sessions/${encodeURIComponent(id)}/close`);
-              RT.views.session(main, { id });
-            },
-          }, "Close session")));
+      const buttons = h("div", {},
+        h("button", {
+          class: "btn-primary",
+          onclick: async () => {
+            const prompt = box.value.trim();
+            if (!prompt) return;
+            await RT.api.post(`/api/sessions/${encodeURIComponent(id)}/message`, { prompt });
+            RT.views.session(main, { id });
+          },
+        }, "Send"),
+        " ",
+        h("button", {
+          onclick: async () => {
+            await RT.api.post(`/api/sessions/${encodeURIComponent(id)}/close`);
+            RT.views.session(main, { id });
+          },
+        }, "Close session"));
+      // One-click "write the plan now": a canned follow-up turn — the session's
+      // --resume context is the plan content; only the destination is spelled out.
+      // (The user can always ask for the plan file in their own words instead.)
+      if (!meta.produced_plans.length) {
+        buttons.prepend(h("button", {
+          class: "btn-outline",
+          onclick: async () => {
+            const cfg = await RT.api.get("/api/config");
+            const proj = cfg.projects.find((p) => p.name === project);
+            const dir = (proj && proj.planning_dir) || ".agents_workspace/planning";
+            const prompt = `Based on our discussion in this session, write the agreed plan as a markdown file under \`${dir}/\` now, then reply with its repo-relative path. Do not implement anything.`;
+            await RT.api.post(`/api/sessions/${encodeURIComponent(id)}/message`, { prompt });
+            RT.views.session(main, { id });
+          },
+        }, "Create plan file"), " ");
+      }
+      controls.append(box, buttons);
     } else {
       controls.append(h("span", { class: "dim" }, `session is ${meta.status}`));
     }

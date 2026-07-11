@@ -61,6 +61,18 @@ def test_parse_commits_skips_blank_lines():
     assert gitinfo._parse_commits("\n \n") == []
 
 
+def test_discovery_confined_to_registered_path(gitrepo):
+    """A registered path that is not itself a repo must error, never answer with
+    an ancestor repo's history (e.g. the repo the server runs from)."""
+    nested = Path(gitrepo.path) / "nested"
+    nested.mkdir()
+    with pytest.raises(gitinfo.GitError):
+        gitinfo.log(str(nested))
+    state, err = gitinfo.repo_state(str(nested))
+    assert state is None
+    assert err
+
+
 def test_diff_stat_patch_untracked(gitrepo):
     root = Path(gitrepo.path)
     (root / "README.md").write_text("# fixture\nchanged\n", encoding="utf-8")

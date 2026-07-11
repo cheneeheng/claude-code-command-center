@@ -9,7 +9,7 @@ from __future__ import annotations
 import subprocess
 from typing import Any
 
-from roundtable.gitinfo import GIT_TIMEOUT, GitError
+from roundtable.gitinfo import GIT_TIMEOUT, GitError, git_env
 from roundtable.locks import Conflict
 
 
@@ -18,6 +18,7 @@ def _run(repo: str, *args: str) -> str:
         proc = subprocess.run(
             ["git", *args],
             cwd=repo,
+            env=git_env(repo),
             capture_output=True,
             text=True,
             encoding="utf-8",
