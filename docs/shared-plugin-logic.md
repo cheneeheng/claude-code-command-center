@@ -1,3 +1,10 @@
+# Shared logic register — intentional cross-member duplication
+
+This file registers logic that is **deliberately** duplicated across members (per the
+repo's intentional-duplication convention): if you change the behaviour, change every
+listed copy. Two entries: the plugin-reading logic, and the plan-lifecycle sidecar
+format.
+
 # Shared plugin-reading logic — library + intentional Node duplicate
 
 Several members read the **same** thing: Claude Code's installed plugins and their members
@@ -51,3 +58,37 @@ view, port `loose_bases` there and update this section.
   the Node copy should match (return empty rather than throw).
 - Display quirks inherited from the shared parser (e.g. a quoted `name: "x"` renders with quotes)
   apply to all copies — fix them in the library and #4 together.
+
+# Shared plan-lifecycle sidecar format — kept-in-sync contract
+
+[docket](../apps/multi-repo-plan-runner/) and [roundtable](../apps/multi-repo-workspace/) track
+plan lifecycle in the **same on-disk sidecar format**, so both apps can point at the same target
+repos without fighting. This is a kept-in-sync contract, not a library: each app is deliberately
+self-contained (stdlib-only, independently installable), and the shared surface is a file format,
+not code — change both sides together or not at all.
+
+## The contract
+
+| Aspect | Value (both sides) |
+|--------|--------------------|
+| Location | `<repo>/<implementation_dir>/<slug>.json` (default `implementation_dir` = `.agents_workspace/implementation`), mirroring the plan's relative path under `planning/` |
+| Keys | `status`, `history[]` with entries `{ts, from, to, trigger, run_id, rc}` |
+| Statuses | closed set `ready \| running \| implemented`; a missing sidecar means `ready` with empty history |
+| Writes | atomic (temp file + `os.replace`) with a bounded Windows `PermissionError` retry |
+
+## The implementations
+
+| # | Location | Role |
+|---|----------|------|
+| 1 | `apps/multi-repo-plan-runner/docket/tracker.py` | docket's tracker. |
+| 2 | `apps/multi-repo-workspace/roundtable/tracker.py` | roundtable's tracker. |
+
+Both files carry a `Cross-reference:` comment pointing here and at each other.
+
+## Known intentional differences (not drift)
+
+- **Trigger vocabulary:** docket writes `headless | manual | startup_reset`; roundtable writes
+  `round | manual | startup_reset`. Readers on both sides treat `trigger` as an opaque display
+  string, so histories from the two apps interleave cleanly in one sidecar.
+- Transition **tables** (which `(from, to)` edges each trigger may take) are per-app policy, not
+  part of the contract; only the serialized format and the status set are.

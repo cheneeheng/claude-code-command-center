@@ -2,6 +2,12 @@
 
 One JSON file per plan under <repo>/.agents_workspace/implementation/<slug>.json,
 mirroring the plan's relative path. A missing sidecar means `ready` with empty history.
+
+Cross-reference: the on-disk sidecar format (keys, location, allowed statuses) is
+byte-compatible with roundtable's (apps/multi-repo-workspace/roundtable/tracker.py) so
+both apps can point at the same repos — registered in docs/shared-plugin-logic.md.
+Trigger vocabularies differ (docket: headless|manual|startup_reset; roundtable:
+round|manual|startup_reset); both sides treat `trigger` as an opaque display string.
 """
 
 from __future__ import annotations
