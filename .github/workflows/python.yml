@@ -18,6 +18,7 @@ jobs:
       matrix:
         member:
           - apps/multi-repo-plan-runner
+          - apps/multi-repo-workspace
           - apps/per-project-plugin-toggler
           - apps/usage-dashboard
           - apps/claude-component-browser
@@ -41,6 +42,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - member: apps/multi-repo-workspace
+            target: roundtable
           - member: libs/claude-usage
             target: src
           - member: libs/claude-plugins
@@ -77,6 +80,26 @@ jobs:
       # schema end to end (the $schema pointer in a fresh config) without needing `claude`.
       - name: packaging smoke test
         run: uv run docket init --dry-run
+
+  test-roundtable:
+    name: pytest (multi-repo-workspace)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/multi-repo-workspace
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: ruff format check
+        run: uv run ruff format --check .
+      - name: pytest (100% line+branch coverage gate)
+        run: uv run pytest
+      # Full-loop smoke: boots the real server against a fake `claude` and walks
+      # board -> session -> order -> end turn -> review -> commit -> close.
+      - name: smoke test
+        run: uv run bash tests/smoke.sh
 
   smoke:
     name: Smoke test (${{ matrix.member }})
