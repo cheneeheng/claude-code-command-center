@@ -1,0 +1,120 @@
+/* --- top bar ------------------------------------------------------------- */
+.topbar {
+  display: flex; align-items: center; gap: 20px;
+  padding: 10px 16px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border);
+}
+.brand { font-weight: 700; font-size: 16px; color: var(--text); }
+.topnav { display: flex; gap: 14px; }
+.topnav a { color: var(--text-dim); }
+.topnav a:hover { color: var(--text); }
+.roundbar { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.roundbar .round-link { color: var(--text); cursor: pointer; }
+.roundbar .last-done { color: var(--text-dim); font-size: 12.5px; }
+
+/* --- banner ---------------------------------------------------------------- */
+.banner {
+  display: flex; align-items: center; gap: 10px;
+  background: #3a2224; color: var(--err);
+  border-bottom: 1px solid var(--err);
+  padding: 8px 16px;
+}
+.banner button { background: none; border: none; color: var(--err); font-size: 16px; margin-left: auto; }
+
+/* --- board ------------------------------------------------------------------ */
+.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--gap); }
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.card:hover { border-color: var(--accent); }
+.card h3 { margin: 0 0 6px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.card .git-line { color: var(--text-dim); font-size: 12.5px; display: flex; gap: 10px; flex-wrap: wrap; }
+.card .warn-strip {
+  background: #3a3224; color: var(--warn);
+  border-radius: 4px; padding: 3px 8px; margin-top: 6px; font-size: 12.5px;
+}
+.chips { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.chip {
+  border-radius: 999px; padding: 1px 9px; font-size: 12px;
+  border: 1px solid var(--border); color: var(--text);
+}
+.chip.ready { background: var(--chip-ready); }
+.chip.running { background: var(--chip-running); }
+.chip.implemented { background: var(--chip-implemented); }
+.chip.state-queued { background: var(--bg-inset); }
+.chip.state-running { background: var(--chip-running); }
+.chip.state-succeeded { background: var(--chip-ready); }
+.chip.state-failed, .chip.state-stopped { background: #4a2a28; }
+.chip.state-skipped { background: var(--bg-inset); color: var(--text-dim); }
+.pulse {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.25; } }
+.stub-badge { font-size: 11px; color: var(--warn); border: 1px solid var(--warn); border-radius: 4px; padding: 0 5px; }
+
+/* --- tabs -------------------------------------------------------------------- */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 12px 0; }
+.tabs button {
+  border: none; border-bottom: 2px solid transparent; border-radius: 0;
+  background: none; color: var(--text-dim); padding: 6px 14px;
+}
+.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+
+/* --- files tree ----------------------------------------------------------------- */
+.files-wrap { display: grid; grid-template-columns: 300px 1fr; gap: var(--gap); align-items: start; }
+.tree { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; max-height: 70vh; overflow: auto; }
+.tree button { display: block; width: 100%; text-align: left; background: none; border: none; padding: 2px 6px; border-radius: 4px; font-family: var(--mono); font-size: 12.5px; }
+.tree button:hover { background: var(--bg-inset); }
+.file-pane { min-width: 0; }
+.file-pane .md-body { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+.editor textarea { min-height: 50vh; }
+.editor .bar { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.dirty-dot { color: var(--warn); }
+
+/* --- diff --------------------------------------------------------------------------- */
+.diff-line-add { color: var(--ok); }
+.diff-line-del { color: var(--err); }
+
+/* --- session chat ------------------------------------------------------------------- */
+.chat { max-width: 860px; margin: 0 auto; }
+.turn { margin: 14px 0; }
+.msg-user {
+  background: var(--chip-implemented); border-radius: var(--radius);
+  padding: 8px 12px; margin-left: 20%; white-space: pre-wrap;
+}
+.msg-claude { padding: 4px 0; }
+.msg-tool { color: var(--text-dim); font-family: var(--mono); font-size: 12.5px; padding: 1px 0; }
+.msg-status { color: var(--text-dim); font-size: 12.5px; }
+.msg-error { color: var(--err); }
+.turn-foot { color: var(--text-dim); font-size: 12px; border-top: 1px dashed var(--border); margin-top: 6px; padding-top: 4px; }
+.stream-pane { border-left: 2px solid var(--accent); padding-left: 10px; margin: 10px 0; }
+.chat-input { display: flex; gap: 8px; margin-top: 14px; align-items: flex-start; }
+.chat-input textarea { min-height: 70px; }
+.cost-chip { border: 1px solid var(--border); border-radius: 999px; padding: 1px 10px; font-size: 12px; color: var(--text-dim); }
+.plan-banner {
+  background: var(--chip-ready); border-radius: var(--radius);
+  padding: 8px 12px; margin: 10px 0;
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+
+/* --- round / review -------------------------------------------------------------------- */
+.order-card {
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 14px; margin: 10px 0;
+}
+.order-card .head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.order-card .out { max-height: 40vh; overflow: auto; }
+.carried {
+  background: var(--bg-raised); border: 1px dashed var(--border);
+  border-radius: var(--radius); padding: 10px 14px; margin: 10px 0;
+}
+.review-actions { display: flex; gap: 12px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.commit-box { display: flex; gap: 8px; margin-top: 8px; }
+details > summary { cursor: pointer; color: var(--text-dim); }

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>roundtable</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/board">roundtable</a>
+    <nav class="topnav" aria-label="Main">
+      <a href="#/board">Board</a>
+      <a href="#/round">Round</a>
+      <a href="#/history">History</a>
+    </nav>
+    <div id="roundbar" class="roundbar"></div>
+  </header>
+  <div id="banner" class="banner" hidden>
+    <span id="banner-text"></span>
+    <button id="banner-dismiss" type="button" aria-label="Dismiss error">×</button>
+  </div>
+  <main id="main"></main>
+  <script src="/static/vendor/marked.min.js"></script>
+  <script src="/static/vendor/dompurify.min.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/markdown.js"></script>
+  <script src="/static/js/sse.js"></script>
+  <script src="/static/js/router.js"></script>
+  <script src="/static/js/board.js"></script>
+  <script src="/static/js/repo.js"></script>
+  <script src="/static/js/plan.js"></script>
+  <script src="/static/js/session.js"></script>
+  <script src="/static/js/round.js"></script>
+  <script src="/static/js/review.js"></script>
+  <script src="/static/js/history.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

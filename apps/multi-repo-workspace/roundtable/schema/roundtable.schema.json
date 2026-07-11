@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cheneeheng/claude-code-command-center/apps/multi-repo-workspace/roundtable/schema/roundtable.schema.json",
+  "title": "roundtable registry (.roundtable.json)",
+  "description": "Config for roundtable: top-level app settings, a defaults layer, and per-project overrides.",
+  "type": "object",
+  "required": ["projects"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Pointer to this JSON Schema (read and ignored by roundtable at runtime)."
+    },
+    "port": {
+      "type": "integer",
+      "description": "Default port for `roundtable serve` (the --port flag overrides).",
+      "default": 8640
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Baseline for every per-project knob; a project inherits anything it does not set.",
+      "additionalProperties": false,
+      "properties": {
+        "allowed_tools": {"$ref": "#/$defs/allowed_tools"},
+        "instruction_template": {"$ref": "#/$defs/instruction_template"},
+        "planning_template": {"$ref": "#/$defs/planning_template"},
+        "model": {"$ref": "#/$defs/model"},
+        "max_turns": {"$ref": "#/$defs/max_turns"},
+        "permission_mode": {"$ref": "#/$defs/permission_mode"},
+        "planning_permission_mode": {"$ref": "#/$defs/permission_mode"},
+        "planning_dir": {"$ref": "#/$defs/planning_dir"},
+        "implementation_dir": {"$ref": "#/$defs/implementation_dir"},
+        "claude_bin": {"$ref": "#/$defs/claude_bin"},
+        "claude_extra_args": {"$ref": "#/$defs/claude_extra_args"}
+      }
+    },
+    "projects": {
+      "type": "array",
+      "description": "One entry per repo; name + path required, every defaults knob optional as an override.",
+      "items": {
+        "type": "object",
+        "required": ["name", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique display name for the project."
+          },
+          "path": {
+            "type": "string",
+            "description": "Repo root; ~ and $VARS are expanded. Must be an existing directory."
+          },
+          "allowed_tools": {"$ref": "#/$defs/allowed_tools"},
+          "instruction_template": {"$ref": "#/$defs/instruction_template"},
+          "planning_template": {"$ref": "#/$defs/planning_template"},
+          "model": {"$ref": "#/$defs/model"},
+          "max_turns": {"$ref": "#/$defs/max_turns"},
+          "permission_mode": {"$ref": "#/$defs/permission_mode"},
+          "planning_permission_mode": {"$ref": "#/$defs/permission_mode"},
+          "planning_dir": {"$ref": "#/$defs/planning_dir"},
+          "implementation_dir": {"$ref": "#/$defs/implementation_dir"},
+          "claude_bin": {"$ref": "#/$defs/claude_bin"},
+          "claude_extra_args": {"$ref": "#/$defs/claude_extra_args"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "allowed_tools": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Tools passed to `claude --allowedTools` (replace-only; a project's list fully replaces the defaults list)."
+    },
+    "instruction_template": {
+      "type": "string",
+      "description": "stdin instruction for implement runs, naming the plan file; {path} is substituted with the plan's repo-relative path."
+    },
+    "planning_template": {
+      "type": "string",
+      "description": "Turn-1 prompt for planning sessions; {request} and {planning_dir} are substituted."
+    },
+    "model": {
+      "type": ["string", "null"],
+      "description": "Model passed to `claude --model`; null lets Claude Code pick its default."
+    },
+    "max_turns": {
+      "type": "integer",
+      "description": "Value for `claude --max-turns`."
+    },
+    "permission_mode": {
+      "type": "string",
+      "enum": ["acceptEdits", "default", "plan", "bypassPermissions"],
+      "description": "Value for `claude --permission-mode`."
+    },
+    "planning_dir": {
+      "type": "string",
+      "description": "Repo-relative directory holding plan markdown files."
+    },
+    "implementation_dir": {
+      "type": "string",
+      "description": "Repo-relative directory for lifecycle status sidecars (docket-compatible)."
+    },
+    "claude_bin": {
+      "type": "string",
+      "description": "Claude Code executable; resolved on PATH or as an explicit file. ~ and $VARS expanded."
+    },
+    "claude_extra_args": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Extra flags appended to the `claude` invocation (escape hatch; do not restate the streaming flags)."
+    }
+  }
+}

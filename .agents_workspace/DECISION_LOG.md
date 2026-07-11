@@ -1280,3 +1280,15 @@ model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke te
 - Full markdown: vendored pinned single-file marked.min.js + dompurify.min.js under static/vendor/ (no npm, no build step) replacing the planned minimal md.js — hand-rolling CommonMark would be more code than the wrapper, violating write-less-code.
 **Impact / Risk:** "Zero runtime deps" claim softened to "one in-repo stdlib-only dep + two vendored JS assets". File editing widens the app's write surface; mitigations above keep it explicit-user-action-only. Deferred list updated (analytics layer, structured editor, tree-level file management remain out).
 **Outcome:** All five v5 artifacts updated in place; cross-iteration audit re-run mentally (no forward refs introduced; costs.py declared in SKELETON tree [02], consumed 02/03/04; vendor assets declared in SKELETON §03, landing in 01).
+
+### Entry 46
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-10T00:00:00Z
+**Task:** Implement the v5 roundtable family (SKELETON_v5 through ITER_04_v5) — branch base and build strategy.
+
+**Context:** The v5 plan docs live only on `docs/roundtable-v5-planning` (not yet on main); the branch skill says branch from main only. Separately, all five artifacts are in scope in one session, so staging every module through its skeleton/501 intermediate states would mean rewriting the same files four times for an identical end state.
+**Decision:** (a) Branched `feat/multi-repo-workspace` off `docs/roundtable-v5-planning` so the plan family the implementation follows is in-tree; the docs branch is a docs-only delta on main and will merge first or ride along. (b) Building each module directly to its ITER_04 (MVP) end state, in iteration order, honoring every iteration's spec — no 501-stub theater for routes that get implemented later in the same session; the 501 mechanism is still implemented for the route table itself (it is skeleton-specified behavior for any future unimplemented surface).
+**Impact / Risk:** PR diff includes the planning docs unless the docs branch merges first (then a rebase drops them). Direct-to-final building risks missing an iteration-staged detail; mitigated by walking sections per iteration against the artifacts.
+**Outcome:** MVP complete (2026-07-11 session): all modules at ITER_04 end state; ruff + ruff format + mypy --strict clean, 252 tests at 100% line+branch coverage, full-loop smoke PASS; ship pass landed (examples/, member .gitignore, docket Cross-reference + shared-plugin-logic sidecar entry, root README/CLAUDE.md catalog + env roster, CI test-roundtable job, ARCHITECTURE.md). docket suite re-run green after its docstring edit. Remaining user action: mark the new CI job required in branch protection.
