@@ -120,6 +120,7 @@
 .file-pane .md-body {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5);
+  max-width: calc(var(--measure) + 2 * var(--space-5));
 }
 /* --- rendered markdown ---------------------------------------------------------- */
 /* The brand reset zeroes all margins/paddings; restore document flow inside every
@@ -132,6 +133,11 @@
 .md-body > :last-child { margin-bottom: 0; }
 .md-body ul, .md-body ol { padding-inline-start: var(--space-6); }
 .md-body li { margin-block: var(--space-1); }
+/* Cap the prose measure so document text reads at a comfortable line length. Code
+   blocks, tables and images opt out — they earn the full surface width. */
+.md-body > p, .md-body > ul, .md-body > ol, .md-body > blockquote,
+.md-body > h1, .md-body > h2, .md-body > h3,
+.md-body > h4, .md-body > h5, .md-body > h6 { max-width: var(--measure); }
 .md-body blockquote {
   border-left: 3px solid var(--border-strong);
   padding-left: var(--space-3);
@@ -139,6 +145,15 @@
 }
 .md-body hr { border: none; border-top: 1px solid var(--border); margin-block: var(--space-4); }
 .md-body img { max-width: 100%; }
+/* Frontmatter key/value table (eyebrow label + table) reads as a tight block, not
+   stretched across the whole card. The lifecycle table is preceded by an <h3>, so
+   this adjacency selector leaves it full width. */
+.card > .eyebrow + table { max-width: var(--measure); }
+.card > .eyebrow + table th { width: 1%; white-space: nowrap; padding-right: var(--space-6); }
+/* Reading-view cards (plan body/metadata/lifecycle, rendered-file frontmatter) hug
+   the reading measure rather than stretching the full 1200px column — the prose,
+   not the surface, sets the width. `.card.my-4` is used only by these reading cards. */
+.card.my-4 { max-width: calc(var(--measure) + 2 * var(--space-5)); }
 
 .editor textarea { min-height: 50vh; font-family: var(--font-mono); }
 .editor .bar { margin-block: var(--space-2); }

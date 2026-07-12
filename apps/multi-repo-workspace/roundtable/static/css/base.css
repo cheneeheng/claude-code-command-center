@@ -1,5 +1,10 @@
 /* App base layer on top of brand.css (Tidewater): only what the brand reset and
    bare-element styles do not already cover. No raw colors/sizes — brand tokens only. */
+:root {
+  /* Comfortable reading measure (~72 chars/line) for long-form prose. `ch` is a
+     font-relative unit, not an off-scale px value; code blocks and tables opt out. */
+  --measure: 72ch;
+}
 main { max-width: 1200px; margin: 0 auto; padding: var(--space-4); }
 pre {
   background: var(--surface-2);
