@@ -31,7 +31,7 @@ RT.views.session = async function sessionView(main, { id }) {
     const turnEl = h("div", { class: "turn" });
     for (const e of entries) {
       if (e.kind === "user") turnEl.append(h("div", { class: "msg-user" }, e.text));
-      else if (e.kind === "text") { const d = h("div", { class: "msg-claude" }); RT.md.into(d, e.text); turnEl.append(d); }
+      else if (e.kind === "text") { const d = h("div", { class: "msg-claude md-body" }); RT.md.into(d, e.text); turnEl.append(d); }
       else if (e.kind === "status") turnEl.append(h("div", { class: "msg-status" }, e.text));
       else if (e.kind === "error") turnEl.append(h("div", { class: "msg-error" }, e.text));
     }
