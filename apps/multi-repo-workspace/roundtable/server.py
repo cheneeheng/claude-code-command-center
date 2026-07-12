@@ -223,6 +223,9 @@ class Handler(BaseHTTPRequestHandler):
             _CONTENT_TYPES.get(target.suffix, "application/octet-stream"),
         )
         self.send_header("Content-Length", str(len(data)))
+        # No build step / no cache-busting filenames: without this, a browser tab left
+        # open across a server restart can keep serving stale JS/CSS from cache.
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
 
