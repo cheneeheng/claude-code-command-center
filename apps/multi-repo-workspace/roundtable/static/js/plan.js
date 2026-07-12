@@ -36,37 +36,33 @@ RT.views.plan = async function planView(main, { name, slug }) {
     },
   }, "Copy manual command"));
 
-  const metaEntries = Object.entries(plan.meta || {});
-  const metaTable = metaEntries.length
-    ? h("table", {},
-        h("tbody", {}, metaEntries.map(([key, value]) =>
-          h("tr", {}, h("th", {}, key), h("td", {}, value)))))
-    : null;
+  const metaCard = RT.md.metaCard(plan.meta, "Plan metadata");
 
   const body = h("div", { class: "md-body" });
   RT.md.into(body, plan.body);
+  const bodyCard = h("div", { class: "card my-4" }, body);
 
   const historyRows = (plan.history || []).map((rec) =>
     h("tr", {},
       h("td", { class: "dim" }, rec.ts),
       h("td", {}, `${rec.from} → ${rec.to}`),
       h("td", {}, rec.trigger)));
+  const historyCard = h("div", { class: "card my-4" },
+    h("h3", { class: "mb-2" }, "Lifecycle history"),
+    historyRows.length
+      ? h("table", {},
+          h("thead", {}, h("tr", {}, ["When", "Transition", "Trigger"].map((c) => h("th", {}, c)))),
+          h("tbody", {}, historyRows))
+      : h("div", { class: "empty" }, "no transitions yet"));
 
   main.replaceChildren(
     ...[
-      h("h2", {},
-        h("a", { href: `#/repo/${encodeURIComponent(name)}` }, `◂ ${name}`),
-        ` ${plan.title} `,
-        h("span", { class: `chip ${plan.status}` }, plan.status)),
+      h("a", { class: "back-link", href: `#/repo/${encodeURIComponent(name)}` }, `← ${name}`),
+      h("h2", {}, `${plan.title} `, h("span", { class: `chip ${plan.status}` }, plan.status)),
       actions,
-      metaTable,
-      body,
-      h("h3", {}, "Lifecycle history"),
-      historyRows.length
-        ? h("table", {},
-            h("thead", {}, h("tr", {}, ["When", "Transition", "Trigger"].map((c) => h("th", {}, c)))),
-            h("tbody", {}, historyRows))
-        : h("div", { class: "empty" }, "no transitions yet"),
+      metaCard,
+      bodyCard,
+      historyCard,
     ].filter(Boolean),
   );
 };

@@ -5,12 +5,7 @@ RT.views = RT.views || {};
 RT.views.round = async function roundView(main) {
   const h = RT.h;
   main.replaceChildren(h("div", { class: "busy" }, "loading round…"));
-  const [rnd, cfg] = await Promise.all([
-    RT.api.get("/api/rounds/current"),
-    RT.api.get("/api/config"),
-  ]);
-  const planningDirs = {};
-  for (const p of cfg.projects) planningDirs[p.name] = p.planning_dir;
+  const rnd = await RT.api.get("/api/rounds/current");
 
   const title = h("h2", {}, `Round ${rnd.number} `,
     h("span", { class: "chip state-queued" }, rnd.status),
@@ -63,20 +58,14 @@ RT.views.round = async function roundView(main) {
             { instruction: ev.target.value.trim() || null });
         },
       });
-      // Project opens the repo on its Plans tab; the plan opens the repo's Files
-      // tab with the plan file already loaded (tab + file preset via sessionStorage).
+      // Project opens the repo on its Plans tab; the plan opens the plan view directly.
       return h("tr", {},
         h("td", {}, h("a", {
           href: `#/repo/${encodeURIComponent(o.project)}`,
           onclick: () => { sessionStorage.setItem(`rt-tab:${o.project}`, "Plans"); },
         }, o.project)),
         h("td", {}, h("a", {
-          href: `#/repo/${encodeURIComponent(o.project)}`,
-          onclick: () => {
-            sessionStorage.setItem(`rt-tab:${o.project}`, "Files");
-            const dir = planningDirs[o.project] || ".agents_workspace/planning";
-            sessionStorage.setItem(`rt-open:${o.project}`, `${dir}/${o.slug}.md`);
-          },
+          href: `#/repo/${encodeURIComponent(o.project)}/plan/${o.slug}`,
         }, h("code", {}, o.slug))),
         h("td", {}, instr),
         h("td", {}, h("button", {
@@ -94,7 +83,7 @@ RT.views.round = async function roundView(main) {
     // End Turn with a plain confirm step: the button arms, then confirms.
     let armed = false;
     const endBtn = h("button", {
-      class: "btn-primary", style: "margin-top:12px",
+      class: "btn-primary mt-3",
       onclick: async () => {
         if (!armed) { armed = true; endBtn.textContent = "Confirm End Turn"; return; }
         await RT.api.post("/api/rounds/current/end-turn");

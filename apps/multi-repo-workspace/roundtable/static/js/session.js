@@ -11,11 +11,11 @@ RT.views.session = async function sessionView(main, { id }) {
   // --- header -----------------------------------------------------------------
   const costChip = h("span", { class: "cost-chip" },
     `session total: ${RT.fmt.costShort(meta.cost_est_usd)}`);
-  const header = h("h2", {},
-    h("a", { href: `#/repo/${encodeURIComponent(project)}` }, `◂ ${project}`),
-    ` planning session `,
-    h("span", { class: "chip state-queued" }, meta.status),
-    " ", costChip);
+  const header = h("div", {},
+    h("a", { class: "back-link", href: `#/repo/${encodeURIComponent(project)}` }, `← ${project}`),
+    h("h2", {}, "Planning session ",
+      h("span", { class: "chip state-queued" }, meta.status),
+      " ", costChip));
 
   // --- transcript, turn-grouped --------------------------------------------------
   const turnCost = {};

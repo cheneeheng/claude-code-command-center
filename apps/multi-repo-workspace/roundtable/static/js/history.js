@@ -39,9 +39,8 @@ RT.views.roundDetail = async function roundDetailView(main, { id }) {
   main.replaceChildren(h("div", { class: "busy" }, "loading round…"));
   const rnd = await RT.api.get(`/api/rounds/${encodeURIComponent(id)}`);
   const wrap = h("div", {},
-    h("h2", {},
-      h("a", { href: "#/history" }, "◂ history"),
-      ` Round ${rnd.number} `,
+    h("a", { class: "back-link", href: "#/history" }, "← History"),
+    h("h2", {}, `Round ${rnd.number} `,
       h("span", { class: "chip state-queued" }, rnd.status),
       " ", h("span", { class: "cost-chip" }, `round cost: ${RT.fmt.costShort(rnd.cost_est_usd)}`)));
   // Read-only reuse of the review card layout: recorded flags/notes/costs, replay.

@@ -10,7 +10,7 @@ RT.views.reviewPanel = function reviewPanel(wrap, rnd, { readOnly = false } = {}
   const byRepo = {};
   for (const o of rnd.orders) (byRepo[o.project] = byRepo[o.project] || []).push(o);
 
-  const closeSlot = h("div", { style: "margin:14px 0" });
+  const closeSlot = h("div", { class: "my-4" });
 
   function renderClose() {
     if (readOnly) return;

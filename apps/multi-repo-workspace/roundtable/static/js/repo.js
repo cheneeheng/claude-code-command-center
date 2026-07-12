@@ -16,13 +16,14 @@ RT.roundOpen = function roundOpen() {
 
 RT.views.repo = function repoView(main, { name }) {
   const h = RT.h;
-  const tabs = ["Plans", "Files", "History", "Diff"];
+  const tabs = ["Plans", "Sessions", "Files", "History", "Diff"];
   let active = sessionStorage.getItem(`rt-tab:${name}`) || "Plans";
 
   const tabbar = h("div", { class: "tabs", role: "tablist" });
   const panel = h("div", { role: "tabpanel" });
   main.replaceChildren(
-    h("h2", {}, h("a", { href: "#/board" }, "◂ board"), ` ${name}`),
+    h("a", { class: "back-link", href: "#/board" }, "← Board"),
+    h("h2", {}, name),
     tabbar, panel,
   );
 
@@ -37,16 +38,13 @@ RT.views.repo = function repoView(main, { name }) {
 
   function renderPanel() {
     panel.replaceChildren(h("div", { class: "busy" }, `loading ${active.toLowerCase()}…`));
-    ({ Plans: renderPlans, Files: renderFiles, History: renderHistory, Diff: renderDiff })[active]();
+    ({ Plans: renderPlans, Sessions: renderSessions, Files: renderFiles, History: renderHistory, Diff: renderDiff })[active]();
   }
 
   // --- Plans tab -------------------------------------------------------------
 
   async function renderPlans() {
-    const [plansRes, sessionsRes] = await Promise.all([
-      RT.api.get(`/api/repos/${encodeURIComponent(name)}/plans`),
-      RT.api.get(`/api/sessions?project=${encodeURIComponent(name)}`),
-    ]);
+    const plansRes = await RT.api.get(`/api/repos/${encodeURIComponent(name)}/plans`);
     const wrap = h("div", {});
 
     // Plan with Claude: inline prompt panel -> POST /api/sessions.
@@ -56,7 +54,7 @@ RT.views.repo = function repoView(main, { name }) {
     promptBox.value = prefill;
     const planPanel = h("div", { hidden: prefill ? null : "" },
       promptBox,
-      h("div", { class: "bar", style: "margin:8px 0" },
+      h("div", { class: "bar my-2" },
         h("button", {
           class: "btn-primary",
           onclick: async () => {
@@ -67,7 +65,7 @@ RT.views.repo = function repoView(main, { name }) {
           },
         }, "Start planning session")));
     wrap.append(
-      h("div", { style: "margin:10px 0" },
+      h("div", { class: "my-3" },
         h("button", { onclick: () => { planPanel.hidden = !planPanel.hidden; } }, "Plan with Claude")),
       planPanel,
     );
@@ -93,21 +91,25 @@ RT.views.repo = function repoView(main, { name }) {
             actions);
         }))));
     }
-
-    wrap.append(h("h3", {}, "Sessions"));
-    if (!sessionsRes.sessions.length) {
-      wrap.append(h("div", { class: "empty" }, "no sessions yet"));
-    } else {
-      wrap.append(h("table", {},
-        h("thead", {}, h("tr", {}, ["Status", "Turns", "Produced plans", "When"].map((c) => h("th", {}, c)))),
-        h("tbody", {}, sessionsRes.sessions.map((s) =>
-          h("tr", { style: "cursor:pointer", onclick: () => { location.hash = `#/session/${s.id}`; } },
-            h("td", {}, s.status),
-            h("td", {}, String(s.turns.length)),
-            h("td", {}, s.produced_plans.map((p) => p.slug).join(", ") || "—"),
-            h("td", { class: "dim" }, RT.fmt.agoIso(s.created_at)))))));
-    }
     panel.replaceChildren(wrap);
+  }
+
+  // --- Sessions tab ------------------------------------------------------------
+
+  async function renderSessions() {
+    const sessionsRes = await RT.api.get(`/api/sessions?project=${encodeURIComponent(name)}`);
+    if (!sessionsRes.sessions.length) {
+      panel.replaceChildren(h("div", { class: "empty" }, "no sessions yet"));
+      return;
+    }
+    panel.replaceChildren(h("table", {},
+      h("thead", {}, h("tr", {}, ["Status", "Turns", "Produced plans", "When"].map((c) => h("th", {}, c)))),
+      h("tbody", {}, sessionsRes.sessions.map((s) =>
+        h("tr", { style: "cursor:pointer", onclick: () => { location.hash = `#/session/${s.id}`; } },
+          h("td", {}, s.status),
+          h("td", {}, String(s.turns.length)),
+          h("td", {}, s.produced_plans.map((p) => p.slug).join(", ") || "—"),
+          h("td", { class: "dim" }, RT.fmt.agoIso(s.created_at)))))));
   }
 
   // --- Files tab --------------------------------------------------------------
@@ -115,8 +117,8 @@ RT.views.repo = function repoView(main, { name }) {
   async function renderFiles() {
     const treePane = h("div", { class: "tree" });
     const filePane = h("div", { class: "file-pane" }, h("div", { class: "empty" }, "select a file"));
-    const newPath = h("input", { type: "text", placeholder: "new file path (repo-relative)", style: "max-width:340px" });
-    const header = h("div", { class: "bar", style: "display:flex;gap:8px;margin-bottom:8px" },
+    const newPath = h("input", { type: "text", placeholder: "new file path (repo-relative)", class: "input-file-path" });
+    const header = h("div", { class: "bar mb-2" },
       newPath,
       h("button", {
         onclick: () => {
@@ -124,7 +126,15 @@ RT.views.repo = function repoView(main, { name }) {
           if (rel) openEditor(rel, "", null);
         },
       }, "New file"));
-    panel.replaceChildren(header, h("div", { class: "files-wrap" }, treePane, filePane));
+    panel.replaceChildren(h("div", { class: "files-wrap" },
+      h("div", { class: "tree-col" }, header, treePane), filePane));
+
+    // rel -> tree button, so opening a file can highlight it in place of repeating
+    // the filename in the (single) right-hand content column.
+    const fileButtons = new Map();
+    function selectInTree(rel) {
+      for (const [r, btn] of fileButtons) btn.classList.toggle("selected", r === rel);
+    }
 
     async function level(rel, depth, container) {
       const res = await RT.api.get(`/api/repos/${encodeURIComponent(name)}/tree?path=${encodeURIComponent(rel)}`);
@@ -146,11 +156,13 @@ RT.views.repo = function repoView(main, { name }) {
           }, h("span", {}, "▸ "), entry.name);
           container.append(btn, kids);
         } else {
-          container.append(h("button", { style: pad, onclick: () => openFile(childRel) },
-            entry.name, h("span", { class: "dim" }, ` ${entry.size}b`)));
+          const btn = h("button", { style: pad, onclick: () => openFile(childRel) },
+            entry.name, h("span", { class: "dim" }, ` ${entry.size}b`));
+          fileButtons.set(childRel, btn);
+          container.append(btn);
         }
       }
-      if (!res.entries.length) container.append(h("div", { class: "dim", style: "padding-left:8px" }, "(empty)"));
+      if (!res.entries.length) container.append(h("div", { class: "dim pl-2" }, "(empty)"));
     }
     await level("", 0, treePane);
 
@@ -162,7 +174,8 @@ RT.views.repo = function repoView(main, { name }) {
     }
 
     async function openFile(rel) {
-      filePane.replaceChildren(h("div", { class: "busy" }, `loading ${rel}…`));
+      selectInTree(rel);
+      filePane.replaceChildren(h("div", { class: "busy" }, "loading…"));
       let res;
       try {
         res = await RT.api.get(`/api/repos/${encodeURIComponent(name)}/file?path=${encodeURIComponent(rel)}`);
@@ -171,7 +184,7 @@ RT.views.repo = function repoView(main, { name }) {
         const note = err.status === 415 ? "binary file — not viewable"
           : err.status === 413 ? "too large to view (512 KB cap)"
           : `cannot open: ${err.message}`;
-        filePane.replaceChildren(h("h3", {}, h("code", {}, rel)), h("div", { class: "empty" }, note));
+        filePane.replaceChildren(h("div", { class: "empty" }, note));
         return;
       }
       showFile(rel, res.content, res.mtime);
@@ -179,27 +192,27 @@ RT.views.repo = function repoView(main, { name }) {
 
     function showFile(rel, content, mtime) {
       const isMd = rel.toLowerCase().endsWith(".md");
-      const head = h("div", { class: "bar", style: "display:flex;gap:8px;align-items:center" },
-        h("h3", { style: "margin:4px 0" }, h("code", {}, rel)),
+      const actionsBar = h("div", { class: "bar mb-2" },
         h("button", { onclick: () => openEditor(rel, content, mtime) }, "Edit"));
       const bodyWrap = h("div", {});
       if (isMd) {
         let rendered = true;
         const toggle = h("button", { onclick: () => { rendered = !rendered; toggle.textContent = rendered ? "Source" : "Rendered"; paint(); } }, "Source");
-        head.append(toggle);
+        actionsBar.append(toggle);
         const paint = () => {
-          if (rendered) { const div = h("div", { class: "md-body" }); RT.md.into(div, content); bodyWrap.replaceChildren(div); }
+          if (rendered) RT.md.intoWithFrontmatter(bodyWrap, content);
           else bodyWrap.replaceChildren(h("pre", {}, content));
         };
         paint();
       } else {
         bodyWrap.replaceChildren(h("pre", {}, content));
       }
-      filePane.replaceChildren(head, bodyWrap);
+      filePane.replaceChildren(actionsBar, bodyWrap);
     }
 
     function openEditor(rel, content, mtime) {
       const isMd = rel.toLowerCase().endsWith(".md");
+      selectInTree(rel);
       let dirty = false;
       let currentMtime = mtime; // null => create on first save
       const ta = h("textarea", {});
@@ -244,22 +257,25 @@ RT.views.repo = function repoView(main, { name }) {
 
       const bar = h("div", { class: "bar" },
         h("button", { class: "btn-primary", onclick: save }, "Save"),
-        h("button", { onclick: () => { currentMtime === null && !dirty ? filePane.replaceChildren(h("div", { class: "empty" }, "select a file")) : openFileAgain(); } }, "Cancel"),
+        h("button", {
+          onclick: () => {
+            if (currentMtime === null && !dirty) { selectInTree(null); filePane.replaceChildren(h("div", { class: "empty" }, "select a file")); }
+            else openFileAgain();
+          },
+        }, "Cancel"),
         dirtyDot);
       async function openFileAgain() { await openFile(rel); }
 
-      const editorWrap = h("div", { class: "editor" },
-        h("h3", { style: "margin:4px 0" }, h("code", {}, rel), isMd ? " (markdown)" : ""),
-        conflict, bar, ta);
+      const editorWrap = h("div", { class: "editor" }, conflict, bar, ta);
       if (isMd) {
         let showPreview = false;
-        const preview = h("div", { class: "md-body", hidden: "" });
+        const preview = h("div", { hidden: "" });
         const tog = h("button", {
           onclick: () => {
             showPreview = !showPreview;
             tog.textContent = showPreview ? "Source" : "Rendered";
             preview.hidden = !showPreview; ta.hidden = showPreview;
-            if (showPreview) RT.md.into(preview, ta.value);
+            if (showPreview) RT.md.intoWithFrontmatter(preview, ta.value);
           },
         }, "Rendered");
         bar.append(tog);
@@ -306,18 +322,11 @@ RT.views.repo = function repoView(main, { name }) {
     if (!res.patch && !res.untracked.length) {
       wrap.append(h("div", { class: "empty" }, "working tree clean"));
     } else {
-      if (res.stat) wrap.append(h("pre", {}, res.stat));
+      if (res.stat) wrap.append(h("pre", { class: "mb-3" }, res.stat));
       if (res.truncated) wrap.append(h("div", { class: "warn-strip" }, "patch truncated at 1 MB"));
-      if (res.patch) {
-        const pre = h("pre", {});
-        for (const line of res.patch.split("\n")) {
-          const cls = line.startsWith("+") ? "diff-line-add" : line.startsWith("-") ? "diff-line-del" : "";
-          pre.append(h("span", { class: cls }, line + "\n"));
-        }
-        wrap.append(pre);
-      }
+      if (res.patch) wrap.append(RT.diff.render(res.patch));
       if (res.untracked.length) {
-        wrap.append(h("h3", {}, "Untracked"),
+        wrap.append(h("h3", { class: "mb-2 mt-3" }, "Untracked"),
           h("ul", {}, res.untracked.map((u) => h("li", {}, h("code", {}, u)))));
       }
     }

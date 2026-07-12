@@ -1,6 +1,18 @@
 // Hash router: pattern -> view. Unknown hash -> #/board.
 window.RT = window.RT || {};
 
+// Marks the top-nav link for the current section as active (nav rule: the
+// active location must be visibly marked). Repo/session pages are reached
+// from the board, so they mark "Board"; round-history detail marks "History".
+RT.markActiveNav = function markActiveNav(hash) {
+  const section = hash.startsWith("#/round") ? "#/round"
+    : hash.startsWith("#/history") || hash.startsWith("#/rounds/") ? "#/history"
+    : "#/board";
+  document.querySelectorAll(".topnav a").forEach((a) => {
+    a.classList.toggle("current", a.getAttribute("href") === section);
+  });
+};
+
 RT.router = {
   routes: [],
   register(pattern, handler) {
@@ -19,6 +31,7 @@ RT.router = {
     const hash = location.hash || "#/board";
     const main = document.getElementById("main");
     if (RT.viewCleanup) { RT.viewCleanup(); RT.viewCleanup = null; }
+    RT.markActiveNav(hash);
     for (const route of this.routes) {
       const m = route.rx.exec(hash);
       if (m) {

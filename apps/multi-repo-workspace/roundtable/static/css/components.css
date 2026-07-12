@@ -15,11 +15,28 @@
 }
 .brand:hover { color: var(--fg); }
 .topnav { display: flex; gap: var(--space-4); }
-.topnav a { color: var(--fg-muted); }
+.topnav a {
+  color: var(--fg-muted);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+}
 .topnav a:hover { color: var(--fg); text-decoration: none; }
+/* "current" (not the brand's global .is-active, which is the left-edge card idiom
+   and doesn't read cleanly on an inline horizontal nav item). */
+.topnav a.current { color: var(--secondary); background: var(--secondary-wash); }
 .roundbar { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
 .roundbar .round-link { color: var(--fg); }
 .roundbar .last-done { color: var(--fg-muted); font-size: var(--fs-75); }
+
+/* --- back link ------------------------------------------------------------ */
+/* A small navigational link above the page title — separate from it, not
+   crammed into the same line as the entity name. */
+.back-link {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  font-size: var(--fs-75); color: var(--fg-muted);
+  margin-bottom: var(--space-1);
+}
+.back-link:hover { color: var(--secondary); text-decoration: none; }
 
 /* --- banner ---------------------------------------------------------------- */
 .banner {
@@ -36,11 +53,13 @@
 }
 
 /* --- board ------------------------------------------------------------------ */
+/* Scoped to .board — plain .card is reused elsewhere (plan view) for a static,
+   non-clickable surface and must not inherit the pointer cursor / hover state. */
 .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-3); }
-.card { cursor: pointer; padding: var(--space-3) var(--space-4); } /* surface from brand .card */
-.card:hover { border-color: var(--secondary); }
-.card h3 { margin: 0 0 var(--space-2); display: flex; align-items: center; gap: var(--space-2); }
-.card .git-line {
+.board .card { cursor: pointer; padding: var(--space-3) var(--space-4); } /* surface from brand .card */
+.board .card:hover { border-color: var(--secondary); }
+.board .card h3 { margin: 0 0 var(--space-2); display: flex; align-items: center; gap: var(--space-2); }
+.board .card .git-line {
   color: var(--fg-muted); font-family: var(--font-mono); font-size: var(--fs-75);
   display: flex; gap: var(--space-3); flex-wrap: wrap;
 }
@@ -80,7 +99,11 @@
 .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
 
 /* --- files tree ----------------------------------------------------------------- */
+/* Strict two columns: left is navigation (tree + create-file), right is the
+   single file surface — the file's identity lives only in the tree selection. */
 .files-wrap { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-3); align-items: start; }
+.tree-col { display: flex; flex-direction: column; gap: var(--space-2); }
+.input-file-path { max-width: 340px; }
 .tree {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: var(--space-2);
@@ -92,6 +115,7 @@
   border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: var(--fs-75);
 }
 .tree button:hover { background: var(--surface-2); border-color: transparent; }
+.tree button.selected { background: var(--secondary-wash); color: var(--secondary); }
 .file-pane { min-width: 0; }
 .file-pane .md-body {
   background: var(--surface); border: 1px solid var(--border);
@@ -117,12 +141,37 @@
 .md-body img { max-width: 100%; }
 
 .editor textarea { min-height: 50vh; font-family: var(--font-mono); }
-.editor .bar { display: flex; gap: var(--space-2); align-items: center; margin: var(--space-2) 0; }
+.editor .bar { margin-block: var(--space-2); }
 .dirty-dot { color: var(--warning); }
 
 /* --- diff --------------------------------------------------------------------------- */
-.diff-line-add { color: var(--success); }
-.diff-line-del { color: var(--danger); }
+.diff-file { margin-block: var(--space-4); }
+.diff-file-head {
+  font-family: var(--font-mono); font-size: var(--fs-75); font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2); border: 1px solid var(--border); border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+.diff-table {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--font-mono); font-size: var(--fs-75);
+  border: 1px solid var(--border);
+}
+.diff-table td { padding: 1px var(--space-2); vertical-align: top; border-bottom: none; }
+.diff-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff-num {
+  width: 1%; text-align: right; color: var(--fg-subtle);
+  user-select: none; border-right: 1px solid var(--border);
+}
+.diff-marker { width: 1%; text-align: center; user-select: none; color: var(--fg-subtle); }
+.diff-hunk-row td {
+  background: var(--surface-2); color: var(--fg-muted);
+  padding-block: var(--space-1); border-right: none;
+}
+.diff-row-add { background: var(--success-wash); }
+.diff-row-add .diff-marker { color: var(--success); }
+.diff-row-del { background: var(--danger-wash); }
+.diff-row-del .diff-marker { color: var(--danger); }
 
 /* --- session chat ------------------------------------------------------------------- */
 .chat { max-width: 860px; margin: 0 auto; }
