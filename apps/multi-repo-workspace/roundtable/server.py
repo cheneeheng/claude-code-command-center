@@ -365,6 +365,7 @@ class Handler(BaseHTTPRequestHandler):
                     "title": plan.title,
                     "status": plan.status,
                     "body": plan.body,
+                    "meta": plan.meta,
                     "history": plan.history,
                     "manual_command": plans.manual_command(project, slug),
                 }

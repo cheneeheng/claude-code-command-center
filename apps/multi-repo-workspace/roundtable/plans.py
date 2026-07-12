@@ -23,7 +23,8 @@ class Plan:
     slug: str  # relative path under planning/, sans .md; may contain "/"
     title: str
     status: str  # ready|running|implemented — sourced from the sidecar, NOT the plan
-    body: str = ""  # "" for list summaries; full markdown from read_plan
+    body: str = ""  # "" for list summaries; frontmatter-stripped markdown from read_plan
+    meta: dict[str, str] = field(default_factory=dict)  # frontmatter, for a GitHub-style table
     history: list[dict[str, Any]] = field(default_factory=list)
     mtime: int = 0  # plan file st_mtime (s) — the Plans tab's "updated" column
 
@@ -88,14 +89,15 @@ def read_plan(project: Project, slug: str) -> Plan:
     if not md.is_file():
         raise FileNotFoundError(f"plan not found: {project.name}/{slug}")
     text = md.read_text(encoding="utf-8")
-    meta, _ = frontmatter.parse(text)
+    meta, body = frontmatter.parse(text)
     rec = tracker.read_record(project, slug)
     return Plan(
         project=project.name,
         slug=slug,
         title=meta.get("title") or slug,
         status=rec["status"],
-        body=text,
+        body=body,
+        meta=meta,
         history=list(rec["history"]),
     )
 

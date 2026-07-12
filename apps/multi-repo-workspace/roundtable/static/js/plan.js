@@ -36,6 +36,13 @@ RT.views.plan = async function planView(main, { name, slug }) {
     },
   }, "Copy manual command"));
 
+  const metaEntries = Object.entries(plan.meta || {});
+  const metaTable = metaEntries.length
+    ? h("table", {},
+        h("tbody", {}, metaEntries.map(([key, value]) =>
+          h("tr", {}, h("th", {}, key), h("td", {}, value)))))
+    : null;
+
   const body = h("div", { class: "md-body" });
   RT.md.into(body, plan.body);
 
@@ -46,18 +53,21 @@ RT.views.plan = async function planView(main, { name, slug }) {
       h("td", {}, rec.trigger)));
 
   main.replaceChildren(
-    h("h2", {},
-      h("a", { href: `#/repo/${encodeURIComponent(name)}` }, `◂ ${name}`),
-      ` ${plan.title} `,
-      h("span", { class: `chip ${plan.status}` }, plan.status)),
-    actions,
-    body,
-    h("h3", {}, "Lifecycle history"),
-    historyRows.length
-      ? h("table", {},
-          h("thead", {}, h("tr", {}, ["When", "Transition", "Trigger"].map((c) => h("th", {}, c)))),
-          h("tbody", {}, historyRows))
-      : h("div", { class: "empty" }, "no transitions yet"),
+    ...[
+      h("h2", {},
+        h("a", { href: `#/repo/${encodeURIComponent(name)}` }, `◂ ${name}`),
+        ` ${plan.title} `,
+        h("span", { class: `chip ${plan.status}` }, plan.status)),
+      actions,
+      metaTable,
+      body,
+      h("h3", {}, "Lifecycle history"),
+      historyRows.length
+        ? h("table", {},
+            h("thead", {}, h("tr", {}, ["When", "Transition", "Trigger"].map((c) => h("th", {}, c)))),
+            h("tbody", {}, historyRows))
+        : h("div", { class: "empty" }, "no transitions yet"),
+    ].filter(Boolean),
   );
 };
 
