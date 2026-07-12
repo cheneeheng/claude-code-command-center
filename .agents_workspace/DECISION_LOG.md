@@ -1246,3 +1246,133 @@ constant and the pre-existing mypy `buckets` var-annotation gaps alone (not mine
 model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke test passes.
 
 **Outcome:** Verified in-browser — 30d daily (30 bars), 12m/all weekly (52 bars); smoke `PASS`.
+
+### Entry 44
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-10T00:00:00Z
+**Task:** Plan the v5 family (planning/v5/) — roundtable, the turn-based multi-repo workspace succeeding multi-repo-plan-runner.
+
+**Context:** User chose the stack (stdlib Python + vanilla JS) and member framing (new app) via AskUserQuestion; the remaining forks inside the plan were left to me. "Try not to defer anything" set the MVP-boundary bias.
+**Decision:**
+- Member/naming: `apps/multi-repo-workspace/`, internal name `roundtable` (descriptive folder per repo convention; short internal name mirroring docket's pattern).
+- Reuse strategy: fork-and-adapt docket's registry/tracker/plans/runner machinery rather than extracting a `libs/` member — the copies diverge at birth (new registry keys, sessions, persisted run output), and extraction would force an out-of-scope docket refactor. The one kept-in-sync contract is the implementation-sidecar JSON format, registered in `docs/shared-plugin-logic.md` with Cross-reference comments in both trackers (single sanctioned docket edit, planned in ITER_01_v5). Lib extraction revisited only on a third consumer.
+- Freshness model: board/round pages poll (5s/3s); SSE only for live token streams (session turns, order runs) — usage-dashboard v4 fast-poll precedent.
+- Concurrency: one per-project lock shared by planning turns and implement runs; planning turns acquire non-blocking (409 repo_busy to the user), the executor blocks (orders queue). Prevents plan/implement interleaving in one repo.
+- MVP boundary under "defer nothing": git **commit** is inside the MVP (safe, locally reversible, closes the review loop); push/branch/PR automation stays out. Browser-only (no TUI), zero runtime deps.
+- Round model: exactly one non-done round; closing a round auto-opens the next and carries forward follow-up notes (unaddressed carried items roll again).
+**Impact / Risk:** Plan-level only (no code yet). Fork-not-lib accepts deliberate duplication of ~4 small modules; the sidecar-format contract keeps docket and roundtable interoperable on the same repos. Trigger vocabularies differ (`headless` vs `round`) — treated as opaque display strings by both.
+**Outcome:** Family delivered: planning/v5/SKELETON_v5.md + ITER_01..04_v5.md; ITER_04_v5 is the mvp:true terminator.
+
+### Entry 45
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-10T00:00:00Z
+**Task:** v5 family scope expansion — user pulled per-run cost metrics, in-app file editing, and full markdown rendering into the MVP.
+
+**Context:** The three items were on ITER_04_v5's deferred list; the user asked for them in-MVP, suggesting claude-usage reuse for costs. Forks: where to land them (edit the hours-old unbuilt family in place vs append an ITER_05 grab-bag), how to source cost (parse transcripts vs the stream-json result event), and how to get "full markdown" without a framework.
+**Decision:**
+- Edited the family in place: each item lands in its natural iteration (editing + markdown in ITER_01, cost capture in ITER_02 via a new costs.py, order/round costs in ITER_03, cost surfacing in ITER_04). No artifact is built yet, so the delivered-artifact immutability rule does not bind; an ITER_05 of three unrelated leftovers would have been worse decomposition.
+- Cost source: the result event's token counts fed to claude_usage.estimated_cost (roundtable = the lib's third consumer, uv path dep; no transcript parsing). Estimate-canonical, reported total_cost_usd informational — inherits the usage-dashboard v4 cost policy. Unknown model => null, rendered n/a, never 0.
+- File editing: PUT file route guarded by the existing traversal check + 1 MB cap + binary reject + repo-lock 409 + expect_mtime optimistic-concurrency 409 (no server-side merge). UI is a plain textarea (structured editor deferred). Required rewording the SKELETON "plans app-read-only" paragraph into a repo-write policy: no autonomous writes; explicit user actions (file save, commit) and Claude sessions are the only repo writers.
+- Full markdown: vendored pinned single-file marked.min.js + dompurify.min.js under static/vendor/ (no npm, no build step) replacing the planned minimal md.js — hand-rolling CommonMark would be more code than the wrapper, violating write-less-code.
+**Impact / Risk:** "Zero runtime deps" claim softened to "one in-repo stdlib-only dep + two vendored JS assets". File editing widens the app's write surface; mitigations above keep it explicit-user-action-only. Deferred list updated (analytics layer, structured editor, tree-level file management remain out).
+**Outcome:** All five v5 artifacts updated in place; cross-iteration audit re-run mentally (no forward refs introduced; costs.py declared in SKELETON tree [02], consumed 02/03/04; vendor assets declared in SKELETON §03, landing in 01).
+
+### Entry 46
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-10T00:00:00Z
+**Task:** Implement the v5 roundtable family (SKELETON_v5 through ITER_04_v5) — branch base and build strategy.
+
+**Context:** The v5 plan docs live only on `docs/roundtable-v5-planning` (not yet on main); the branch skill says branch from main only. Separately, all five artifacts are in scope in one session, so staging every module through its skeleton/501 intermediate states would mean rewriting the same files four times for an identical end state.
+**Decision:** (a) Branched `feat/multi-repo-workspace` off `docs/roundtable-v5-planning` so the plan family the implementation follows is in-tree; the docs branch is a docs-only delta on main and will merge first or ride along. (b) Building each module directly to its ITER_04 (MVP) end state, in iteration order, honoring every iteration's spec — no 501-stub theater for routes that get implemented later in the same session; the 501 mechanism is still implemented for the route table itself (it is skeleton-specified behavior for any future unimplemented surface).
+**Impact / Risk:** PR diff includes the planning docs unless the docs branch merges first (then a rebase drops them). Direct-to-final building risks missing an iteration-staged detail; mitigated by walking sections per iteration against the artifacts.
+**Outcome:** MVP complete (2026-07-11 session): all modules at ITER_04 end state; ruff + ruff format + mypy --strict clean, 252 tests at 100% line+branch coverage, full-loop smoke PASS; ship pass landed (examples/, member .gitignore, docket Cross-reference + shared-plugin-logic sidecar entry, root README/CLAUDE.md catalog + env roster, CI test-roundtable job, ARCHITECTURE.md). docket suite re-run green after its docstring edit. Remaining user action: mark the new CI job required in branch protection.
+
+### Entry 47
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-11T00:00:00Z
+**Task:** roundtable UI audit — six user-reported issues (banner, history repo, wrapping, create-plan button, round links, Tidewater restyle).
+
+**Context:** Three items left forks open. (1) History-shows-server-repo fix: validate `rev-parse --show-toplevel` per call vs confining discovery via env. (2) "Create plan from session context" button: new backend route vs frontend-only canned message; when it should appear; where the planning dir comes from. (3) Tidewater restyle: keep the app's tokens.css as an alias layer vs consuming brand tokens directly.
+**Decision:** (1) `GIT_CEILING_DIRECTORIES` = parent of the registered path, injected in both gitinfo/gitwrite `_run`s — one env var covers every git call (including the commit write, which could otherwise land in an ancestor repo) with no extra subprocess; a mis-registered non-repo path now degrades to the documented `git_error` card instead of impersonating an ancestor. History/Diff tabs render that error inline instead of a stuck loader. (2) Frontend-only: the button posts a canned follow-up through the existing `/message` endpoint (the `--resume` context *is* the plan content; only the destination dir, read from `/api/config`, is spelled out), keeping the "plans are written only by the Claude session" invariant and the 100%-coverage backend untouched. Shown only while the session is idle with no produced plans — once a plan exists the plan-banner takes over (controls-only-when-functional convention). (3) Deleted tokens.css; base/components.css consume brand tokens directly (chip/status colors from the semantic washes). Button/dot markup moved to the brand class contract (`btn-primary`/`btn-danger`/`dot dot-live`).
+**Impact / Risk:** Ceiling env changes behavior for registered paths that are subdirectories of a repo — previously they silently worked via upward discovery; now they must point at the repo root (matches `discover_repos`, which only registers roots). Theme now follows OS light/dark instead of always-dark. Google-Fonts `@import` degrades to system fallbacks offline.
+**Outcome:** ruff/format/mypy clean; 254 tests, 100% line+branch coverage; all six issues verified end-to-end in Chrome against the example registry plus a scratch git repo.
+
+### Entry 48
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-12T00:00:00Z
+**Task:** roundtable Plans-tab row click + rendered-markdown styling fixes.
+
+**Context:** (1) The reported symptom (plan row bounces to the board) traced to a router defect, not the row handler: `register()` regex-escaped the pattern before substituting placeholders, corrupting `{slug...}` so the plan-detail route never matched and every plan URL fell through to the `#/board` fallback (it also pushed catch-all names out of pattern order). The user asked for different row behavior (Files tab + open file), which alone would sidestep the broken route — but the session view's "View" links still target `#/repo/{name}/plan/{slug}`, so the defect stays user-facing. (2) The row's new Files-tab handoff needs the repo's planning dir, which the plans API response does not carry.
+**Decision:** (1) Fixed the router (single-pass placeholder→sentinel, then escape, then sentinel→group) in addition to the requested row-behavior change; the plan-detail view stays and is now actually reachable from sessions. (2) Reused the Round tab's existing handoff convention (`rt-tab`/`rt-open` sessionStorage keys) and fetched `/api/config` in the Plans tab's existing Promise.all to resolve `planning_dir` (same source and fallback round.js uses), rather than extending the plans API.
+**Impact / Risk:** Router fix affects all routes — verified repo/session/plan patterns compile and match as before. Extra `/api/config` call per Plans-tab render (localhost, negligible). Markdown spacing rules apply to every `.md-body` surface (file view, plan view, editor preview), not just the file pane.
+**Outcome:** node --check clean on edited JS; route-regex behavior verified with a scratch script (names in order, multi-segment slugs match, repo route unaffected).
+
+### Entry 49
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-12T19:40:28Z
+**Task:** roundtable UI design pass (ceh-web-frontend:ui-design), keeping the Tidewater theme.
+
+**Context:** The design pass surfaced two contract violations rather than a look-and-feel change: the top nav never marked the active section (nav rule: active location must be visibly marked), and several views hardcoded raw px inline styles for spacing/width instead of `--space-*` tokens (token-compliance rule). Fixing the nav required deciding which section each hash prefix belongs to, since repo/session/plan routes have no direct top-nav entry of their own.
+**Decision:** Repo, plan, and session routes (`#/repo/*`, `#/session/*`) mark "Board" active since they're only reached from the board; `#/rounds/{id}` (round history detail) marks "History" since it's reached from the History tab; `#/round` marks itself. Added a small token-only utility set to base.css (`.bar`, `.mt-3`, `.mb-2`, `.my-1..4`, `.pl-2`) and a component-scoped `.input-file-path` class, then replaced every hardcoded-px inline style in repo.js/review.js/round.js with them. `.editor .bar` now builds on the generic `.bar` instead of duplicating its flex/gap/align rules. No visual redesign, no template swap — Tidewater's tokens and class contract were already in place from a prior pass.
+**Impact / Risk:** Pure CSS/JS refactor of existing surfaces; no markup structure or behavior changed beyond the nav highlight itself. Low risk — verified with `node --check` on every edited JS file.
+**Outcome:** node --check clean on repo.js, review.js, round.js, router.js. Not run: browser verification (no dev-server/browser step taken this session — state so explicitly).
+
+### Entry 50
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-12T20:10:59Z
+**Task:** roundtable follow-up UI fixes: nav highlight, Sessions tab, diff-tab list formatting, Files-tab frontmatter table, plan-view section separation.
+
+**Context:** The Entry-49 nav fix reused the class name `is-active`, which collides with brand.css's global `.is-active` active-edge rule (left border + wash) — that rule fired *in addition to* the topnav-specific bottom border, producing the reported "left and bottom line" mess. The Files tab has no server-side frontmatter split (unlike the Plan view, which gets `meta`/`body` pre-split from the backend), so rendering its frontmatter as a table required a client-side parser.
+**Decision:** (1) Renamed the nav class to `current` (topnav-scoped only) and replaced the border treatment with a pill (`color: var(--secondary); background: var(--secondary-wash)`), avoiding the brand class collision entirely. (2) Split the Sessions listing out of the Plans-tab render into its own `renderSessions()`, added "Sessions" to the tab list. (3) Restored `ul/ol` indentation in base.css (the brand reset zeroes it; only `.md-body` had a local fix, so the diff tab's plain `<ul>` of untracked files rendered with markers past the left edge). (4) Added `RT.md.splitFrontmatter`/`metaTable`/`intoWithFrontmatter` to markdown.js, mirroring `roundtable/frontmatter.py`'s flat `key: value` parser client-side (display-only, no backend change — the Files tab serves arbitrary files, not just plans, so this stays in the generic markdown renderer rather than the plan-specific API). Wired into both Files-tab render paths (view + editor preview). Also switched plan.js to the new shared `metaTable` helper for consistency. (5) Wrapped the plan view's metadata/body/history sections each in `.card` with `my-4` spacing, giving them visible boundaries instead of unbroken flowing text.
+**Impact / Risk:** Client-side frontmatter parser duplicates frontmatter.py's logic (documented cross-reference, JS can't import Python); a future format change to the Python parser needs a matching JS update — acceptable given it's a small, stable, read-only format. List-indentation fix is global (any bare `<ul>`/`<ol>` in the app), reviewed for conflicts — none found outside `.md-body`'s already-more-specific override.
+**Outcome:** node --check clean on repo.js, plan.js, markdown.js, router.js. Not run: browser verification — state so explicitly.
+
+### Entry 51
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-12T20:27:49Z
+**Task:** roundtable UI follow-ups: card cursor bug, Files-tab 2-column redesign, back-navigation redesign.
+
+**Context:** (1) The plan-view cards from Entry 49 inherited `cursor: pointer` and a hover border from `.card`, because that rule was written for the board's clickable repo cards but targets the bare `.card` class — every non-clickable card elsewhere picks it up too. (2) The Files tab's header (new-file input) sat above both columns rather than in the left one, and the right pane repeated the filename in an `<h3>` even though the tree already shows it — the user wants selection state to live only in the tree. (3) Four views (repo, plan, session, round-history-detail) all embed a "◂ back" link inline inside the page's `<h2>`, mixing navigation with the title on one line — same pattern in all four, so fixed all four for consistency rather than only the three named.
+**Decision:** (1) Scoped the board's card rules to `.board .card`/`.board .card:hover`/`.board .card h3`/`.board .card .git-line` — `.card` alone (brand.css) stays a plain static surface. (2) Moved the new-file bar into a `.tree-col` alongside the tree (CSS grid `.files-wrap` now holds exactly two children: `.tree-col` and `.file-pane`); dropped the repeated filename header from both the viewer and the editor; added a `rel -> button` map (`fileButtons`) so `selectInTree(rel)` can toggle a `.selected` class on the matching tree button (secondary-wash pill, same visual language as the nav's `current` state). Also added `RT.md.metaCard()` (table wrapped in a `.card` with an eyebrow label) and used it from both `intoWithFrontmatter` (Files tab) and plan.js, so the two frontmatter-table presentations match. (3) Replaced the inline `◂ {parent}` anchor in each of those four views with a standalone `.back-link` element above the `<h2>` (small, muted, arrow prefix, hover picks up `--secondary`) — title and back-navigation are now visually and structurally separate.
+**Impact / Risk:** `.board .card` rescoping is pure narrowing — no board behavior changes, only removes leakage. Files tab: the pending sessionStorage handoff (`rt-open`) still calls `openFile` normally, so tree highlighting degrades gracefully (no highlight) when the target file's tree node hasn't been expanded/rendered yet — pre-existing limitation, not a regression. Dropped the "(markdown)" filename-adjacent hint in the editor; no functional loss (Source/Rendered toggle only appears for .md files regardless).
+**Outcome:** node --check clean on repo.js, plan.js, session.js, history.js, markdown.js, router.js. Not run: browser verification — state so explicitly.
+
+### Entry 52
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-12T20:38:08Z
+**Task:** roundtable: pretty diff-tab renderer using git's own patch output; round-view plan link goes straight to the plan view.
+
+**Context:** The user asked about reusing cross-repo-file-diff's (`Vantage.Compare`) diff renderer; that app diffs two full file texts directly (hand-rolled LCS), whereas roundtable's Diff tab already receives a ready-made unified-diff patch from `git diff` across the whole working tree. Reusing Vantage's algorithm as-is would have meant switching roundtable's data flow from git's patch to per-file before/after text (new backend endpoint, per-file UI) — flagged as extra work for no real gain, and the user chose to keep using `git diff`'s patch text and just render it well.
+**Decision:** Added `static/js/diff.js` (`RT.diff.parse`/`render`, no deps) — a small unified-diff parser (`diff --git`/`@@ hunk @@`/`+`/`-`/context lines, binary-file detection) that renders each changed file as a `.diff-file` card with a two-gutter (old/new line number) table, styled with the diff-relevant Tidewater state tokens (`--success-wash`/`--danger-wash`). Replaced the old flat `<pre>` + colored-`<span>`-per-line rendering in `repo.js`'s `renderDiff`. Kept the existing `git diff --stat` summary block above it (still useful as an at-a-glance overview). For the round-view plan link: dropped the Files-tab handoff (`rt-tab`/`rt-open` sessionStorage keys, which existed only to fake a "jump to this plan" flow) and linked straight to the real plan route (`#/repo/{project}/plan/{slug}`), which the Entry-50 router fix made reachable. Removed the now-dead `/api/config` fetch and `planningDirs` map from `round.js` (they existed only to build the old Files-tab handoff path).
+**Impact / Risk:** Diff parser is regex-based on git's own unified-diff format; malformed/exotic patches (e.g. combined diffs from a merge, which this app doesn't produce since it only diffs the working tree) fall outside scope and would render as an empty file card — acceptable given the only producer is `git diff` on a two-parent-free working tree. No backend changes.
+**Outcome:** node --check clean on diff.js, repo.js, round.js. Parser verified against a hand-built sample patch (context/add/del line numbering, binary-file marker) via a throwaway node script — correct. Not run: browser verification — state so explicitly.
+
+### Entry 53
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-12T00:00:00Z
+**Task:** ui-design pass on apps/multi-repo-workspace ("make it clean, modern, intuitive")
+
+**Context:** The app already ships a mature, token-disciplined Tidewater UI that had been through a prior visual review. "Clean/modern/intuitive" is open-ended and could mean anything from a token tweak to a full re-layout (e.g. converting the top-nav to an app-shell sidebar). Scope was the fork.
+**Decision:** Kept the archetype (top-nav is legitimate for 3 destinations) and the existing markup; made a targeted, CSS-only typographic pass in the shared stylesheets. Added a `--measure: 72ch` reading-width token; capped rendered-markdown prose blocks to it (code/tables/images opt out); tightened the frontmatter key/value table; and hugged the reading-view cards (`.card.my-4`, `.file-pane .md-body`) to the measure so prose (not the 1200px surface) sets the width. No JS/markup changes — everything cascades to plan, file, session, and diff surfaces.
+**Impact / Risk:** Low. Purely presentational; no behavior/data change. `.card.my-4` and `.eyebrow + table` selectors verified to hit only reading-view cards (board uses `.card`, orders use `.order-card`), so board/round/history layouts are untouched. Verified live in-browser: measure resolves, cards hug, all four views render.
+**Outcome:** Plan and file views now read as coherent document columns at a comfortable line length; metadata reads as a tight block. Board/round/history unchanged by design.

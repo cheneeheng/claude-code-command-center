@@ -1,0 +1,12 @@
+{
+  "$schema": "../roundtable/schema/roundtable.schema.json",
+  "port": 8640,
+  "defaults": {
+    "model": "claude-sonnet-4-6",
+    "max_turns": 40
+  },
+  "projects": [
+    { "name": "web-app", "path": "examples/sample-repos/web-app" },
+    { "name": "api-service", "path": "examples/sample-repos/api-service" }
+  ]
+}

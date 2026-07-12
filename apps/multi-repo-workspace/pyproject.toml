@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "roundtable"
+version = "0.1.0"
+description = "Turn-based multi-repo Claude Code workspace: board, in-app planning, rounds of headless runs, review."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["claude-usage"]
+
+[project.scripts]
+roundtable = "roundtable.cli:main"
+
+[tool.uv.sources]
+claude-usage = { path = "../../libs/claude-usage", editable = true }
+
+[tool.setuptools]
+packages = ["roundtable"]
+
+[tool.setuptools.package-data]
+roundtable = ["static/**/*", "schema/*.json"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.15",
+    "mypy>=1.14",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=roundtable --cov-report=term-missing --cov-fail-under=100"
+
+[tool.coverage.run]
+branch = true
+source = ["roundtable"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]

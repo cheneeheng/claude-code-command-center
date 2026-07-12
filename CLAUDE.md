@@ -9,7 +9,8 @@ A monorepo of independent projects centered on Claude Code, grouped by category:
 
 ```
 apps/      full applications you run (cross-repo-file-diff, multi-repo-plan-runner,
-           per-project-plugin-toggler, usage-dashboard, claude-component-browser)
+           multi-repo-workspace, per-project-plugin-toggler, usage-dashboard,
+           claude-component-browser)
 tools/     single-purpose utilities & scripts (statusline-hook,
            session-name-date-prefixer, file-sync,
            scheduled-session-digests, usage-report)
@@ -73,7 +74,9 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir
   for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in),
   `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout),
-  `C4_PLAN_PRICE_USD` (usage-dashboard monthly plan price for the Plan Value card). OS-provided
+  `C4_PLAN_PRICE_USD` (usage-dashboard monthly plan price for the Plan Value card),
+  `C4_ROUNDTABLE_REGISTRY` (multi-repo-workspace registry path override),
+  `C4_ROUNDTABLE_HOME` (multi-repo-workspace state dir, default `~/.roundtable`). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
 - **Scheduled tasks:** a member that registers a Windows Task Scheduler task uses its own folder

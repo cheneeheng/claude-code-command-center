@@ -1,0 +1,234 @@
+/* App components on the Tidewater token + class contract (brand.css). */
+
+/* --- top bar ------------------------------------------------------------- */
+.topbar {
+  display: flex; align-items: center; gap: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.brand {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-300);
+  color: var(--fg);
+}
+.brand:hover { color: var(--fg); }
+.topnav { display: flex; gap: var(--space-4); }
+.topnav a {
+  color: var(--fg-muted);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+}
+.topnav a:hover { color: var(--fg); text-decoration: none; }
+/* "current" (not the brand's global .is-active, which is the left-edge card idiom
+   and doesn't read cleanly on an inline horizontal nav item). */
+.topnav a.current { color: var(--secondary); background: var(--secondary-wash); }
+.roundbar { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
+.roundbar .round-link { color: var(--fg); }
+.roundbar .last-done { color: var(--fg-muted); font-size: var(--fs-75); }
+
+/* --- back link ------------------------------------------------------------ */
+/* A small navigational link above the page title — separate from it, not
+   crammed into the same line as the entity name. */
+.back-link {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  font-size: var(--fs-75); color: var(--fg-muted);
+  margin-bottom: var(--space-1);
+}
+.back-link:hover { color: var(--secondary); text-decoration: none; }
+
+/* --- banner ---------------------------------------------------------------- */
+.banner {
+  display: flex; align-items: center; gap: var(--space-3);
+  background: var(--danger-wash); color: var(--danger);
+  border-bottom: 1px solid var(--danger);
+  padding: var(--space-2) var(--space-4);
+}
+/* display:flex above would defeat the [hidden] attribute — restore it. */
+.banner[hidden] { display: none; }
+.banner button {
+  background: none; border: none; color: var(--danger);
+  font-size: var(--fs-300); margin-left: auto;
+}
+
+/* --- board ------------------------------------------------------------------ */
+/* Scoped to .board — plain .card is reused elsewhere (plan view) for a static,
+   non-clickable surface and must not inherit the pointer cursor / hover state. */
+.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-3); }
+.board .card { cursor: pointer; padding: var(--space-3) var(--space-4); } /* surface from brand .card */
+.board .card:hover { border-color: var(--secondary); }
+.board .card h3 { margin: 0 0 var(--space-2); display: flex; align-items: center; gap: var(--space-2); }
+.board .card .git-line {
+  color: var(--fg-muted); font-family: var(--font-mono); font-size: var(--fs-75);
+  display: flex; gap: var(--space-3); flex-wrap: wrap;
+}
+.warn-strip {
+  background: var(--warning-wash); color: var(--warning);
+  border-radius: var(--radius-sm); padding: var(--space-1) var(--space-2);
+  margin-top: var(--space-2); font-size: var(--fs-75);
+}
+.chips { display: flex; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
+.chip {
+  font-family: var(--font-mono); font-size: var(--fs-50);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-sm); padding: 0.08rem 0.4rem;
+  border: 1px solid var(--border); color: var(--fg-muted); background: var(--bg);
+  white-space: nowrap;
+}
+.chip.ready { background: var(--success-wash); color: var(--success); border-color: var(--success); }
+.chip.running { background: var(--warning-wash); color: var(--warning); border-color: var(--warning); }
+.chip.implemented { background: var(--secondary-wash); color: var(--secondary); border-color: var(--secondary); }
+.chip.state-queued { background: var(--surface-2); }
+.chip.state-running { background: var(--warning-wash); color: var(--warning); border-color: var(--warning); }
+.chip.state-succeeded { background: var(--success-wash); color: var(--success); border-color: var(--success); }
+.chip.state-failed, .chip.state-stopped { background: var(--danger-wash); color: var(--danger); border-color: var(--danger); }
+.chip.state-skipped { background: var(--surface-2); color: var(--fg-subtle); }
+.stub-badge {
+  font-size: var(--fs-50); color: var(--warning);
+  border: 1px dashed var(--warning); border-radius: var(--radius-sm); padding: 0 var(--space-1);
+}
+
+/* --- tabs -------------------------------------------------------------------- */
+.tabs { display: flex; gap: var(--space-1); border-bottom: 1px solid var(--border); margin: var(--space-3) 0; }
+.tabs button {
+  border: none; border-bottom: 2px solid transparent; border-radius: 0;
+  background: none; color: var(--fg-muted); padding: var(--space-2) var(--space-4);
+}
+.tabs button:hover { background: none; border-color: transparent; border-bottom-color: var(--border-strong); color: var(--fg); }
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+
+/* --- files tree ----------------------------------------------------------------- */
+/* Strict two columns: left is navigation (tree + create-file), right is the
+   single file surface — the file's identity lives only in the tree selection. */
+.files-wrap { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-3); align-items: start; }
+.tree-col { display: flex; flex-direction: column; gap: var(--space-2); }
+.input-file-path { max-width: 340px; }
+.tree {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: var(--space-2);
+  max-height: 70vh; overflow: auto;
+}
+.tree button {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; padding: 2px var(--space-2);
+  border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: var(--fs-75);
+}
+.tree button:hover { background: var(--surface-2); border-color: transparent; }
+.tree button.selected { background: var(--secondary-wash); color: var(--secondary); }
+.file-pane { min-width: 0; }
+.file-pane .md-body {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5);
+  max-width: calc(var(--measure) + 2 * var(--space-5));
+}
+/* --- rendered markdown ---------------------------------------------------------- */
+/* The brand reset zeroes all margins/paddings; restore document flow inside every
+   rendered-markdown surface (file view, plan view, editor preview, chat). */
+.md-body p, .md-body ul, .md-body ol, .md-body pre, .md-body table,
+.md-body blockquote { margin-block: var(--space-3); }
+.md-body h1, .md-body h2, .md-body h3,
+.md-body h4, .md-body h5, .md-body h6 { margin-block: var(--space-5) var(--space-2); }
+.md-body > :first-child { margin-top: 0; }
+.md-body > :last-child { margin-bottom: 0; }
+.md-body ul, .md-body ol { padding-inline-start: var(--space-6); }
+.md-body li { margin-block: var(--space-1); }
+/* Cap the prose measure so document text reads at a comfortable line length. Code
+   blocks, tables and images opt out — they earn the full surface width. */
+.md-body > p, .md-body > ul, .md-body > ol, .md-body > blockquote,
+.md-body > h1, .md-body > h2, .md-body > h3,
+.md-body > h4, .md-body > h5, .md-body > h6 { max-width: var(--measure); }
+.md-body blockquote {
+  border-left: 3px solid var(--border-strong);
+  padding-left: var(--space-3);
+  color: var(--fg-muted);
+}
+.md-body hr { border: none; border-top: 1px solid var(--border); margin-block: var(--space-4); }
+.md-body img { max-width: 100%; }
+/* Frontmatter key/value table (eyebrow label + table) reads as a tight block, not
+   stretched across the whole card. The lifecycle table is preceded by an <h3>, so
+   this adjacency selector leaves it full width. */
+.card > .eyebrow + table { max-width: var(--measure); }
+.card > .eyebrow + table th { width: 1%; white-space: nowrap; padding-right: var(--space-6); }
+/* Reading-view cards (plan body/metadata/lifecycle, rendered-file frontmatter) hug
+   the reading measure rather than stretching the full 1200px column — the prose,
+   not the surface, sets the width. `.card.my-4` is used only by these reading cards. */
+.card.my-4 { max-width: calc(var(--measure) + 2 * var(--space-5)); }
+
+.editor textarea { min-height: 50vh; font-family: var(--font-mono); }
+.editor .bar { margin-block: var(--space-2); }
+.dirty-dot { color: var(--warning); }
+
+/* --- diff --------------------------------------------------------------------------- */
+.diff-file { margin-block: var(--space-4); }
+.diff-file-head {
+  font-family: var(--font-mono); font-size: var(--fs-75); font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2); border: 1px solid var(--border); border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+.diff-table {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--font-mono); font-size: var(--fs-75);
+  border: 1px solid var(--border);
+}
+.diff-table td { padding: 1px var(--space-2); vertical-align: top; border-bottom: none; }
+.diff-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff-num {
+  width: 1%; text-align: right; color: var(--fg-subtle);
+  user-select: none; border-right: 1px solid var(--border);
+}
+.diff-marker { width: 1%; text-align: center; user-select: none; color: var(--fg-subtle); }
+.diff-hunk-row td {
+  background: var(--surface-2); color: var(--fg-muted);
+  padding-block: var(--space-1); border-right: none;
+}
+.diff-row-add { background: var(--success-wash); }
+.diff-row-add .diff-marker { color: var(--success); }
+.diff-row-del { background: var(--danger-wash); }
+.diff-row-del .diff-marker { color: var(--danger); }
+
+/* --- session chat ------------------------------------------------------------------- */
+.chat { max-width: 860px; margin: 0 auto; }
+.turn { margin: var(--space-4) 0; }
+.msg-user {
+  background: var(--secondary-wash); border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3); margin-left: 20%; white-space: pre-wrap;
+}
+.msg-claude { padding: var(--space-1) 0; }
+.msg-tool { color: var(--fg-muted); font-family: var(--font-mono); font-size: var(--fs-75); padding: 1px 0; }
+.msg-status { color: var(--fg-muted); font-size: var(--fs-75); }
+.msg-error { color: var(--danger); }
+.turn-foot {
+  color: var(--fg-muted); font-size: var(--fs-50);
+  border-top: 1px dashed var(--border); margin-top: var(--space-2); padding-top: var(--space-1);
+}
+.stream-pane { border-left: 3px solid var(--secondary); padding-left: var(--space-3); margin: var(--space-3) 0; }
+.chat-input { display: flex; gap: var(--space-2); margin-top: var(--space-4); align-items: flex-start; }
+.chat-input textarea { min-height: 70px; }
+.cost-chip {
+  border: 1px solid var(--border); border-radius: var(--radius-full);
+  padding: 1px var(--space-3); font-size: var(--fs-50);
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg-muted);
+}
+.plan-banner {
+  background: var(--success-wash); border: 1px solid var(--success);
+  border-radius: var(--radius-md); padding: var(--space-2) var(--space-3);
+  margin: var(--space-3) 0; display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap;
+}
+
+/* --- round / review -------------------------------------------------------------------- */
+.order-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0; box-shadow: var(--shadow-sm);
+}
+.order-card .head { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+.order-card .out { max-height: 40vh; overflow-y: auto; }
+.carried {
+  background: var(--surface); border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); margin: var(--space-3) 0;
+}
+.review-actions { display: flex; gap: var(--space-3); align-items: center; margin-top: var(--space-2); flex-wrap: wrap; }
+.commit-box { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+details > summary { cursor: pointer; color: var(--fg-muted); }

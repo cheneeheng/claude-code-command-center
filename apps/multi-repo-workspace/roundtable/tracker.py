@@ -1,40 +1,41 @@
-"""Implementation sidecar: lifecycle status + transition history. docket OWNS these.
+"""Implementation sidecar: lifecycle status + transition history. The app OWNS these.
 
-One JSON file per plan under <repo>/.agents_workspace/implementation/<slug>.json,
-mirroring the plan's relative path. A missing sidecar means `ready` with empty history.
+One JSON file per plan under <repo>/<implementation_dir>/<slug>.json, mirroring the
+plan's relative path. A missing sidecar means `ready` with empty history.
 
 Cross-reference: the on-disk sidecar format (keys, location, allowed statuses) is
-byte-compatible with roundtable's (apps/multi-repo-workspace/roundtable/tracker.py) so
-both apps can point at the same repos — registered in docs/shared-plugin-logic.md.
-Trigger vocabularies differ (docket: headless|manual|startup_reset; roundtable:
-round|manual|startup_reset); both sides treat `trigger` as an opaque display string.
+byte-compatible with docket's (apps/multi-repo-plan-runner/docket/tracker.py) so both
+apps can point at the same repos — registered in docs/shared-plugin-logic.md. Trigger
+vocabularies differ (roundtable: round|manual|startup_reset; docket:
+headless|manual|startup_reset); both sides treat `trigger` as an opaque display string.
 """
 
 from __future__ import annotations
 
 import json
-import os
-import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
+
+from roundtable.registry import Project, atomic_write_json
 
 VALID_STATUS = ("ready", "running", "implemented")
 
-ALLOWED = {  # (from, to): {triggers}  — the full lifecycle table from SKELETON §02
-    ("ready", "running"): {"headless"},
-    ("running", "implemented"): {"headless"},
-    ("running", "ready"): {"headless", "startup_reset"},
+ALLOWED: dict[tuple[str, str], set[str]] = {  # (from, to): {triggers}
+    ("ready", "running"): {"round"},
+    ("running", "implemented"): {"round"},
+    ("running", "ready"): {"round", "startup_reset"},
     ("ready", "implemented"): {"manual"},
     ("implemented", "ready"): {"manual"},
 }
 
 
-def sidecar_path(project, slug: str) -> Path:
+def sidecar_path(project: Project, slug: str) -> Path:
     """<repo>/<implementation_dir>/<slug>.json — mirrors the plan's path."""
     return Path(project.path) / project.implementation_dir / f"{slug}.json"
 
 
-def read_record(project, slug: str) -> dict:
+def read_record(project: Project, slug: str) -> dict[str, Any]:
     """Load the sidecar JSON. Missing file -> {slug, status:"ready", history:[]}.
 
     An unrecognised status is defensively treated as `ready`.
@@ -43,7 +44,7 @@ def read_record(project, slug: str) -> dict:
     if not path.is_file():
         return {"slug": slug, "status": "ready", "history": []}
     try:
-        rec = json.loads(path.read_text(encoding="utf-8"))
+        rec: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return {"slug": slug, "status": "ready", "history": []}
     if rec.get("status") not in VALID_STATUS:
@@ -54,19 +55,19 @@ def read_record(project, slug: str) -> dict:
 
 
 def set_status(
-    project,
+    project: Project,
     slug: str,
     to: str,
     *,
     trigger: str,
     run_id: str | None = None,
     rc: int | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """Validate (current, to) against ALLOWED + the trigger, append a history record,
-    and atomically write the sidecar. Returns the updated record. Raises ValueError on an
-    illegal transition or disallowed trigger."""
+    and atomically write the sidecar. Returns the updated record. Raises ValueError on
+    an illegal transition or disallowed trigger."""
     rec = read_record(project, slug)
-    current = rec["status"]
+    current: str = rec["status"]
 
     edge = (current, to)
     if edge not in ALLOWED:
@@ -93,30 +94,15 @@ def set_status(
         }
     )
 
-    _atomic_write(sidecar_path(project, slug), rec)
+    atomic_write_json(sidecar_path(project, slug), rec)
     return rec
 
 
-def _atomic_write(path: Path, rec: dict) -> None:
-    """Write to a temp file in the same directory, then os.replace over the target."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + f".tmp.{os.getpid()}")
-    tmp.write_text(json.dumps(rec, indent=2), encoding="utf-8")
-    # On Windows a just-written target can be transiently locked by AV/indexer, making the
-    # atomic os.replace fail with PermissionError; retry briefly before giving up.
-    for _ in range(9):
-        try:
-            os.replace(tmp, path)
-            return
-        except PermissionError:
-            time.sleep(0.05)
-    os.replace(tmp, path)  # final attempt; let a persistent PermissionError propagate
-
-
-def reset_stale_runs(projects) -> list:
+def reset_stale_runs(projects: list[Project]) -> list[tuple[str, str]]:
     """Startup recovery: flip every sidecar reading `running` back to `ready`
     (trigger=startup_reset). In-memory runs die with the process, so any persisted
-    `running` is orphaned. Returns the list of (project_name, slug) reset."""
+    `running` is orphaned — docket-written ones included (same format). Returns the
+    list of (project_name, slug) reset."""
     reset: list[tuple[str, str]] = []
     for project in projects:
         impl_root = Path(project.path) / project.implementation_dir

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+
+# Test / coverage artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+
+# OS / editor
+Thumbs.db
+.DS_Store
+*.swp
+
+# Environment
+.env
+.env.local
+
+# Runnable example: lifecycle sidecars are runtime state — keep the example at "ready"
+examples/sample-repos/*/.agents_workspace/implementation/
