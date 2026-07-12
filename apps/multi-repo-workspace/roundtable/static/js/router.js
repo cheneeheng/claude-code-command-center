@@ -5,11 +5,14 @@ RT.router = {
   routes: [],
   register(pattern, handler) {
     // pattern: e.g. "#/repo/{name}" or "#/repo/{name}/plan/{slug...}"
+    // Placeholders become sentinels first (one pass, so names stay in pattern
+    // order), then literals are regex-escaped, then sentinels become groups.
     const names = [];
     const rx = pattern
+      .replace(/\{(\w+)(\.\.\.)?\}/g, (_, n, dots) => { names.push(n); return dots ? "\x01" : "\x02"; })
       .replace(/[.*+?^$()[\]\\]/g, (c) => "\\" + c)
-      .replace(/\{(\w+)\.\.\.\}/g, (_, n) => { names.push(n); return "(.+)"; })
-      .replace(/\{(\w+)\}/g, (_, n) => { names.push(n); return "([^/]+)"; });
+      .replace(/\x01/g, "(.+)")
+      .replace(/\x02/g, "([^/]+)");
     this.routes.push({ rx: new RegExp(`^${rx}$`), names, handler });
   },
   dispatch() {
