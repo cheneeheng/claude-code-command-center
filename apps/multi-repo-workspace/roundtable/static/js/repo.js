@@ -43,13 +43,10 @@ RT.views.repo = function repoView(main, { name }) {
   // --- Plans tab -------------------------------------------------------------
 
   async function renderPlans() {
-    const [plansRes, sessionsRes, cfg] = await Promise.all([
+    const [plansRes, sessionsRes] = await Promise.all([
       RT.api.get(`/api/repos/${encodeURIComponent(name)}/plans`),
       RT.api.get(`/api/sessions?project=${encodeURIComponent(name)}`),
-      RT.api.get("/api/config"),
     ]);
-    const project = cfg.projects.find((p) => p.name === name);
-    const planningDir = (project && project.planning_dir) || ".agents_workspace/planning";
     const wrap = h("div", {});
 
     // Plan with Claude: inline prompt panel -> POST /api/sessions.
@@ -87,15 +84,7 @@ RT.views.repo = function repoView(main, { name }) {
           }
           return h("tr", {
             style: "cursor:pointer",
-            onclick: () => {
-              // Open the plan file in the Files tab (same pending-open handoff
-              // the Round tab uses).
-              sessionStorage.setItem(`rt-open:${name}`, `${planningDir}/${p.slug}.md`);
-              active = "Files";
-              sessionStorage.setItem(`rt-tab:${name}`, active);
-              renderTabs();
-              renderPanel();
-            },
+            onclick: () => { location.hash = `#/repo/${encodeURIComponent(name)}/plan/${p.slug}`; },
           },
             h("td", {}, p.title),
             h("td", {}, h("code", {}, p.slug)),
