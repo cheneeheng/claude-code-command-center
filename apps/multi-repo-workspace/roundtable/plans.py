@@ -23,8 +23,12 @@ class Plan:
     slug: str  # relative path under planning/, sans .md; may contain "/"
     title: str
     status: str  # ready|running|implemented — sourced from the sidecar, NOT the plan
-    body: str = ""  # "" for list summaries; frontmatter-stripped markdown from read_plan
-    meta: dict[str, str] = field(default_factory=dict)  # frontmatter, for a GitHub-style table
+    body: str = (
+        ""  # "" for list summaries; frontmatter-stripped markdown from read_plan
+    )
+    meta: dict[str, str] = field(
+        default_factory=dict
+    )  # frontmatter, for a GitHub-style table
     history: list[dict[str, Any]] = field(default_factory=list)
     mtime: int = 0  # plan file st_mtime (s) — the Plans tab's "updated" column
 

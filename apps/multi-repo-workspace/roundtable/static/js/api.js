@@ -62,6 +62,31 @@ RT.h = function h(tag, attrs, ...children) {
   return el;
 };
 
+// Inline icon: a single solid path on a 24px grid, drawn in currentColor.
+RT.icon = function icon(pathD) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("class", "icon");
+  svg.setAttribute("aria-hidden", "true");
+  const path = document.createElementNS(NS, "path");
+  path.setAttribute("d", pathD);
+  path.setAttribute("fill", "currentColor");
+  svg.append(path);
+  return svg;
+};
+RT.icons = {
+  trash: "M9 3v1H4v2h16V4h-5V3H9zM6 8v13h12V8H6zm3 2h2v9H9v-9zm4 0h2v9h-2v-9z",
+};
+
+// Project identity tile: initial letter on a data-ramp tint (stable name hash).
+RT.monogram = function monogram(name) {
+  const ramp = ([...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 6) + 1;
+  return RT.h("span", {
+    class: "monogram", style: `--mono-c: var(--data-${ramp})`, "aria-hidden": "true",
+  }, (name[0] || "?").toUpperCase());
+};
+
 RT.fmt = {
   ago(tsSeconds) {
     if (!tsSeconds) return "—";

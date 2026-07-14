@@ -286,6 +286,7 @@ class Handler(BaseHTTPRequestHandler):
                         if s in ("succeeded", "failed", "stopped", "skipped")
                     ),
                     "carried_followups": len(current["carried_followups"]),
+                    "cost_est_usd": current["cost_est_usd"],
                 },
                 "last_done": None
                 if done is None

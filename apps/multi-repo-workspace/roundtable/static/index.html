@@ -10,14 +10,25 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#/board">roundtable</a>
+    <a class="brand" href="#/board">
+      <!-- Brand mark: a round table with seats around it. -->
+      <svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <circle class="seat" cx="12" cy="3" r="1.7"/>
+        <circle class="seat" cx="20.6" cy="9.2" r="1.7"/>
+        <circle class="seat" cx="17.3" cy="19.3" r="1.7"/>
+        <circle class="seat" cx="6.7" cy="19.3" r="1.7"/>
+        <circle class="seat" cx="3.4" cy="9.2" r="1.7"/>
+      </svg>
+      roundtable
+    </a>
     <nav class="topnav" aria-label="Main">
       <a href="#/board">Board</a>
       <a href="#/round">Round</a>
       <a href="#/history">History</a>
     </nav>
-    <div id="roundbar" class="roundbar"></div>
   </header>
+  <div id="rounddock" class="round-dock" hidden></div>
   <div id="banner" class="banner" hidden>
     <span id="banner-text"></span>
     <button id="banner-dismiss" type="button" aria-label="Dismiss error">×</button>

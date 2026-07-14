@@ -6,6 +6,9 @@
   --measure: 72ch;
 }
 main { max-width: 1200px; margin: 0 auto; padding: var(--space-4); }
+/* Thin, themed scrollbars everywhere (standard properties; in Chromium 121+
+   these replace the chunky arrowed default). */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 pre {
   background: var(--surface-2);
   border: 1px solid var(--border);

@@ -102,6 +102,7 @@ def test_api_board_real_state(srv):
     assert card["sessions"] == {"streaming": 0}
     assert card["round"] is None
     assert board["round"]["number"] == 1 and board["round"]["status"] == "open"
+    assert board["round"]["cost_est_usd"] is None
     assert board["last_done"] is None
 
 
