@@ -8,7 +8,7 @@ RT.views.board = function boardView(main) {
   main.replaceChildren(h("div", { class: "busy" }, "loading board…"));
 
   function card(p) {
-    const head = h("h3", {}, p.name);
+    const head = h("h3", {}, RT.monogram(p.name), p.name);
     if (p.sessions && p.sessions.streaming > 0) {
       head.append(h("span", { class: "dot dot-live", title: "planning session streaming", "aria-label": "planning session streaming" }));
     }
@@ -52,7 +52,10 @@ RT.views.board = function boardView(main) {
         "no projects configured — create a .roundtable.json (roundtable init --scan ~/repos)"));
       return;
     }
-    main.replaceChildren(grid);
+    main.replaceChildren(
+      h("span", { class: "eyebrow mb-3" },
+        `Projects · ${data.projects.length}`),
+      grid);
   }
 
   const listener = (ev) => render(ev.detail);

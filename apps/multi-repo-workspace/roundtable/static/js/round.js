@@ -7,10 +7,9 @@ RT.views.round = async function roundView(main) {
   main.replaceChildren(h("div", { class: "busy" }, "loading round…"));
   const rnd = await RT.api.get("/api/rounds/current");
 
-  const title = h("h2", {}, `Round ${rnd.number} `,
-    h("span", { class: "chip state-queued" }, rnd.status),
-    " ", h("span", { class: "cost-chip" }, `round cost: ${RT.fmt.costShort(rnd.cost_est_usd)}`));
-  const wrap = h("div", {}, title);
+  // No page title: the global round dock above already carries the round's
+  // identity, status, and cost.
+  const wrap = h("div", {});
 
   if (rnd.status === "open") renderOpen();
   else if (rnd.status === "executing") renderExecuting();
@@ -49,49 +48,42 @@ RT.views.round = async function roundView(main) {
     }
 
     const rows = rnd.orders.map((o) => {
-      const instr = h("input", {
-        type: "text",
-        value: o.instruction || "",
-        placeholder: "instruction override (blank = project template)",
+      const instr = h("textarea", {
+        rows: "1",
+        placeholder: "add instruction…",
+        title: "optional — blank uses the project's instruction template",
         onchange: async (ev) => {
           await RT.api.post(`/api/orders/${o.id}/instruction`,
             { instruction: ev.target.value.trim() || null });
         },
-      });
+      }, o.instruction || "");
       // Project opens the repo on its Plans tab; the plan opens the plan view directly.
       return h("tr", {},
-        h("td", {}, h("a", {
-          href: `#/repo/${encodeURIComponent(o.project)}`,
+        h("td", { class: "cell-project" }, RT.monogram(o.project), h("a", {
+          href: `#/repo/${encodeURIComponent(o.project)}`, title: o.project,
           onclick: () => { sessionStorage.setItem(`rt-tab:${o.project}`, "Plans"); },
         }, o.project)),
         h("td", {}, h("a", {
           href: `#/repo/${encodeURIComponent(o.project)}/plan/${o.slug}`,
         }, h("code", {}, o.slug))),
-        h("td", {}, instr),
-        h("td", {}, h("button", {
-          class: "btn-danger",
+        h("td", { class: "cell-instr" }, instr),
+        h("td", { class: "cell-remove" }, h("button", {
+          class: "btn-danger btn-sm remove-btn",
           onclick: async () => {
             await RT.api.del(`/api/rounds/current/orders/${o.id}`);
             RT.views.round(main);
           },
-        }, "Remove")));
+        }, RT.icon(RT.icons.trash), "Remove")));
     });
-    wrap.append(h("table", {},
-      h("thead", {}, h("tr", {}, ["Project", "Plan", "Instruction", ""].map((c) => h("th", {}, c)))),
-      h("tbody", {}, rows)));
-
-    // End Turn with a plain confirm step: the button arms, then confirms.
-    let armed = false;
-    const endBtn = h("button", {
-      class: "btn-primary mt-3",
-      onclick: async () => {
-        if (!armed) { armed = true; endBtn.textContent = "Confirm End Turn"; return; }
-        await RT.api.post("/api/rounds/current/end-turn");
-        RT.pollBoard();
-        RT.views.round(main);
-      },
-    }, "End Turn");
-    wrap.append(endBtn);
+    // End Turn itself lives in the global round dock; this panel is the queue.
+    wrap.append(
+      h("span", { class: "eyebrow" }, `Queued orders · ${rnd.orders.length}`),
+      h("p", { class: "panel-caption" },
+        "when the turn ends, each order runs its plan headlessly in its repo"),
+      h("div", { class: "card table-panel" },
+        h("table", { class: "orders-table" },
+          h("thead", {}, h("tr", {}, ["Project", "Plan", "Instruction", ""].map((c) => h("th", {}, c)))),
+          h("tbody", {}, rows))));
   }
 
   // --- executing -------------------------------------------------------------------
@@ -128,15 +120,14 @@ RT.views.round = async function roundView(main) {
       wrap.append(card);
     }
 
-    // 3s state poll while executing (SKELETON freshness model).
+    // 3s state poll while executing (SKELETON freshness model). Cost display
+    // lives in the round dock, refreshed by the board poll.
     const timer = setInterval(async () => {
       const fresh = await RT.api.get("/api/rounds/current");
       if (fresh.status !== "executing" ||
           JSON.stringify(fresh.orders.map((o) => o.state)) !== JSON.stringify(rnd.orders.map((o) => o.state))) {
         clearInterval(timer);
         RT.views.round(main);
-      } else {
-        title.querySelector(".cost-chip").textContent = `round cost: ${RT.fmt.costShort(fresh.cost_est_usd)}`;
       }
     }, 3000);
     RT.viewCleanup = () => clearInterval(timer);

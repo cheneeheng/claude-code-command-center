@@ -1,19 +1,24 @@
 /* App components on the Tidewater token + class contract (brand.css). */
 
 /* --- top bar ------------------------------------------------------------- */
+/* Chrome recedes to the page shade; the dock and cards carry the lighter
+   surface steps (depth ladder: bg chrome → surface dock → surface-2 cards). */
 .topbar {
   display: flex; align-items: center; gap: var(--space-5);
   padding: var(--space-3) var(--space-4);
-  background: var(--surface);
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 .brand {
+  display: inline-flex; align-items: center; gap: var(--space-2);
   font-family: var(--font-display);
   font-weight: var(--weight-bold);
   font-size: var(--fs-300);
   color: var(--fg);
 }
 .brand:hover { color: var(--fg); }
+.brand-mark { flex: none; }
+.brand-mark .seat { fill: var(--accent); }
 .topnav { display: flex; gap: var(--space-4); }
 .topnav a {
   color: var(--fg-muted);
@@ -24,9 +29,136 @@
 /* "current" (not the brand's global .is-active, which is the left-edge card idiom
    and doesn't read cleanly on an inline horizontal nav item). */
 .topnav a.current { color: var(--secondary); background: var(--secondary-wash); }
-.roundbar { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
-.roundbar .round-link { color: var(--fg); }
-.roundbar .last-done { color: var(--fg-muted); font-size: var(--fs-75); }
+/* --- round dock (floating card below the topbar, on every view) ----------- */
+/* A three-panel console split by hairline rules: round identity + lifecycle
+   flow left, the one global action center, last-round scoreboard right. Each
+   panel centers its own content. */
+.round-dock {
+  display: flex; align-items: stretch;
+  width: min(calc(1200px - 2 * var(--space-4)), calc(100% - 2 * var(--space-4)));
+  margin: var(--space-4) auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.round-dock[hidden] { display: none; }
+.dock-left, .dock-right {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+.dock-center {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-inline: 1px solid var(--border);
+}
+.dock-center:empty { display: none; }
+.dock-caption { font-size: var(--fs-50); color: var(--fg-muted); white-space: nowrap; }
+.dock-left .flow { margin-top: var(--space-2); }
+.round-line { display: flex; align-items: center; gap: var(--space-3); }
+/* The dock's focal point: the round number in the display serif. */
+.round-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-400);
+  font-weight: var(--weight-bold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  white-space: nowrap;
+}
+/* Quiet chip-link for the order count, sitting on the title's baseline. */
+.orders-chip {
+  font-family: var(--font-mono); font-size: var(--fs-75);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-full);
+  padding: 0.1rem var(--space-3); white-space: nowrap;
+}
+.orders-chip:hover { color: var(--secondary); border-color: var(--secondary); text-decoration: none; }
+/* End Turn: the app's one global action. A terracotta pill that lifts on
+   hover while its turn glyph rotates — passing the turn around the table. */
+.btn-endturn {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-full);
+  color: var(--on-text);
+  font-weight: var(--weight-semibold);
+  padding: var(--space-2) var(--space-6);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.btn-endturn:hover {
+  background: var(--accent-hi); border-color: var(--accent-hi); color: var(--on-text);
+  transform: translateY(-1px); box-shadow: var(--shadow-md);
+}
+.btn-endturn:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+.btn-endturn .glyph {
+  display: inline-block; line-height: 1;
+  transition: transform var(--dur-slow) var(--ease-standard);
+}
+.btn-endturn:hover .glyph { transform: rotate(180deg); }
+/* Lifecycle flow track: open → executing → review → done. A node-and-rail
+   progress line — the rail fills through the current node, the current node
+   glows in its stage color (and pulses while executing), future stages ghost. */
+.flow { display: flex; width: min(420px, 100%); }
+.flow-step {
+  flex: 1; min-width: 0; position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-1);
+}
+/* Rail segment from the previous node's center to this node's center. */
+.flow-step::before {
+  content: ""; position: absolute; top: 4px;
+  left: calc(-50% + 7px); right: calc(50% + 7px);
+  border-top: 2px solid var(--border);
+  transition: border-color var(--dur-slow) var(--ease-out);
+}
+.flow-step:first-child::before { content: none; }
+.flow-step.past::before, .flow-step.current::before { border-top-color: var(--secondary); }
+.flow-node {
+  box-sizing: border-box; z-index: 1;
+  width: 10px; height: 10px; border-radius: var(--radius-full);
+  border: 2px solid var(--border-strong); background: var(--surface);
+}
+.flow-step.past .flow-node { background: var(--secondary); border-color: var(--secondary); }
+.flow-step.current .flow-node {
+  background: currentColor; border-color: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
+.flow-step.current.st-executing .flow-node { animation: tw-pulse 2s var(--ease-standard) infinite; }
+.flow-label { font-family: var(--font-mono); font-size: var(--fs-50); color: var(--fg-subtle); white-space: nowrap; }
+.flow-step.past .flow-label { color: var(--fg-muted); }
+.flow-step.current .flow-label { color: currentColor; font-weight: var(--weight-semibold); }
+.flow-step.current.st-open      { color: var(--secondary); }
+.flow-step.current.st-executing { color: var(--warning); }
+.flow-step.current.st-review    { color: var(--accent); }
+.flow-step.current.st-done      { color: var(--success); }
+a.btn:hover { text-decoration: none; }
+/* Last-round scoreboard: stat-size numbers with micro-labels; the whole panel
+   links to History without shouting about it. */
+.lastround {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  align-items: center; text-align: center;
+  color: inherit;
+}
+.lastround:hover { text-decoration: none; color: inherit; }
+.lastround:hover .eyebrow { color: var(--secondary); }
+.scoreboard { display: flex; gap: var(--space-6); }
+.stat { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+.stat-value {
+  font-size: var(--fs-500); font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums; line-height: var(--lh-tight);
+  white-space: nowrap;
+}
+.stat-label {
+  font-family: var(--font-mono); font-size: var(--fs-50);
+  color: var(--fg-subtle); white-space: nowrap;
+}
 
 /* --- back link ------------------------------------------------------------ */
 /* A small navigational link above the page title — separate from it, not
@@ -56,9 +188,30 @@
 /* Scoped to .board — plain .card is reused elsewhere (plan view) for a static,
    non-clickable surface and must not inherit the pointer cursor / hover state. */
 .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-3); }
-.board .card { cursor: pointer; padding: var(--space-3) var(--space-4); } /* surface from brand .card */
+.board .card {
+  cursor: pointer; padding: var(--space-3) var(--space-4);
+  background: var(--surface-2); /* lightest step of the depth ladder: clickable */
+  position: relative;
+}
 .board .card:hover { border-color: var(--secondary); }
+/* "open" affordance: an arrow that slides in at the top-right on hover/focus. */
+.board .card::after {
+  content: "→"; position: absolute; top: var(--space-3); right: var(--space-4);
+  color: var(--secondary); opacity: 0; transform: translateX(-4px);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.board .card:hover::after, .board .card:focus-visible::after { opacity: 1; transform: none; }
 .board .card h3 { margin: 0 0 var(--space-2); display: flex; align-items: center; gap: var(--space-2); }
+/* Project monogram: rounded identity tile tinted from the data ramp. */
+.monogram {
+  flex: none; width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display); font-weight: var(--weight-bold); font-size: var(--fs-100);
+  color: var(--mono-c);
+  background: color-mix(in srgb, var(--mono-c) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mono-c) 35%, transparent);
+}
 .board .card .git-line {
   color: var(--fg-muted); font-family: var(--font-mono); font-size: var(--fs-75);
   display: flex; gap: var(--space-3); flex-wrap: wrap;
@@ -218,6 +371,65 @@
 }
 
 /* --- round / review -------------------------------------------------------------------- */
+/* Framed table panel (orders queue, round history): the eyebrow + caption
+   header sits above the card (like the board's PROJECTS label); the card
+   holds only the table. */
+.table-panel { padding: var(--space-2) var(--space-5) var(--space-3); }
+.table-panel .eyebrow { margin-bottom: var(--space-1); }
+.panel-caption {
+  color: var(--fg-muted); font-size: var(--fs-75);
+  margin-block: var(--space-1) var(--space-3);
+}
+/* Fixed layout: column widths are set here, never negotiated from content —
+   otherwise the auto-growing textarea stretches the table past the card. */
+.orders-table { table-layout: fixed; }
+.orders-table th:nth-child(1) { width: 16%; }
+.orders-table th:nth-child(2) { width: 22%; }
+.orders-table th:nth-child(4) { width: 120px; }
+.orders-table td { padding: var(--space-3); vertical-align: middle; }
+.orders-table td:nth-child(2) { overflow-wrap: anywhere; }
+.orders-table tbody tr:last-child td { border-bottom: none; }
+.orders-table tbody tr:hover { background: var(--surface-2); }
+.cell-project { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell-project a { color: var(--fg); font-weight: var(--weight-medium); }
+.cell-project .monogram {
+  width: 22px; height: 22px; font-size: var(--fs-50);
+  margin-right: var(--space-2); vertical-align: middle;
+}
+/* Recessed, vertically resizable instruction field: the darker well tells the
+   user there is something to type into. */
+.cell-instr textarea {
+  display: block; width: 100%;
+  font-size: var(--fs-75);
+  min-height: 38px; max-height: 40vh; resize: vertical;
+  /* Auto-grow with content (Chromium); elsewhere it just stays resizable.
+     Vertical only: the fixed table layout pins the width, and anywhere-wrap
+     breaks even a single unbroken word instead of pushing wider. */
+  field-sizing: content;
+  overflow-wrap: anywhere;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.cell-instr textarea:hover { border-color: var(--border-strong); }
+.cell-remove { width: 1%; text-align: right; }
+.remove-btn { display: inline-flex; align-items: center; gap: var(--space-1); }
+.icon { width: 14px; height: 14px; flex: none; }
+/* Round history table: rows are links into the round detail. */
+.history-table td { padding: var(--space-3); }
+.history-table tbody tr { cursor: pointer; }
+.history-table tbody tr:hover { background: var(--surface-2); }
+.history-table tbody tr:last-child td { border-bottom: none; }
+/* The current (non-done) round: teal leading edge + faint wash. Declared after
+   :hover so the wash wins while hovered too. */
+.history-table tbody tr.is-current { background: var(--secondary-wash); }
+.history-table tbody tr.is-current td:first-child { box-shadow: inset 3px 0 0 var(--secondary); }
+.cell-round { font-weight: var(--weight-medium); white-space: nowrap; }
+.outcomes { display: inline-flex; gap: var(--space-3); white-space: nowrap; }
+/* Round status chips — same lifecycle colors as the dock's flow track. */
+.chip.st-open      { background: var(--secondary-wash); color: var(--secondary); border-color: var(--secondary); }
+.chip.st-executing { background: var(--warning-wash);   color: var(--warning);   border-color: var(--warning); }
+.chip.st-review    { background: var(--accent-wash);    color: var(--accent);    border-color: var(--accent); }
+.chip.st-done      { background: var(--success-wash);   color: var(--success);   border-color: var(--success); }
 .order-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4);
