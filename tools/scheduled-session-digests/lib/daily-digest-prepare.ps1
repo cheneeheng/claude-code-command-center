@@ -260,7 +260,7 @@ foreach ($file in $RecentFiles) {
                 $textBlocks = @($obj.message.content) | Where-Object { $_.type -eq 'text' -and $_.text }
                 foreach ($block in $textBlocks) {
                     $text = $block.text.Trim()
-                    if ($text.Length -gt 2000) { $text = $text.Substring(0, 2000) + "`n[...truncated]" }
+                    if ($text.Length -gt 10000) { $text = $text.Substring(0, 10000) + "`n[...truncated]" }
                     $null = $transcript.AppendLine("[ASSISTANT]")
                     $null = $transcript.AppendLine($text)
                     $null = $transcript.AppendLine("")

@@ -266,8 +266,8 @@ for file in "${RECENT_FILES[@]}"; do
         elif [[ "$type" == "assistant" ]]; then
             while IFS= read -r text; do
                 [[ -z "$text" ]] && continue
-                if [[ ${#text} -gt 2000 ]]; then
-                    text="${text:0:2000}"$'\n[...truncated]'
+                if [[ ${#text} -gt 10000 ]]; then
+                    text="${text:0:10000}"$'\n[...truncated]'
                 fi
                 printf '[ASSISTANT]\n%s\n\n' "$text" >> "$TRANSCRIPT_TMP"
             done < <(echo "$line" | jq -r '
