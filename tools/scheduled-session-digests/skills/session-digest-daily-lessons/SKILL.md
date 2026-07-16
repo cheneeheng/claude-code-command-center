@@ -1,13 +1,14 @@
 ---
 name: session-digest-daily-lessons
-description: Run the daily-lessons scheduler from inside an interactive Claude Code session instead of via the cron/Task Scheduler trigger (which calls `claude --print` and burns programmatic credit). Use when the user asks to "run daily lessons", "extract today's lessons", or "do the daily lessons harvest". You act as coordinator: run the prepare script to stage one input file per new chat, fan the extraction out to subagents, then git-sync the meta repo.
+description: Run the daily-lessons scheduler from inside an interactive Claude Code session instead of via the cron/Task Scheduler trigger (which calls `claude --print` and burns programmatic credit). Use when the user asks to "run daily lessons", "extract today's lessons", or "do the daily lessons harvest". You act as coordinator: run the prepare script to stage one input file per new chat, fan the extraction out to subagents, advance the cursor, then git-sync the meta repo.
 ---
 
 # Daily Lessons — interactive coordinator
 
 You are the coordinator. The prepare script scans `~/.claude/projects` for new
 chats and stages per-chat input files; you spawn one subagent per chat to extract
-lessons; then you commit the results. No `claude --print` is used anywhere.
+lessons, advance the cursor over the verified outputs, commit, and clean up. No
+`claude --print` is used anywhere.
 
 ## Step 1 — Run the prepare script
 
@@ -19,35 +20,44 @@ file). The prepare and git-sync scripts are installed at
 Run the script for the current OS and capture stdout:
 
 - Windows (PowerShell tool):
-  `& "$env:C4_CLAUDE_META_DIR\.claude\scripts\daily-lessons-prepare.ps1"`
+  `& "$env:C4_CLAUDE_META_DIR\.claude\scripts\daily-digest-prepare.ps1" -Scheduler daily-lessons`
 - macOS / Linux (Bash tool):
-  `bash "$C4_CLAUDE_META_DIR/.claude/scripts/daily-lessons-prepare.sh"`
+  `bash "$C4_CLAUDE_META_DIR/.claude/scripts/daily-digest-prepare.sh" daily-lessons`
 
 Pass `--full-scan` / `-FullScan` only if the user explicitly asks to reprocess
 all history.
 
 The last lines of output are `MANIFEST=<path>` and `JOBS=<n>`.
 
-## Step 2 — Check for work
+## Step 2 — Read the manifest
 
-If `JOBS=0`, report "No new chats to process" and stop. Do not commit.
-
-## Step 3 — Read the manifest
-
-Read the `MANIFEST` file. It is a JSON array; each entry is:
+Read the `MANIFEST` file. It is a JSON object:
 
 ```json
-{ "uuid": "...", "date": "YYYY-MM-DD", "title": "...", "project": "...",
-  "input": "<absolute input file path>", "output": "<absolute output file path>" }
+{ "scheduler": "daily-lessons",
+  "cursor": "<cursor file path>",
+  "cursorEpoch": <epoch to write to the cursor after a fully successful run>,
+  "jobs": [ { "uuid": "...", "date": "YYYY-MM-DD", "title": "...", "project": "...",
+              "mtime": <source chat mtime, Unix epoch>,
+              "input": "<absolute input file path>",
+              "output": "<absolute output file path>" } ] }
 ```
 
-## Step 4 — Fan out to subagents
+`jobs` is sorted oldest-first by source chat mtime.
+
+If `JOBS=0`: when `cursorEpoch` is greater than 0, write it to the `cursor` file
+(recent chats were deliberately skipped; this saves rescanning them). Then delete
+the staging directory (the manifest's parent directory), report "No new chats to
+process", and stop. Do not commit.
+
+## Step 3 — Fan out to subagents
 
 For each manifest entry, spawn a `general-purpose` subagent **on the `sonnet` model
 with medium reasoning effort** (set the Agent `model` to `sonnet`; lessons extraction
-benefits from deeper reasoning — this mirrors the cron trigger's `--effort medium`). Run them in parallel in batches of up to 5 (multiple
-Agent calls in one message), waiting for each batch before starting the next. Give
-every subagent this task, substituting the entry's `input` and `output`:
+benefits from deeper reasoning — this mirrors the cron trigger's `--effort medium`).
+Run them in parallel in batches of up to 5 (multiple Agent calls in one message),
+waiting for each batch before starting the next. Give every subagent this task,
+substituting the entry's `input` and `output`:
 
 > Read the file at `<input>`. It has a header (UUID, Date, Title, Project) and a
 > `## Conversation` section containing a transcript with `[USER]` and
@@ -94,9 +104,22 @@ every subagent this task, substituting the entry's `input` and `output`:
 Every chat must produce its output file (real lessons or the stub) — the stub is
 what stops a chat being reprocessed next run.
 
+## Step 4 — Advance the cursor
+
+Walk the manifest's `jobs` in order and check each `output` file exists:
+
+- If every output exists, write `cursorEpoch` (the integer, nothing else) to the
+  `cursor` file.
+- Otherwise, write the `mtime` of the last job before the first missing output
+  (if the very first job's output is missing, leave the cursor untouched) and
+  warn that the failed chats will be retried next run.
+
+The cursor records the newest source chat that was fully handled, so a crashed
+or failed job is picked up again by the next run.
+
 ## Step 5 — Commit
 
-After all subagents finish, run git-sync from the meta repo:
+Run git-sync from the meta repo:
 
 - Windows: `& "$env:C4_CLAUDE_META_DIR\.claude\scripts\git-sync.ps1" -Label "daily-lessons"`
 - macOS / Linux: `bash "$C4_CLAUDE_META_DIR/.claude/scripts/git-sync.sh" "daily-lessons"`
@@ -106,6 +129,10 @@ uncommitted. Make one trailing commit to capture it (a plain commit creates no n
 so it terminates): in `$C4_CLAUDE_META_DIR` run `git add -A`, and if anything is staged,
 `git commit -m "daily-lessons: git-sync log"` then `git push` if a remote is configured.
 
-## Step 6 — Report
+## Step 6 — Clean up and report
+
+Delete the staging directory
+(`$C4_CLAUDE_META_DIR/.claude/scheduled-session-digests/daily-lessons/`) — the
+staged inputs and manifest are no longer needed.
 
 State how many chats were processed and whether the commit/push succeeded.

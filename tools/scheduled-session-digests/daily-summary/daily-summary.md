@@ -1,43 +1,39 @@
-# Summarise Chat History
+# Summarise Chat Session
 
-Read a pre-extracted chat transcript and write a concise summary to the output path
-specified in the input file header.
+Read a pre-extracted chat transcript and write a concise summary directly to the
+output file. The trigger script substitutes the file paths below before passing
+this prompt to `claude --print`.
+
+- Input file : `{{INPUT_FILE}}`
+- Output file: `{{OUTPUT_FILE}}`
 
 ---
 
 ## Step 1 — Read the input file
 
-Read `$C4_CLAUDE_META_DIR/.claude/scripts/chat-input.md`.
-
-Parse the header fields:
-- `UUID` — session identifier
-- `Date` — date of the chat (YYYY-MM-DD)
-- `Title` — session title
-- `Project` — project directory name
-- `Output` — full path to write the summary to
-
-The `## Conversation` section contains the extracted transcript with `[USER]` and
-`[ASSISTANT]` turn markers.
+Read the input file. It has a header (`UUID`, `Date`, `Title`, `Project`, `CWD`,
+`Output`) followed by a `## Conversation` section containing the transcript with
+`[USER]` and `[ASSISTANT]` turn markers.
 
 ---
 
 ## Step 2 — Write the summary
 
-Write the summary to the path specified in `Output`.
+Create the parent directory of the output file if needed, then write the summary
+to the output file with this structure:
 
 ```markdown
-# Chat Summary — YYYY-MM-DD
-**Session**: UUID
-**Title**: Title
-**Project**: Project
+# Chat Summary — <Date>
+**Session**: <UUID>
+**Title**: <Title>
+**Project**: <Project>
 
 ## What was worked on
 <Bullet list of the main tasks, features, or investigations in this session.
  Derive from what the user asked and what was built or changed.>
 
 ## Decisions made
-<Architectural, design, or tooling decisions and their rationale.
- Skip this section if none were made.>
+<Architectural, design, or tooling decisions and their rationale.>
 
 ## Outcomes
 <What was actually completed, created, or fixed. Be specific — file names,
@@ -47,24 +43,31 @@ Write the summary to the path specified in `Output`.
 <Files created, modified, or deleted this session. Use sub-bullets:
  - Created: `path/to/file` — purpose
  - Modified: `path/to/file` — what changed
- - Deleted: `path/to/file`
- Skip this section if no files changed.>
+ - Deleted: `path/to/file`>
 
 ## Pending / Next Steps
-<Work discussed but not completed, or logical next actions. Use checkboxes.
- Skip this section if none.>
+<Work discussed but not completed, or logical next actions. Use checkboxes.>
 
 ## Key Facts for Next Session
 <Non-obvious facts a future LLM must know to avoid repeating mistakes or
- asking redundant questions. Skip this section if none.>
+ asking redundant questions.>
 
 ## Open items
-<Unresolved questions or explicit next steps mentioned in the conversation.
- Skip this section if none.>
+<Unresolved questions or explicit next steps mentioned in the conversation.>
 ```
 
 Rules:
+
+- Skip any section that does not apply.
 - Keep the whole file under 80 lines.
 - Be concrete. Avoid generic statements like "discussed the codebase."
-- If the conversation is very short or contains no meaningful work, write a
-  one-line `## Note` instead: `No significant work recorded.`
+- If the conversation is very short or contains no meaningful work, write the
+  header plus a single `## Note` section containing `No significant work
+  recorded.` instead — the output file must always be created, because its
+  existence marks the session as processed.
+
+---
+
+## Step 3 — Report
+
+Print a single line: the output path you wrote.

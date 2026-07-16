@@ -1,18 +1,38 @@
 # git-sync
 
-A pure shell utility — no LLM involved. Called by `daily-summary`, `daily-lessons`,
-and `weekly-lessons` after Claude has written its output files.
+A pure shell utility — no LLM involved. Called by `daily-summary`,
+`daily-lessons`, and `weekly-lessons` after Claude has written its output files.
+It is the **only** writer of git history in `claude-meta`.
 
-1. `git add -A` in `claude-meta`.
+1. `git add -A` in `$C4_CLAUDE_META_DIR`.
 2. Commits with message `<label>: <timestamp>` (e.g. `daily-summary: 2026-04-07 02:03`).
 3. Pushes if a remote is configured; logs a note and exits cleanly if not.
+
+It no-ops safely when there is nothing staged or the meta dir is not a git repo.
+
+---
+
+## Usage
+
+```powershell
+# Windows
+& "$env:C4_CLAUDE_META_DIR\.claude\scripts\git-sync.ps1" -Label "daily-summary"
+```
+
+```bash
+# Linux
+bash "$C4_CLAUDE_META_DIR/.claude/scripts/git-sync.sh" "daily-summary"
+```
+
+The label defaults to `auto` when omitted.
 
 ---
 
 ## Install
 
-`git-sync` is copied automatically by any scheduler's installer (`daily-summary`,
-`daily-lessons`, or `weekly-lessons`). To install it standalone:
+`git-sync` is copied automatically by any scheduler's installer
+(`daily-summary`, `daily-lessons`, or `weekly-lessons`). To install it
+standalone:
 
 ```powershell
 # Windows
@@ -36,22 +56,5 @@ git remote add origin <your-remote-url>
 git push -u origin main
 ```
 
----
-
-## claude-meta structure
-
-All schedulers write to `$C4_CLAUDE_META_DIR` (default: `~/claude-meta`):
-
-```
-claude-meta/
-  daily-summaries/     <- one .md per chat session (daily-summary)
-  lessons-learned/     <- one .md per chat session (daily-lessons)
-  master-lessons/      <- MASTER_LESSONS_LEARNED.md (weekly-lessons)
-  logs/                <- trigger output logs (Linux only)
-  .claude/
-    scripts/           <- trigger + prepare scripts, prompts, and git-sync
-    skills/            <- interactive scheduler skills (skill mechanism)
-    scheduler-jobs/    <- transient prepare staging (gitignored)
-    settings.json      <- Claude tool permissions for unattended runs
-    scheduled-repos.json  <- local repo list for weekly-lessons
-```
+The layout of the `claude-meta` repo itself is documented in the
+[member README](../README.md#the-claude-meta-repo).

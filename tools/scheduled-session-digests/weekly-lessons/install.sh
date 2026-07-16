@@ -4,11 +4,12 @@
 # Run once from this directory.
 #
 # What it does:
-#   1. Checks dependencies (git, claude)
+#   1. Checks dependencies (jq, git, claude)
 #   2. Initialises $C4_CLAUDE_META_DIR (git repo) with required subdirs
 #   3. Sets C4_CLAUDE_META_DIR in ~/.claude/claude-scheduler.env (sourced by triggers)
 #   4. Writes claude-meta/.claude/settings.json (Claude tool permissions)
-#   5. Copies weekly-lessons.md, weekly-lessons-trigger.sh, git-sync.sh to scripts dir
+#   5. Copies the scripts (weekly-lessons-prepare/-trigger, git-sync) and the
+#      weekly-lessons.md prompt and skill into the meta repo
 #   6. Registers a cron job (02:00 every Sunday)
 
 set -euo pipefail
@@ -192,6 +193,11 @@ fi
 VERSION_SRC="$HERE/../VERSION"
 [[ -f "$VERSION_SRC" ]] && cp "$VERSION_SRC" "$SCRIPTS_DIR/VERSION" && echo "      $SCRIPTS_DIR/VERSION"
 
+# The prepare script stages the work for both mechanisms (the trigger runs it).
+cp "$HERE/weekly-lessons-prepare.sh" "$SCRIPTS_DIR/weekly-lessons-prepare.sh"
+chmod +x "$SCRIPTS_DIR/weekly-lessons-prepare.sh"
+echo "      $SCRIPTS_DIR/weekly-lessons-prepare.sh"
+
 # ---- Cron mechanism: prompt + trigger ----
 if $WANT_CRON; then
     cp "$HERE/weekly-lessons.md"          "$SCRIPTS_DIR/weekly-lessons.md"
@@ -201,12 +207,8 @@ if $WANT_CRON; then
     echo "      $SCRIPTS_DIR/weekly-lessons-trigger.sh"
 fi
 
-# ---- Skill mechanism: prepare script + interactive SKILL.md ----
+# ---- Skill mechanism: interactive SKILL.md ----
 if $WANT_SKILL; then
-    cp "$HERE/weekly-lessons-prepare.sh"  "$SCRIPTS_DIR/weekly-lessons-prepare.sh"
-    chmod +x "$SCRIPTS_DIR/weekly-lessons-prepare.sh"
-    echo "      $SCRIPTS_DIR/weekly-lessons-prepare.sh"
-
     SKILL_SRC="$HERE/../skills/session-digest-weekly-lessons/SKILL.md"
     SKILL_DIR="$META_DIR/.claude/skills/session-digest-weekly-lessons"
     if [[ -f "$SKILL_SRC" ]]; then

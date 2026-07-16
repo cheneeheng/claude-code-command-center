@@ -1376,3 +1376,51 @@ model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke te
 **Decision:** Kept the archetype (top-nav is legitimate for 3 destinations) and the existing markup; made a targeted, CSS-only typographic pass in the shared stylesheets. Added a `--measure: 72ch` reading-width token; capped rendered-markdown prose blocks to it (code/tables/images opt out); tightened the frontmatter key/value table; and hugged the reading-view cards (`.card.my-4`, `.file-pane .md-body`) to the measure so prose (not the 1200px surface) sets the width. No JS/markup changes — everything cascades to plan, file, session, and diff surfaces.
 **Impact / Risk:** Low. Purely presentational; no behavior/data change. `.card.my-4` and `.eyebrow + table` selectors verified to hit only reading-view cards (board uses `.card`, orders use `.order-card`), so board/round/history layouts are untouched. Verified live in-browser: measure resolves, cards hug, all four views render.
 **Outcome:** Plan and file views now read as coherent document columns at a comfortable line length; metadata reads as a tight block. Board/round/history unchanged by design.
+
+### Entry 54
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-16T00:00:00Z
+**Task:** scheduled-session-digests cleanup — unify temp-file pathing and cron/skill variants
+
+**Context:** The user asked for (1) all temp files under `.claude/<tool>/<scheduler>/`, (2) unified cron/skill pathing, (3) script cleanup. The cron triggers and skill prepare scripts each carried an independent ~250-line copy of the same scan/extract logic per scheduler per language, with divergent temp locations (`.claude/scripts/*.md` inputs, `/tmp` mktemps, `docs/claude_logs/` staging vs `.claude/scheduler-jobs/`). How to unify was the fork: normalize paths in place across 12 scripts, or restructure so one implementation serves both mechanisms.
+**Decision:** Restructured: triggers are now thin consumers of the prepare scripts. Prepare stages inputs + `manifest.json` under `$C4_CLAUDE_META_DIR/.claude/scheduled-session-digests/<scheduler>/` (gitignored, reset per run, deleted by the consumer when done); the cron trigger loops manifest jobs through `claude --print` with path placeholders substituted into the prompt templates; the skill fans the same manifest out to subagents. The two daily schedulers share one parameterized `lib/daily-digest-prepare.{ps1,sh}` + `lib/daily-digest-trigger.{ps1,sh}` (they differed only in output dir, config key, and model choice).
+**Impact / Risk:** Old per-scheduler script filenames disappear; setup uninstall removes both old and new names so pre-existing installs clean up. Behavior verified by end-to-end smokes on both PowerShell 5 and bash (WSL) with a stubbed `claude`.
+**Outcome:** ~1200 duplicated lines collapsed into one implementation per language; cron and skill parity is now structural rather than copy-maintained.
+
+### Entry 55
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-16T00:00:00Z
+**Task:** scheduled-session-digests — daily-lessons cron path no longer uses the ceh-lessons-learned marketplace skill
+
+**Context:** The cron daily-lessons flow depended on the marketplace skill writing to `docs/claude_logs/LESSONS_LEARNED.md` (CWD-relative) and the trigger moving that file. The installed skill (2.0.5) now writes to `.agents_workspace/LESSONS_LEARNED.md` and sets `disable-model-invocation: true`, so the cron flow was silently broken (every session would stub). The interactive skill had already dropped the dependency for the parallel-subagent collision reason.
+**Decision:** Embedded the extraction methodology (mirroring the interactive skill's subagent prompt, which itself mirrors the marketplace skill's format) directly in `daily-lessons.md`, writing straight to the final output path with a stub fallback. No external skill dependency, no staging file, and Claude crash now leaves no output (retried next run) instead of a false "no lessons" stub.
+**Impact / Risk:** Lesson format unchanged; the README prerequisite on the agent-skills marketplace is removed. If the marketplace skill's methodology evolves, this prompt no longer follows it automatically.
+**Outcome:** Cron and skill daily-lessons variants now produce identical output through the same contract.
+
+### Entry 56
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-16T00:00:00Z
+**Task:** scheduled-session-digests — cursor files for the daily schedulers (crash-robust cutoff)
+
+**Context:** User asked (mid-task) to replace the dailies' cutoff heuristic (mtime of the newest output file) with the weekly-lessons cursor concept, so a crash retries exactly the unprocessed chats. Open choices: cursor location, what the cursor means, and how it advances when some jobs fail.
+**Decision:** `.claude/<scheduler>-cursor` beside the existing `weekly-lessons-cursor` (state, not temp — deliberately outside the transient staging dir). Semantics: Unix-epoch mtime (whole seconds, matching bash `stat -c %Y`; PS floors to match) of the newest source chat fully handled. Advancement: jobs are staged oldest-first; the cron trigger advances per verified output and stops advancing at the first failure; the skill writes the mtime of the last job in the longest successful prefix; a fully successful run advances to the newest scanned file (covering deliberately skipped chats). The UUID-already-processed check remains as a safety net, so completed chats are never redone even when the cursor lags.
+**Impact / Risk:** First run after upgrade has no cursor and rescans history; the UUID check makes that a no-op re-filter. Fractional-mtime boundary bug found in smoke and fixed by truncating epochs on the PS side.
+**Outcome:** Both smokes assert: failed job leaves cursor untouched and is re-staged next run; successful run advances and second scan stages zero jobs.
+
+### Entry 57
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-16T00:00:00Z
+**Task:** scheduled-session-digests — removed dead files
+
+**Context:** `weekly-lessons/scheduled-repos.json` is read by nothing (only echoed by setup as a post-install hint) and `docs/claude_logs/.gitkeep` kept an empty directory left over from the pre-monorepo staging design. Both surfaced while unifying temp paths.
+**Decision:** Deleted both, plus the setup hint lines and the git-sync README mention.
+**Impact / Risk:** None found by repo-wide grep; the meta-repo structure diagram no longer lists them.
+**Outcome:** Removed.

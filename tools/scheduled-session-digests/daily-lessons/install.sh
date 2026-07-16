@@ -7,14 +7,14 @@
 #   1. Checks dependencies (jq, git, claude)
 #   2. Initialises $C4_CLAUDE_META_DIR (git repo) with required subdirs
 #   3. Sets C4_CLAUDE_META_DIR in ~/.claude/claude-scheduler.env (sourced by triggers)
-#   4. Gitignores docs/claude_logs/ (transient staging area)
-#   5. Copies daily-lessons.md, daily-lessons-trigger.sh, git-sync.sh to scripts dir
-#   6. Registers a cron job (03:00 daily, staggered from daily-summary at 02:00)
+#   4. Copies the shared scripts (daily-digest-prepare/-trigger, git-sync), the
+#      daily-lessons.md prompt, and the skill into the meta repo
+#   5. Registers a cron job (03:00 daily, staggered from daily-summary at 02:00)
 #
 # How it works:
-#   At 03:00 the trigger scans ~/.claude/projects/**/*.jsonl for new chat files,
-#   passes each transcript to Claude for lessons extraction via the
-#   ceh-lessons-learned skill, and commits the per-session files.
+#   At 03:00 the trigger stages new chats from ~/.claude/projects/**/*.jsonl,
+#   passes each transcript to Claude for lessons extraction, and commits the
+#   per-session files.
 
 set -euo pipefail
 
@@ -132,20 +132,7 @@ for rc in "$HOME/.bashrc" "$HOME/.bash_profile"; do
 done
 
 # ---------------------------------------------------------------------------
-# 4. Gitignore the transient staging directory
-# ---------------------------------------------------------------------------
-step "Updating .gitignore..."
-
-GITIGNORE="$META_DIR/.gitignore"
-if ! grep -q "docs/claude_logs/" "$GITIGNORE" 2>/dev/null; then
-    echo "docs/claude_logs/" >> "$GITIGNORE"
-    echo "      Added docs/claude_logs/ to $GITIGNORE"
-else
-    echo "      Already present - skipping."
-fi
-
-# ---------------------------------------------------------------------------
-# 5. Install scripts
+# 4. Install scripts
 # ---------------------------------------------------------------------------
 step "Installing files..."
 
@@ -164,21 +151,22 @@ fi
 VERSION_SRC="$HERE/../VERSION"
 [[ -f "$VERSION_SRC" ]] && cp "$VERSION_SRC" "$SCRIPTS_DIR/VERSION" && echo "      $SCRIPTS_DIR/VERSION"
 
+# The prepare script stages the work for both mechanisms (the trigger runs it).
+cp "$HERE/../lib/daily-digest-prepare.sh" "$SCRIPTS_DIR/daily-digest-prepare.sh"
+chmod +x "$SCRIPTS_DIR/daily-digest-prepare.sh"
+echo "      $SCRIPTS_DIR/daily-digest-prepare.sh"
+
 # ---- Cron mechanism: prompt + trigger ----
 if $WANT_CRON; then
-    cp "$HERE/daily-lessons.md"          "$SCRIPTS_DIR/daily-lessons.md"
-    cp "$HERE/daily-lessons-trigger.sh"  "$SCRIPTS_DIR/daily-lessons-trigger.sh"
-    chmod +x "$SCRIPTS_DIR/daily-lessons-trigger.sh"
+    cp "$HERE/daily-lessons.md"               "$SCRIPTS_DIR/daily-lessons.md"
+    cp "$HERE/../lib/daily-digest-trigger.sh" "$SCRIPTS_DIR/daily-digest-trigger.sh"
+    chmod +x "$SCRIPTS_DIR/daily-digest-trigger.sh"
     echo "      $SCRIPTS_DIR/daily-lessons.md"
-    echo "      $SCRIPTS_DIR/daily-lessons-trigger.sh"
+    echo "      $SCRIPTS_DIR/daily-digest-trigger.sh"
 fi
 
-# ---- Skill mechanism: prepare script + interactive SKILL.md ----
+# ---- Skill mechanism: interactive SKILL.md ----
 if $WANT_SKILL; then
-    cp "$HERE/daily-lessons-prepare.sh"  "$SCRIPTS_DIR/daily-lessons-prepare.sh"
-    chmod +x "$SCRIPTS_DIR/daily-lessons-prepare.sh"
-    echo "      $SCRIPTS_DIR/daily-lessons-prepare.sh"
-
     SKILL_SRC="$HERE/../skills/session-digest-daily-lessons/SKILL.md"
     SKILL_DIR="$META_DIR/.claude/skills/session-digest-daily-lessons"
     if [[ -f "$SKILL_SRC" ]]; then
@@ -202,15 +190,15 @@ echo "$cfg" > "$CONFIG_FILE"
 echo "      $CONFIG_FILE"
 
 # ---------------------------------------------------------------------------
-# 6. Register cron job (staggered from daily-summary to avoid git-sync conflicts)
+# 5. Register cron job (staggered from daily-summary to avoid git-sync conflicts)
 # ---------------------------------------------------------------------------
 if $WANT_CRON; then
     step "Registering cron job..."
 
-    CRON_CMD="$CRON_MIN $CRON_HOUR * * * '$SCRIPTS_DIR/daily-lessons-trigger.sh' >> '$META_DIR/logs/daily-lessons.log' 2>&1"
+    CRON_CMD="$CRON_MIN $CRON_HOUR * * * '$SCRIPTS_DIR/daily-digest-trigger.sh' daily-lessons >> '$META_DIR/logs/daily-lessons.log' 2>&1"
     mkdir -p "$META_DIR/logs"
 
-    if crontab -l 2>/dev/null | grep -q "daily-lessons-trigger.sh"; then
+    if crontab -l 2>/dev/null | grep -q "daily-digest-trigger.sh' daily-lessons"; then
         echo "      Cron job already registered - skipping."
     else
         (crontab -l 2>/dev/null; echo "$CRON_CMD") | crontab -
@@ -229,7 +217,7 @@ if $WANT_CRON; then
     echo "--- Verify the cron scheduler ---"
     echo "  crontab -l | grep daily-lessons"
     echo "  tail -f '$META_DIR/logs/daily-lessons.log'"
-    echo "  bash '$SCRIPTS_DIR/daily-lessons-trigger.sh'   # test now"
+    echo "  bash '$SCRIPTS_DIR/daily-digest-trigger.sh' daily-lessons   # test now"
 fi
 
 if $WANT_SKILL; then
