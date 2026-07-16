@@ -5,11 +5,12 @@
 # What it does:
 #   1. Initialises %USERPROFILE%\claude-meta (git repo) with required subdirs
 #   2. Sets C4_CLAUDE_META_DIR as a permanent user environment variable
-#   3. Copies daily-summary.md, daily-summary-trigger.ps1, git-sync.ps1 → %USERPROFILE%\claude-meta\.claude\scripts\
+#   3. Copies the shared scripts (daily-digest-prepare/-trigger, git-sync), the
+#      daily-summary.md prompt, and the skill into the meta repo
 #   4. Registers the SessionDigest-DailySummary Task Scheduler task (02:00 daily)
 #
 # How it works:
-#   At 02:00 the trigger scans ~/.claude/projects/**/*.jsonl for new chat files,
+#   At 02:00 the trigger stages new chats from ~/.claude/projects/**/*.jsonl,
 #   passes each transcript to Claude for summarisation, and commits the results.
 
 param(
@@ -117,19 +118,20 @@ if (Test-Path $VersionSrc) {
     Write-Host "      $ScriptsDir\VERSION" -ForegroundColor Green
 }
 
+# The prepare script stages the work for both mechanisms (the trigger runs it).
+Copy-Item "$Here\..\lib\daily-digest-prepare.ps1" -Destination "$ScriptsDir\daily-digest-prepare.ps1" -Force
+Write-Host "      $ScriptsDir\daily-digest-prepare.ps1" -ForegroundColor Green
+
 # ---- Cron mechanism: trigger + prompt file ----
 if ($WantCron) {
-    Copy-Item "$Here\daily-summary.md"          -Destination "$ScriptsDir\daily-summary.md"          -Force
-    Copy-Item "$Here\daily-summary-trigger.ps1" -Destination "$ScriptsDir\daily-summary-trigger.ps1" -Force
+    Copy-Item "$Here\daily-summary.md"                -Destination "$ScriptsDir\daily-summary.md"        -Force
+    Copy-Item "$Here\..\lib\daily-digest-trigger.ps1" -Destination "$ScriptsDir\daily-digest-trigger.ps1" -Force
     Write-Host "      $ScriptsDir\daily-summary.md" -ForegroundColor Green
-    Write-Host "      $ScriptsDir\daily-summary-trigger.ps1" -ForegroundColor Green
+    Write-Host "      $ScriptsDir\daily-digest-trigger.ps1" -ForegroundColor Green
 }
 
-# ---- Skill mechanism: prepare script + interactive SKILL.md ----
+# ---- Skill mechanism: interactive SKILL.md ----
 if ($WantSkill) {
-    Copy-Item "$Here\daily-summary-prepare.ps1" -Destination "$ScriptsDir\daily-summary-prepare.ps1" -Force
-    Write-Host "      $ScriptsDir\daily-summary-prepare.ps1" -ForegroundColor Green
-
     $SkillSrc = Join-Path $Here "..\skills\session-digest-daily-summary\SKILL.md"
     $SkillDir = Join-Path $MetaDir ".claude\skills\session-digest-daily-summary"
     if (Test-Path $SkillSrc) {
@@ -160,7 +162,7 @@ $TaskName   = "SessionDigest-DailySummary"
 # digest task nests under \ClaudeAutomation\<member>\ and stays self-identifying to the member.
 $MemberName = Split-Path -Leaf (Split-Path -Parent $PSScriptRoot)
 $TaskFolder = "\ClaudeAutomation\$MemberName\"
-$Script     = "$ScriptsDir\daily-summary-trigger.ps1"
+$Script     = "$ScriptsDir\daily-digest-trigger.ps1"
 
 if ($WantCron) {
     Step "Registering Task Scheduler task..."
@@ -169,7 +171,7 @@ if ($WantCron) {
         $trigger  = New-ScheduledTaskTrigger -Daily -At $ScheduleTime
         $action   = New-ScheduledTaskAction `
             -Execute "powershell.exe" `
-            -Argument "-NonInteractive -File `"$Script`""
+            -Argument "-NonInteractive -File `"$Script`" -Scheduler daily-summary"
         $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
 
         Register-ScheduledTask `
@@ -187,20 +189,17 @@ if ($WantCron) {
     }
 }
 
-$LogFile = Join-Path $MetaDir "logs\daily-summary.log"
-
 Write-Host ""
 Write-Host "=== Install complete ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Open a new terminal for C4_CLAUDE_META_DIR to take effect."
 
 if ($WantCron) {
-    Write-Host "Logs: $LogFile"
+    Write-Host "Logs: $MetaDir\logs\<timestamp>_daily-summary-*.log"
     Write-Host ""
     Write-Host "--- Verify the cron scheduler ---" -ForegroundColor Yellow
     Write-Host "     Get-ScheduledTask -TaskName '$TaskName' -TaskPath '$TaskFolder'"
-    Write-Host "     Get-Content '$LogFile' -Wait"
-    Write-Host "     & '$ScriptsDir\daily-summary-trigger.ps1'   # test now"
+    Write-Host "     & '$ScriptsDir\daily-digest-trigger.ps1' -Scheduler daily-summary   # test now"
 }
 
 if ($WantSkill) {

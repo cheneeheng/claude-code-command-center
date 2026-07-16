@@ -6,7 +6,8 @@
 #   1. Initialises %USERPROFILE%\claude-meta (git repo) with required subdirs
 #   2. Sets C4_CLAUDE_META_DIR as a permanent user environment variable
 #   3. Writes claude-meta\.claude\settings.json (Claude tool permissions)
-#   4. Copies weekly-lessons.md and weekly-lessons-trigger.ps1 → %USERPROFILE%\claude-meta\.claude\scripts\
+#   4. Copies the scripts (weekly-lessons-prepare/-trigger, git-sync), the
+#      weekly-lessons.md prompt, and the skill into the meta repo
 #   5. Registers the SessionDigest-WeeklyLessons Task Scheduler task (Sunday 02:00)
 
 param(
@@ -149,6 +150,10 @@ if (Test-Path $VersionSrc) {
     Write-Host "      $ScriptsDir\VERSION" -ForegroundColor Green
 }
 
+# The prepare script stages the work for both mechanisms (the trigger runs it).
+Copy-Item "$Here\weekly-lessons-prepare.ps1" -Destination "$ScriptsDir\weekly-lessons-prepare.ps1" -Force
+Write-Host "      $ScriptsDir\weekly-lessons-prepare.ps1" -ForegroundColor Green
+
 # ---- Cron mechanism: trigger + prompt file ----
 if ($WantCron) {
     Copy-Item "$Here\weekly-lessons.md"          -Destination "$ScriptsDir\weekly-lessons.md"          -Force
@@ -157,11 +162,8 @@ if ($WantCron) {
     Write-Host "      $ScriptsDir\weekly-lessons-trigger.ps1" -ForegroundColor Green
 }
 
-# ---- Skill mechanism: prepare script + interactive SKILL.md ----
+# ---- Skill mechanism: interactive SKILL.md ----
 if ($WantSkill) {
-    Copy-Item "$Here\weekly-lessons-prepare.ps1" -Destination "$ScriptsDir\weekly-lessons-prepare.ps1" -Force
-    Write-Host "      $ScriptsDir\weekly-lessons-prepare.ps1" -ForegroundColor Green
-
     $SkillSrc = Join-Path $Here "..\skills\session-digest-weekly-lessons\SKILL.md"
     $SkillDir = Join-Path $MetaDir ".claude\skills\session-digest-weekly-lessons"
     if (Test-Path $SkillSrc) {

@@ -7,7 +7,8 @@ description: Run the weekly-lessons harvest from inside an interactive Claude Co
 
 The prepare script collects every per-session lessons file written since the last
 harvest into one input file. You read it, distil the project-generic lessons into
-the master file, advance the cursor, and commit. No `claude --print` is used.
+the master file, advance the cursor, commit, and clean up. No `claude --print`
+is used.
 
 This is a single inline analysis job — there is no subagent to pin a model on, so it
 runs on whatever model and effort this coordinator session uses. The cron trigger runs
@@ -31,21 +32,32 @@ Run the script for the current OS and capture stdout:
 Pass `--full-scan` / `-FullScan` only if the user explicitly asks to reprocess
 all lessons history.
 
-Output lines: `INPUT=<path>`, `FILES=<n>`, `LATEST_EPOCH=<int>`, `CURSOR=<path>`,
-`MASTER=<path>`.
+The last lines of output are `MANIFEST=<path>` and `JOBS=<n>` (the number of
+collected source files).
 
-## Step 2 — Check for work
+## Step 2 — Read the manifest
 
-If `FILES=0`, report "No new lessons to harvest" and stop. Do not commit or touch
-the cursor.
+Read the `MANIFEST` file. It is a JSON object:
+
+```json
+{ "scheduler": "weekly-lessons",
+  "cursor": "<cursor file path>",
+  "cursorEpoch": <epoch to write to the cursor after a successful harvest>,
+  "files": <number of collected source files>,
+  "input": "<harvest input file path>",
+  "master": "<master lessons file path>" }
+```
+
+If `files` is 0, delete the staging directory (the manifest's parent directory),
+report "No new lessons to harvest", and stop. Do not commit or touch the cursor.
 
 ## Step 3 — Read inputs
 
-Read the `INPUT` file (one `## Source: <path>` section per session, each followed
+Read the `input` file (one `## Source: <path>` section per session, each followed
 by `Date:` and the session's lessons). Note the run date from the
 `# Lessons Harvest Input — YYYY-MM-DD` header; call it `RunDate`.
 
-Read the `MASTER` file if it exists, noting every existing `### ` lesson title for
+Read the `master` file if it exists, noting every existing `### ` lesson title for
 deduplication. If it does not exist, treat it as empty.
 
 ## Step 4 — Analyse and filter
@@ -64,7 +76,8 @@ For each lesson across all source sections:
 If no new lessons passed the filter, skip this step — leave the master file
 untouched.
 
-Otherwise: if the master file does not exist, create it with:
+Otherwise: if the master file does not exist, create it (including parent
+directories) with:
 
 ```markdown
 # Master Lessons Learned
@@ -91,8 +104,8 @@ Update the `Last updated:` line to `RunDate`.
 
 ## Step 6 — Advance the cursor
 
-Write the `LATEST_EPOCH` value (the integer from Step 1, nothing else) to the
-`CURSOR` file. Do this whether or not any lesson passed the filter — it marks
+Write the `cursorEpoch` value (the integer from the manifest, nothing else) to the
+`cursor` file. Do this whether or not any lesson passed the filter — it marks
 these source files as harvested so they are not reprocessed next run. Only skip it
 if an error stopped you from completing the analysis.
 
@@ -108,7 +121,11 @@ uncommitted. Make one trailing commit to capture it (a plain commit creates no n
 so it terminates): in `$C4_CLAUDE_META_DIR` run `git add -A`, and if anything is staged,
 `git commit -m "weekly-lessons: git-sync log"` then `git push` if a remote is configured.
 
-## Step 8 — Report
+## Step 8 — Clean up and report
+
+Delete the staging directory
+(`$C4_CLAUDE_META_DIR/.claude/scheduled-session-digests/weekly-lessons/`) — the
+harvest input and manifest are no longer needed.
 
 Print: `Harvest complete for <RunDate>. Checked M sessions, added N new lessons to
 the master file.` State explicitly if no new generic lessons were found.

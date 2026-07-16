@@ -187,9 +187,6 @@ if [[ "$mode" == "install" ]]; then
     echo "  ── Done ───────────────────────────────────────────────"
     echo ""
     echo "  Open a new shell for C4_CLAUDE_META_DIR to take effect."
-    if [[ -n "$wl_mode" ]]; then
-        echo "  Edit '$META_DIR/.claude/scheduled-repos.json' to add your repos."
-    fi
     echo ""
 fi
 
@@ -209,9 +206,12 @@ if [[ "$mode" == "uninstall" ]]; then
     }
 
     # ---- Cron-based mechanism (cron jobs + trigger + prompt files) ----------
+    # Legacy per-scheduler trigger names are removed too, so an uninstall also
+    # cleans up installs made before the shared daily-digest-trigger.
     if prompt_confirm "Remove the cron-based schedulers (cron jobs + trigger scripts)?"; then
         CURRENT=$(crontab -l 2>/dev/null || true)
         NEW=$(echo "$CURRENT" \
+            | grep -v "daily-digest-trigger.sh" \
             | grep -v "daily-summary-trigger.sh" \
             | grep -v "daily-lessons-trigger.sh" \
             | grep -v "weekly-lessons-trigger.sh" \
@@ -224,9 +224,9 @@ if [[ "$mode" == "uninstall" ]]; then
         fi
 
         for f in \
-            "daily-summary.md"          "daily-summary-trigger.sh" \
-            "daily-lessons.md"          "daily-lessons-trigger.sh" \
-            "weekly-lessons.md"         "weekly-lessons-trigger.sh"
+            "daily-summary.md"  "daily-lessons.md"  "weekly-lessons.md" \
+            "daily-digest-trigger.sh" "weekly-lessons-trigger.sh" \
+            "daily-summary-trigger.sh" "daily-lessons-trigger.sh"
         do
             rm_file "$SCRIPTS/$f"
         done
@@ -234,16 +234,8 @@ if [[ "$mode" == "uninstall" ]]; then
 
     echo ""
 
-    # ---- Skill-based mechanism (prepare scripts + interactive skills) -------
-    if prompt_confirm "Remove the skill-based schedulers (prepare scripts + skills)?"; then
-        for f in \
-            "daily-summary-prepare.sh" \
-            "daily-lessons-prepare.sh" \
-            "weekly-lessons-prepare.sh"
-        do
-            rm_file "$SCRIPTS/$f"
-        done
-
+    # ---- Skill-based mechanism (interactive skills) --------------------------
+    if prompt_confirm "Remove the skill-based schedulers (skills)?"; then
         for s in daily-summary daily-lessons weekly-lessons; do
             path="$META_DIR/.claude/skills/session-digest-$s"
             if [[ -d "$path" ]]; then
@@ -258,8 +250,13 @@ if [[ "$mode" == "uninstall" ]]; then
     echo ""
 
     # ---- Shared files (used by both; remove only if you want a full clean) ---
-    if prompt_confirm "Remove shared files (git-sync.sh, VERSION, scheduler-config.json)?" "n"; then
-        for f in "git-sync.sh" "VERSION" "scheduler-config.json"; do
+    # The prepare scripts are shared: the cron triggers run them too.
+    if prompt_confirm "Remove shared files (prepare scripts, git-sync.sh, VERSION, scheduler-config.json)?" "n"; then
+        for f in \
+            "daily-digest-prepare.sh" "weekly-lessons-prepare.sh" \
+            "daily-summary-prepare.sh" "daily-lessons-prepare.sh" \
+            "git-sync.sh" "VERSION" "scheduler-config.json"
+        do
             rm_file "$SCRIPTS/$f"
         done
     fi

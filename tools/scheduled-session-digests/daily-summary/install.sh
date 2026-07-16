@@ -7,11 +7,12 @@
 #   1. Checks dependencies (jq, git, claude)
 #   2. Initialises $C4_CLAUDE_META_DIR (git repo) with required subdirs
 #   3. Sets C4_CLAUDE_META_DIR in ~/.claude/claude-scheduler.env (sourced by triggers)
-#   4. Copies daily-summary.md, daily-summary-trigger.sh, git-sync.sh to scripts dir
+#   4. Copies the shared scripts (daily-digest-prepare/-trigger, git-sync), the
+#      daily-summary.md prompt, and the skill into the meta repo
 #   5. Registers a cron job (02:00 daily)
 #
 # How it works:
-#   At 02:00 the trigger scans ~/.claude/projects/**/*.jsonl for new chat files,
+#   At 02:00 the trigger stages new chats from ~/.claude/projects/**/*.jsonl,
 #   passes each transcript to Claude for summarisation, and commits the results.
 
 set -euo pipefail
@@ -150,21 +151,22 @@ fi
 VERSION_SRC="$HERE/../VERSION"
 [[ -f "$VERSION_SRC" ]] && cp "$VERSION_SRC" "$SCRIPTS_DIR/VERSION" && echo "      $SCRIPTS_DIR/VERSION"
 
+# The prepare script stages the work for both mechanisms (the trigger runs it).
+cp "$HERE/../lib/daily-digest-prepare.sh" "$SCRIPTS_DIR/daily-digest-prepare.sh"
+chmod +x "$SCRIPTS_DIR/daily-digest-prepare.sh"
+echo "      $SCRIPTS_DIR/daily-digest-prepare.sh"
+
 # ---- Cron mechanism: prompt + trigger ----
 if $WANT_CRON; then
-    cp "$HERE/daily-summary.md"          "$SCRIPTS_DIR/daily-summary.md"
-    cp "$HERE/daily-summary-trigger.sh"  "$SCRIPTS_DIR/daily-summary-trigger.sh"
-    chmod +x "$SCRIPTS_DIR/daily-summary-trigger.sh"
+    cp "$HERE/daily-summary.md"               "$SCRIPTS_DIR/daily-summary.md"
+    cp "$HERE/../lib/daily-digest-trigger.sh" "$SCRIPTS_DIR/daily-digest-trigger.sh"
+    chmod +x "$SCRIPTS_DIR/daily-digest-trigger.sh"
     echo "      $SCRIPTS_DIR/daily-summary.md"
-    echo "      $SCRIPTS_DIR/daily-summary-trigger.sh"
+    echo "      $SCRIPTS_DIR/daily-digest-trigger.sh"
 fi
 
-# ---- Skill mechanism: prepare script + interactive SKILL.md ----
+# ---- Skill mechanism: interactive SKILL.md ----
 if $WANT_SKILL; then
-    cp "$HERE/daily-summary-prepare.sh"  "$SCRIPTS_DIR/daily-summary-prepare.sh"
-    chmod +x "$SCRIPTS_DIR/daily-summary-prepare.sh"
-    echo "      $SCRIPTS_DIR/daily-summary-prepare.sh"
-
     SKILL_SRC="$HERE/../skills/session-digest-daily-summary/SKILL.md"
     SKILL_DIR="$META_DIR/.claude/skills/session-digest-daily-summary"
     if [[ -f "$SKILL_SRC" ]]; then
@@ -193,10 +195,10 @@ echo "      $CONFIG_FILE"
 if $WANT_CRON; then
     step "Registering cron job..."
 
-    CRON_CMD="$CRON_MIN $CRON_HOUR * * * '$SCRIPTS_DIR/daily-summary-trigger.sh' >> '$META_DIR/logs/daily-summary.log' 2>&1"
+    CRON_CMD="$CRON_MIN $CRON_HOUR * * * '$SCRIPTS_DIR/daily-digest-trigger.sh' daily-summary >> '$META_DIR/logs/daily-summary.log' 2>&1"
     mkdir -p "$META_DIR/logs"
 
-    if crontab -l 2>/dev/null | grep -q "daily-summary-trigger.sh"; then
+    if crontab -l 2>/dev/null | grep -q "daily-digest-trigger.sh' daily-summary"; then
         echo "      Cron job already registered - skipping."
     else
         (crontab -l 2>/dev/null; echo "$CRON_CMD") | crontab -
@@ -215,7 +217,7 @@ if $WANT_CRON; then
     echo "--- Verify the cron scheduler ---"
     echo "  crontab -l | grep daily-summary"
     echo "  tail -f '$META_DIR/logs/daily-summary.log'"
-    echo "  bash '$SCRIPTS_DIR/daily-summary-trigger.sh'   # test now"
+    echo "  bash '$SCRIPTS_DIR/daily-digest-trigger.sh' daily-summary   # test now"
 fi
 
 if $WANT_SKILL; then

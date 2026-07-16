@@ -208,9 +208,6 @@ if ($mode -eq "install") {
     Write-Host "  ── Done ───────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  Open a new terminal for C4_CLAUDE_META_DIR to take effect."
-    if ($wlMode) {
-        Write-Host "  Edit '$MetaDir\.claude\scheduled-repos.json' to add your repos."
-    }
     Write-Host ""
 }
 
@@ -239,6 +236,8 @@ if ($mode -eq "uninstall") {
     }
 
     # ---- Cron-based mechanism (scheduled tasks + trigger + prompt files) -----
+    # Legacy per-scheduler trigger names are removed too, so an uninstall also
+    # cleans up installs made before the shared daily-digest-trigger.
     if ($NonInteractive -or (Prompt-Confirm "Remove the cron-based schedulers (scheduled tasks + trigger scripts)?")) {
         foreach ($task in @("SessionDigest-DailySummary", "SessionDigest-DailyLessons", "SessionDigest-WeeklyLessons")) {
             if (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue) {
@@ -249,24 +248,17 @@ if ($mode -eq "uninstall") {
             }
         }
         foreach ($f in @(
-            "daily-summary.md",  "daily-summary-trigger.ps1",
-            "daily-lessons.md",  "daily-lessons-trigger.ps1",
-            "weekly-lessons.md", "weekly-lessons-trigger.ps1")) {
+            "daily-summary.md", "daily-lessons.md", "weekly-lessons.md",
+            "daily-digest-trigger.ps1", "weekly-lessons-trigger.ps1",
+            "daily-summary-trigger.ps1", "daily-lessons-trigger.ps1")) {
             Remove-FileIfPresent (Join-Path $scripts $f)
         }
     }
 
     Write-Host ""
 
-    # ---- Skill-based mechanism (prepare scripts + interactive skills) --------
-    if ($NonInteractive -or (Prompt-Confirm "Remove the skill-based schedulers (prepare scripts + skills)?")) {
-        foreach ($f in @(
-            "daily-summary-prepare.ps1",
-            "daily-lessons-prepare.ps1",
-            "weekly-lessons-prepare.ps1")) {
-            Remove-FileIfPresent (Join-Path $scripts $f)
-        }
-
+    # ---- Skill-based mechanism (interactive skills) --------------------------
+    if ($NonInteractive -or (Prompt-Confirm "Remove the skill-based schedulers (skills)?")) {
         foreach ($s in @("daily-summary", "daily-lessons", "weekly-lessons")) {
             $path = Join-Path $MetaDir ".claude\skills\session-digest-$s"
             if (Test-Path $path) {
@@ -281,8 +273,12 @@ if ($mode -eq "uninstall") {
     Write-Host ""
 
     # ---- Shared files (used by both; remove only for a full clean) -----------
-    if ((-not $NonInteractive) -and (Prompt-Confirm "Remove shared files (git-sync.ps1, VERSION, scheduler-config.json)?" $false)) {
-        foreach ($f in @("git-sync.ps1", "VERSION", "scheduler-config.json")) {
+    # The prepare scripts are shared: the cron triggers run them too.
+    if ((-not $NonInteractive) -and (Prompt-Confirm "Remove shared files (prepare scripts, git-sync.ps1, VERSION, scheduler-config.json)?" $false)) {
+        foreach ($f in @(
+            "daily-digest-prepare.ps1", "weekly-lessons-prepare.ps1",
+            "daily-summary-prepare.ps1", "daily-lessons-prepare.ps1",
+            "git-sync.ps1", "VERSION", "scheduler-config.json")) {
             Remove-FileIfPresent (Join-Path $scripts $f)
         }
     }

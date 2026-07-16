@@ -5,15 +5,15 @@
 # What it does:
 #   1. Initialises %USERPROFILE%\claude-meta (git repo) with required subdirs
 #   2. Sets C4_CLAUDE_META_DIR as a permanent user environment variable
-#   3. Gitignores docs\claude_logs\ (transient staging area)
-#   4. Copies daily-lessons.md, daily-lessons-trigger.ps1, git-sync.ps1 → %USERPROFILE%\claude-meta\.claude\scripts\
-#   5. Registers the SessionDigest-DailyLessons Task Scheduler task (03:00 daily,
+#   3. Copies the shared scripts (daily-digest-prepare/-trigger, git-sync), the
+#      daily-lessons.md prompt, and the skill into the meta repo
+#   4. Registers the SessionDigest-DailyLessons Task Scheduler task (03:00 daily,
 #      staggered from daily-summary at 02:00 to avoid git-sync conflicts)
 #
 # How it works:
-#   At 03:00 the trigger scans ~/.claude/projects/**/*.jsonl for new chat files,
-#   passes each transcript to Claude for lessons extraction via the
-#   ceh-lessons-learned skill, and commits the per-session files.
+#   At 03:00 the trigger stages new chats from ~/.claude/projects/**/*.jsonl,
+#   passes each transcript to Claude for lessons extraction, and commits the
+#   per-session files.
 
 param(
     # Mode selects which mechanism to install:
@@ -99,22 +99,7 @@ if ($existing -ne $MetaDir) {
 }
 
 # ---------------------------------------------------------------------------
-# 3. Gitignore the transient staging directory
-# ---------------------------------------------------------------------------
-Step "Updating .gitignore..."
-
-$Gitignore = Join-Path $MetaDir ".gitignore"
-$StagingEntry = "docs/claude_logs/"
-$existing = if (Test-Path $Gitignore) { Get-Content $Gitignore -Raw } else { "" }
-if ($existing -notmatch [regex]::Escape($StagingEntry)) {
-    Add-Content $Gitignore "`n$StagingEntry" -Encoding UTF8
-    Write-Host "      Added $StagingEntry to $Gitignore" -ForegroundColor Green
-} else {
-    Write-Host "      Already present - skipping." -ForegroundColor Gray
-}
-
-# ---------------------------------------------------------------------------
-# 4. Install trigger script and git-sync
+# 3. Install scripts
 # ---------------------------------------------------------------------------
 Step "Installing files..."
 
@@ -135,19 +120,20 @@ if (Test-Path $VersionSrc) {
     Write-Host "      $ScriptsDir\VERSION" -ForegroundColor Green
 }
 
+# The prepare script stages the work for both mechanisms (the trigger runs it).
+Copy-Item "$Here\..\lib\daily-digest-prepare.ps1" -Destination "$ScriptsDir\daily-digest-prepare.ps1" -Force
+Write-Host "      $ScriptsDir\daily-digest-prepare.ps1" -ForegroundColor Green
+
 # ---- Cron mechanism: trigger + prompt file ----
 if ($WantCron) {
-    Copy-Item "$Here\daily-lessons.md"          -Destination "$ScriptsDir\daily-lessons.md"          -Force
-    Copy-Item "$Here\daily-lessons-trigger.ps1" -Destination "$ScriptsDir\daily-lessons-trigger.ps1" -Force
+    Copy-Item "$Here\daily-lessons.md"                -Destination "$ScriptsDir\daily-lessons.md"        -Force
+    Copy-Item "$Here\..\lib\daily-digest-trigger.ps1" -Destination "$ScriptsDir\daily-digest-trigger.ps1" -Force
     Write-Host "      $ScriptsDir\daily-lessons.md" -ForegroundColor Green
-    Write-Host "      $ScriptsDir\daily-lessons-trigger.ps1" -ForegroundColor Green
+    Write-Host "      $ScriptsDir\daily-digest-trigger.ps1" -ForegroundColor Green
 }
 
-# ---- Skill mechanism: prepare script + interactive SKILL.md ----
+# ---- Skill mechanism: interactive SKILL.md ----
 if ($WantSkill) {
-    Copy-Item "$Here\daily-lessons-prepare.ps1" -Destination "$ScriptsDir\daily-lessons-prepare.ps1" -Force
-    Write-Host "      $ScriptsDir\daily-lessons-prepare.ps1" -ForegroundColor Green
-
     $SkillSrc = Join-Path $Here "..\skills\session-digest-daily-lessons\SKILL.md"
     $SkillDir = Join-Path $MetaDir ".claude\skills\session-digest-daily-lessons"
     if (Test-Path $SkillSrc) {
@@ -171,14 +157,14 @@ $cfg | ConvertTo-Json -Depth 3 | Set-Content $ConfigFile -Encoding UTF8
 Write-Host "      $ConfigFile" -ForegroundColor Green
 
 # ---------------------------------------------------------------------------
-# 5. Register Task Scheduler task (cron mechanism only)
+# 4. Register Task Scheduler task (cron mechanism only)
 # ---------------------------------------------------------------------------
 $TaskName   = "SessionDigest-DailyLessons"
 # Subfolder = this member's folder name (the parent of each digest's own folder), so every
 # digest task nests under \ClaudeAutomation\<member>\ and stays self-identifying to the member.
 $MemberName = Split-Path -Leaf (Split-Path -Parent $PSScriptRoot)
 $TaskFolder = "\ClaudeAutomation\$MemberName\"
-$Script     = "$ScriptsDir\daily-lessons-trigger.ps1"
+$Script     = "$ScriptsDir\daily-digest-trigger.ps1"
 
 if ($WantCron) {
     Step "Registering Task Scheduler task..."
@@ -187,7 +173,7 @@ if ($WantCron) {
         $trigger  = New-ScheduledTaskTrigger -Daily -At $ScheduleTime
         $action   = New-ScheduledTaskAction `
             -Execute "powershell.exe" `
-            -Argument "-NonInteractive -File `"$Script`""
+            -Argument "-NonInteractive -File `"$Script`" -Scheduler daily-lessons"
         $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
 
         Register-ScheduledTask `
@@ -205,20 +191,17 @@ if ($WantCron) {
     }
 }
 
-$LogFile = Join-Path $MetaDir "logs\daily-lessons.log"
-
 Write-Host ""
 Write-Host "=== Install complete ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Open a new terminal for C4_CLAUDE_META_DIR to take effect."
 
 if ($WantCron) {
-    Write-Host "Logs: $LogFile"
+    Write-Host "Logs: $MetaDir\logs\<timestamp>_daily-lessons-*.log"
     Write-Host ""
     Write-Host "--- Verify the cron scheduler ---" -ForegroundColor Yellow
     Write-Host "     Get-ScheduledTask -TaskName '$TaskName' -TaskPath '$TaskFolder'"
-    Write-Host "     Get-Content '$LogFile' -Wait"
-    Write-Host "     & '$ScriptsDir\daily-lessons-trigger.ps1'   # test now"
+    Write-Host "     & '$ScriptsDir\daily-digest-trigger.ps1' -Scheduler daily-lessons   # test now"
 }
 
 if ($WantSkill) {
