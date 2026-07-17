@@ -1424,3 +1424,16 @@ model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke te
 **Decision:** Deleted both, plus the setup hint lines and the git-sync README mention.
 **Impact / Risk:** None found by repo-wide grep; the meta-repo structure diagram no longer lists them.
 **Outcome:** Removed.
+
+### Entry 58
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-07-17T00:00:00Z
+**Task:** scheduled-session-digests — git-sync merges back to the default branch; run logs go local-only
+
+**Context:** Interactive skill runs can start on a feature branch (the user-global branch-guard hook forces one before Claude may write files), so digests were landing on unmerged branches. The user chose (via AskUserQuestion) to gitignore `logs/` and to build the merge into git-sync itself; open implementation choices remained: merge semantics, failure handling, and whether git-sync self-heals pre-existing state.
+**Decision:** git-sync commits on the current branch, then if it differs from the default branch (`main`, falling back to `master`) merges it in (ff when possible), deletes the local branch and any stale remote copy, and pushes. On merge conflict: abort, return to the feature branch, log a warning — never leave a conflicted tree. The merge also runs when nothing was staged, so leftover branches self-heal. git-sync also self-heals the log policy (appends a root-anchored `logs/` ignore line to .gitignore and untracks previously committed logs via `git rm -r --cached --ignore-unmatch`) so other installs converge without manual steps. Avoided `2>$null` on stderr-writing git commands (PS 5.1 + `$ErrorActionPreference=Stop` turns redirected stderr into terminating errors); used `--quiet` flags and existence guards (MERGE_HEAD test, `git ls-remote`) instead.
+**Impact / Risk:** Post-push log lines are no longer versioned anywhere (accepted: git history itself records each successful run). A digest content folder literally named `logs` at the repo root would be ignored; the anchored pattern protects nested dirs.
+**Outcome:** Verified: no-op/commit path smoke-tested live under powershell.exe against the real meta repo (tree clean after push); merge path tested in a scratch repo (uncommitted work committed on branch, ff-merged to main, branch deleted). Meta repo cleaned: stray `docs/lessons-learned-2026-06-22` branch deleted local+remote, 146 tracked logs untracked.
+

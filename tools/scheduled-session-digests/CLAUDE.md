@@ -34,7 +34,10 @@ pick, per scheduler, a cron mechanism and/or a skill mechanism.
   source file fully handled). Consumers advance it only over verified outputs, so a crash retries
   exactly the unprocessed work.
 - `skills/` holds the installable skills; they are copied to `$C4_CLAUDE_META_DIR/.claude/skills/`.
-- `git-sync` stages, date-stamped commits, and pushes `claude-meta` after each run.
+- `git-sync` stages, date-stamped commits, merges the current branch back into the default
+  branch if they differ (interactive skill runs can start on a guard-forced feature branch),
+  and pushes `claude-meta` after each run. Run logs under `logs/` are gitignored (local-only)
+  because they keep being written after the push.
 
 ## Invariants — do not break these
 
