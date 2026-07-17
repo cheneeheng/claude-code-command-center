@@ -111,10 +111,10 @@ Run git-sync from the meta repo:
 - Windows: `& "$env:C4_CLAUDE_META_DIR\.claude\scripts\git-sync.ps1" -Label "daily-summary"`
 - macOS / Linux: `bash "$C4_CLAUDE_META_DIR/.claude/scripts/git-sync.sh" "daily-summary"`
 
-git-sync writes its own run log under `logs/` *after* it commits, so that log is left
-uncommitted. Make one trailing commit to capture it (a plain commit creates no new log,
-so it terminates): in `$C4_CLAUDE_META_DIR` run `git add -A`, and if anything is staged,
-`git commit -m "daily-summary: git-sync log"` then `git push` if a remote is configured.
+git-sync is self-contained: run logs under `logs/` are gitignored (local-only), and if
+the session is on a feature branch (e.g. one forced by a branch guard) git-sync merges
+it into the default branch and deletes it, so the digest lands on main. Do not make any
+extra commits.
 
 ## Step 6 — Clean up and report
 

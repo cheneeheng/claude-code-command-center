@@ -9,7 +9,7 @@ optionally be pushed to a remote.
 | 1 | [daily-summary](daily-summary/) | 02:00 daily | Summarises each new Claude Code chat, one `.md` per session |
 | 2 | [daily-lessons](daily-lessons/) | 03:00 daily | Extracts lessons learned from each new chat, one `.md` per session |
 | 3 | [weekly-lessons](weekly-lessons/) | Sunday 02:00 | Distils the week's per-session lessons into a master file |
-| 4 | [git-sync](git-sync/) | called by 1, 2, and 3 | Stages, commits (date-stamped), and pushes `claude-meta` after each run |
+| 4 | [git-sync](git-sync/) | called by 1, 2, and 3 | Stages, commits (date-stamped), merges back to the default branch if needed, and pushes `claude-meta` after each run |
 
 Trigger times, day of week, and session filter thresholds are set interactively
 during install; defaults are shown above. Both Windows (PowerShell + Task
@@ -53,8 +53,10 @@ Both mechanisms share the same pipeline; only the step that calls Claude differs
    epoch) of the newest source file whose output was verified. A crash or failed
    job leaves the cursor behind it, so exactly the unprocessed work is retried
    next run.
-4. **Commit** — `git-sync` makes one date-stamped commit (and pushes if a remote
-   is configured), then the staging directory is deleted.
+4. **Commit** — `git-sync` makes one date-stamped commit, merges the current
+   branch back into the default branch if they differ (and pushes if a remote is
+   configured), then the staging directory is deleted. Run logs under `logs/`
+   are gitignored so the tree is clean after every run.
 
 ---
 
