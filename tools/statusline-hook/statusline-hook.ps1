@@ -62,11 +62,12 @@ $reset7dFmt = if ($reset7d -gt 0) {
   [DateTimeOffset]::FromUnixTimeSeconds($reset7d).LocalDateTime.ToString('ddd HH:mm')
 } else { '---' }
 
-# --- ANSI color codes ---
-$Green  = "`e[32m"
-$Yellow = "`e[33m"
-$Red    = "`e[31m"
-$Reset  = "`e[0m"
+# --- ANSI color codes (char 27 = ESC; `e escape is PS 6+ only) ---
+$esc    = [char]27
+$Green  = "$esc[32m"
+$Yellow = "$esc[33m"
+$Red    = "$esc[31m"
+$Reset  = "$esc[0m"
 
 # Context: green <30, yellow 30-49, red >=50
 $ctxColor = if ($pct -lt 30) { $Green } elseif ($pct -lt 50) { $Yellow } else { $Red }
