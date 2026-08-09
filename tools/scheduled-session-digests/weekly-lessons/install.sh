@@ -236,6 +236,9 @@ echo "      $CONFIG_FILE"
 if $WANT_CRON; then
     step "Registering cron job..."
 
+    # Per-run logs go to logs/<yyyy>/<MM>/ (the trigger writes those). This cron
+    # redirect stays a flat, stable file: it catches failures that happen before
+    # the trigger can open its own log, and cron opens it before the script runs.
     CRON_CMD="$CRON_MIN $CRON_HOUR * * $CRON_DOW '$SCRIPTS_DIR/weekly-lessons-trigger.sh' >> '$META_DIR/logs/weekly-lessons.log' 2>&1"
     mkdir -p "$META_DIR/logs"
 

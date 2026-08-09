@@ -220,7 +220,7 @@ if ($WantCron) {
     }
 }
 
-$LogFile = Join-Path $MetaDir "logs\weekly-lessons.log"
+$LogPattern = Join-Path $MetaDir "logs\<yyyy>\<MM>\<timestamp>_weekly-lessons-*.log"
 
 Write-Host ""
 Write-Host "=== Install complete ===" -ForegroundColor Cyan
@@ -231,11 +231,11 @@ Write-Host "Requires daily-lessons to have run at least once to populate lessons
 if ($WantCron) {
     Write-Host ""
     Write-Host "The harvest runs every $ScheduleDayOfWeek at $ScheduleTime."
-    Write-Host "Logs: $LogFile"
+    Write-Host "Logs: $LogPattern"
     Write-Host ""
     Write-Host "--- Verify the cron scheduler ---" -ForegroundColor Yellow
     Write-Host "     Get-ScheduledTask -TaskName '$TaskName' -TaskPath '$TaskFolder'"
-    Write-Host "     Get-Content '$LogFile' -Wait"
+    Write-Host "     Get-ChildItem '$MetaDir\logs' -Recurse -Filter '*weekly-lessons*'"
     Write-Host "     & '$ScriptsDir\weekly-lessons-trigger.ps1'   # test now"
 }
 

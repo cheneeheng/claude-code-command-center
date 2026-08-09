@@ -1437,3 +1437,15 @@ model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke te
 **Impact / Risk:** Post-push log lines are no longer versioned anywhere (accepted: git history itself records each successful run). A digest content folder literally named `logs` at the repo root would be ignored; the anchored pattern protects nested dirs.
 **Outcome:** Verified: no-op/commit path smoke-tested live under powershell.exe against the real meta repo (tree clean after push); merge path tested in a scratch repo (uncommitted work committed on branch, ff-merged to main, branch deleted). Meta repo cleaned: stray `docs/lessons-learned-2026-06-22` branch deleted local+remote, 146 tracked logs untracked.
 
+
+### Entry 59
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-08-09T00:00:00Z
+**Task:** scheduled-session-digests — run logs foldered by year/month
+
+**Context:** All run logs landed flat in `$C4_CLAUDE_META_DIR/logs/`. The user asked for `logs/<year>/<month>/<logfile>`, matching the `daily-summaries/` and `lessons-learned/` output layout. Open question: the Linux installers also register a cron stdout redirect to a fixed `logs/<scheduler>.log`, which is not written by a script.
+**Decision:** Moved every script-written per-run log to `logs/<yyyy>/<MM>/`, deriving the folder from the same timestamp already used in the filename (one `Get-Date` / one `date` call per script, so filename and folder can never disagree across a month boundary). Left the Linux cron redirect flat. Cron opens that redirect before the script runs, so a dated path would need `%`-escaped `date` expansion plus an inline `mkdir -p` inside the crontab entry — fragile for a file whose whole job is catching failures that happen before the trigger can open its own log. It is three stable files, not accumulation, and it stays a working `tail -f` target.
+**Impact / Risk:** Existing flat logs stay where they are; nothing reads them programmatically (repo-wide grep found no consumers). The root-anchored `/logs/` gitignore line and `git rm -r --cached logs` in git-sync both cover subdirectories, so the local-only log policy is unaffected.
+**Outcome:** Applied to 5 PowerShell and 5 Bash scripts. Parse-checked and `bash -n` clean; path construction verified on both platforms.

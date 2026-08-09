@@ -23,10 +23,12 @@ if [[ -z "$META_DIR" ]]; then
     exit 0
 fi
 
-LOG_DIR="$META_DIR/logs"
+# Logs are foldered by year/month, matching the digest output layout.
+LOG_STAMP="$(date '+%Y%m%d_%H%M%S')"
+LOG_DIR="$META_DIR/logs/${LOG_STAMP:0:4}/${LOG_STAMP:4:2}"
 mkdir -p "$LOG_DIR"
 SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}" .sh)"
-LOG_FILE="$LOG_DIR/$(date '+%Y%m%d_%H%M%S')_${SCRIPT_NAME}.log"
+LOG_FILE="$LOG_DIR/${LOG_STAMP}_${SCRIPT_NAME}.log"
 
 if [[ ! -d "$META_DIR/.git" ]]; then
     log "[git-sync] $META_DIR is not a git repo - skipping."

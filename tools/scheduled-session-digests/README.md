@@ -102,7 +102,8 @@ claude-meta/
   daily-summaries/     <- one .md per chat session (daily-summary)
   lessons-learned/     <- one .md per chat session (daily-lessons)
   master-lessons/      <- MASTER_LESSONS_LEARNED.md (weekly-lessons)
-  logs/                <- per-run script logs
+  logs/<yyyy>/<MM>/    <- per-run script logs, foldered by year/month
+                          (Linux cron also appends a flat logs/<scheduler>.log)
   .claude/
     scripts/           <- prepare + trigger scripts, prompts, and git-sync
     skills/            <- interactive scheduler skills (skill mechanism)

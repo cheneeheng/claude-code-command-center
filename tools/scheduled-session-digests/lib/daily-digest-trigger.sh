@@ -61,9 +61,11 @@ if [[ -z "$META_DIR" ]]; then
     exit 1
 fi
 
-LOG_DIR="$META_DIR/logs"
+# Logs are foldered by year/month, matching the digest output layout.
+LOG_STAMP="$(date '+%Y%m%d_%H%M%S')"
+LOG_DIR="$META_DIR/logs/${LOG_STAMP:0:4}/${LOG_STAMP:4:2}"
 mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/$(date '+%Y%m%d_%H%M%S')_${SCHEDULER}-trigger.log"
+LOG_FILE="$LOG_DIR/${LOG_STAMP}_${SCHEDULER}-trigger.log"
 
 # ---------------------------------------------------------------------------
 # Guards: everything this trigger needs is installed alongside it
