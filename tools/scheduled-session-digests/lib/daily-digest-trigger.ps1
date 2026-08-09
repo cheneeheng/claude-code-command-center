@@ -53,9 +53,11 @@ if (-not $MetaDir) {
     exit 1
 }
 
-$LogDir = Join-Path $MetaDir "logs"
+# Logs are foldered by year/month, matching the digest output layout.
+$LogStamp = Get-Date
+$LogDir   = Join-Path $MetaDir ("logs\{0}\{1}" -f $LogStamp.ToString("yyyy"), $LogStamp.ToString("MM"))
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
-$LogFile = Join-Path $LogDir ("{0}_{1}-trigger.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"), $Scheduler)
+$LogFile = Join-Path $LogDir ("{0}_{1}-trigger.log" -f $LogStamp.ToString("yyyyMMdd_HHmmss"), $Scheduler)
 
 # ---------------------------------------------------------------------------
 # Guards: everything this trigger needs is installed alongside it

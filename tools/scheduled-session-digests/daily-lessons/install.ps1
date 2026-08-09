@@ -197,7 +197,7 @@ Write-Host ""
 Write-Host "Open a new terminal for C4_CLAUDE_META_DIR to take effect."
 
 if ($WantCron) {
-    Write-Host "Logs: $MetaDir\logs\<timestamp>_daily-lessons-*.log"
+    Write-Host "Logs: $MetaDir\logs\<yyyy>\<MM>\<timestamp>_daily-lessons-*.log"
     Write-Host ""
     Write-Host "--- Verify the cron scheduler ---" -ForegroundColor Yellow
     Write-Host "     Get-ScheduledTask -TaskName '$TaskName' -TaskPath '$TaskFolder'"
