@@ -37,6 +37,10 @@ Both surfaces use the same read/merge/write logic (implemented independently in 
 - CORS in `server.py` is restricted to `http://localhost` only.
 - No npm runtime dependencies — `@types/vscode` is dev-only.
 
-## No test runner configured
+## Tests
 
-No test framework is set up. Tests should be added before shipping.
+Smoke tests only — `tests/smoke.sh` (Linux/macOS) and `tests/smoke.ps1` (Windows). They boot the
+real `html/server.py` on port 17779 against fixture data and assert the `/api/plugins`,
+`/api/toggle`, `/api/marketplace`, and `/api/set-project` happy paths plus the `400` validations.
+The install/uninstall stream endpoints are not covered — they shell out to the real `claude` CLI.
+No pytest suite is configured; the Node surface has no test runner.

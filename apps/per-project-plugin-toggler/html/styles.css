@@ -567,6 +567,19 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   margin-top: 1px;
 }
 
+/* Shown only for skills with `disable-model-invocation: true` in frontmatter. */
+.manual-only-tag {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.08rem 0.35rem;
+  margin-left: 0.4rem;
+  white-space: nowrap;
+}
+
 /* --- Hooks display (ITER_16) — read-only structured text --- */
 .hook-block {
   padding: 4px 0;

@@ -32,11 +32,16 @@ class PluginMember:
         path: Source markdown file (a skill's ``SKILL.md`` or an agent's
             ``<name>.md``). Server-side detail — do not expose to untrusted
             clients.
+        manual_only: ``disable-model-invocation: true`` in frontmatter — the
+            model cannot invoke this skill; the user must call it. A skill
+            concept: only :func:`load_plugin_skills` fills it, so agents keep
+            the ``False`` default, as do skills that do not opt out.
     """
 
     name: str
     description: str
     path: str
+    manual_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -61,6 +66,40 @@ def _unquote(value: str) -> str:
     return value
 
 
+def _frontmatter(path: Path) -> str:
+    """Return a markdown file's raw YAML frontmatter block (``""`` when absent)."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    m = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
+    return m.group(1) if m else ""
+
+
+def _manual_only(fm: str) -> bool:
+    """Return whether a frontmatter block sets ``disable-model-invocation: true``."""
+    m = re.search(r"^disable-model-invocation:\s*(.+)$", fm, re.MULTILINE)
+    return m is not None and _unquote(m.group(1).strip()).lower() == "true"
+
+
+def _name_description(fm: str, fallback: str) -> tuple[str, str]:
+    """Return ``(name, description)`` from a raw frontmatter block."""
+    if not fm:
+        return fallback, ""
+    name_match = re.search(r"^name:\s*(.+)$", fm, re.MULTILINE)
+    name = _unquote(name_match.group(1).strip()) if name_match else fallback
+    block_match = re.search(
+        r"^description:\s*(?:>-|>|[|][-]?)\s*\n((?:[ \t].+\n?)*)", fm, re.MULTILINE
+    )
+    if block_match:
+        raw = block_match.group(1)
+        description = " ".join(ln.strip() for ln in raw.splitlines() if ln.strip())
+    else:
+        inline = re.search(r"^description:\s*(.+)$", fm, re.MULTILINE)
+        description = _unquote(inline.group(1).strip()) if inline else ""
+    return name, description
+
+
 def parse_frontmatter(path: Path, fallback: str = "") -> tuple[str, str]:
     """Return ``(name, description)`` from a markdown file's YAML frontmatter.
 
@@ -78,26 +117,7 @@ def parse_frontmatter(path: Path, fallback: str = "") -> tuple[str, str]:
     """
     if not fallback:
         fallback = path.parent.name
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return fallback, ""
-    m = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
-    if not m:
-        return fallback, ""
-    fm = m.group(1)
-    name_match = re.search(r"^name:\s*(.+)$", fm, re.MULTILINE)
-    name = _unquote(name_match.group(1).strip()) if name_match else fallback
-    block_match = re.search(
-        r"^description:\s*(?:>-|>|[|][-]?)\s*\n((?:[ \t].+\n?)*)", fm, re.MULTILINE
-    )
-    if block_match:
-        raw = block_match.group(1)
-        description = " ".join(ln.strip() for ln in raw.splitlines() if ln.strip())
-    else:
-        inline = re.search(r"^description:\s*(.+)$", fm, re.MULTILINE)
-        description = _unquote(inline.group(1).strip()) if inline else ""
-    return name, description
+    return _name_description(_frontmatter(path), fallback)
 
 
 def load_plugin_skills(install_path: str) -> list[PluginMember]:
@@ -121,8 +141,9 @@ def load_plugin_skills(install_path: str) -> list[PluginMember]:
         skill_md = folder / "SKILL.md"
         if not skill_md.is_file():
             continue
-        name, description = parse_frontmatter(skill_md)
-        members.append(PluginMember(name, description, str(skill_md)))
+        fm = _frontmatter(skill_md)
+        name, description = _name_description(fm, folder.name)
+        members.append(PluginMember(name, description, str(skill_md), _manual_only(fm)))
     return members
 
 

@@ -29,10 +29,10 @@ for entry in buckets["user"]:
 | `plugins_base(claude_dir=None)` | Resolve `<claude_dir>/plugins`. `claude_dir=None` defaults to `~/.claude`; pass an explicit `Path` to override. |
 | `normalise_path(p)` | Cross-platform path normalisation for project-root comparison. |
 | `parse_frontmatter(path, fallback="")` | Extract `(name, description)` from a markdown file's YAML frontmatter (regex; inline and `>-`/`>`/`\|` block scalars). |
-| `load_plugin_skills(install_path)` | Read `skills/<name>/SKILL.md` → `list[PluginMember]`. |
+| `load_plugin_skills(install_path)` | Read `skills/<name>/SKILL.md` → `list[PluginMember]` (sets `manual_only` from `disable-model-invocation`). |
 | `load_plugin_agents(install_path)` | Read flat `agents/*.md` → `list[PluginMember]`. |
 | `load_plugin_hooks(install_path)` | Read `hooks/hooks.json` → `list[PluginHook]`. |
-| `PluginMember` | Frozen dataclass: `name`, `description`, `path` (source `.md`; server-side). |
+| `PluginMember` | Frozen dataclass: `name`, `description`, `path` (source `.md`; server-side), `manual_only` (`disable-model-invocation: true` — the model cannot invoke it; default `False`). |
 | `PluginHook` | Frozen dataclass: `event`, `matcher`, `actions` (`[{type, detail}]`). |
 
 `PluginMember.path` is server-side detail — strip it before sending member lists

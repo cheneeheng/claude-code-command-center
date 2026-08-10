@@ -73,9 +73,14 @@ Plugin ID format: `name@marketplace`.
 Skills and agents are read from the plugin's install path at load time:
 
 ```
-<installPath>/skills/<skill-dir>/SKILL.md     # YAML front matter: name, description
+<installPath>/skills/<skill-dir>/SKILL.md     # YAML front matter: name, description,
+                                              #   disable-model-invocation
 <installPath>/agents/<agent>.md               # YAML front matter: name, description
 ```
+
+A skill whose front matter sets `disable-model-invocation: true` is listed with a
+**manual only** tag: the model cannot invoke it, so you must call it yourself. Model
+invocation is the default, so skills without the key carry no tag.
 
 Marketplace plugin listings are read from:
 

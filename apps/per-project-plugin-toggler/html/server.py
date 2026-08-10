@@ -123,7 +123,8 @@ def build_sections(raw: dict, settings: dict) -> dict:
                 "scope": scope,
                 "enabled": enabled_map.get(pid, True),  # default: enabled
                 "installed": installed,
-                "skills": [{"name": m.name, "description": m.description}
+                "skills": [{"name": m.name, "description": m.description,
+                            "manualOnly": m.manual_only}
                            for m in claude_plugins.load_plugin_skills(install_path)] if installed else [],
                 "agents": [{"name": m.name, "description": m.description}
                            for m in claude_plugins.load_plugin_agents(install_path)] if installed else [],

@@ -89,6 +89,17 @@ def test_load_plugin_skills_reads_and_sorts_skipping_noise(tmp_path: Path) -> No
     skills = load_plugin_skills(str(tmp_path))
     assert [s.name for s in skills] == ["alpha-skill", "beta-skill"]
     assert skills[0].path.endswith("SKILL.md")
+    assert [s.manual_only for s in skills] == [False, False]
+
+
+def test_load_plugin_skills_reads_disable_model_invocation(tmp_path: Path) -> None:
+    d = tmp_path / "skills" / "manual"
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        '---\nname: manual\ndisable-model-invocation: "true"\n---\nbody\n',
+        encoding="utf-8",
+    )
+    assert load_plugin_skills(str(tmp_path))[0].manual_only is True
 
 
 # ── load_plugin_agents ──────────────────────────────────────────────────────

@@ -58,6 +58,8 @@ The **Enable all** and **Disable all** buttons in the header apply only to plugi
 
 Each plugin row shows a skill count badge. Click the badge (or the row disclosure) to expand an inline list of skill names and descriptions. Click again to collapse.
 
+A skill tagged **manual only** cannot be invoked by the model — you must call it yourself. Model invocation is the default, so skills without the tag can be invoked either way.
+
 ## Installing plugins from a marketplace
 
 1. Click **+ Install plugin** (right of the bulk-actions row). The install panel slides open.

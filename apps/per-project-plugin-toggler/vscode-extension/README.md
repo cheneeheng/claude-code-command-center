@@ -36,7 +36,8 @@ The extension reads installed plugins from `~/.claude/plugins/installed_plugins.
 Plugin IDs use the format `name@marketplace`. Skills and agents are read from each plugin's install path:
 
 ```
-<installPath>/skills/<skill-dir>/SKILL.md   # YAML front matter: name, description
+<installPath>/skills/<skill-dir>/SKILL.md   # YAML front matter: name, description,
+                                            #   disable-model-invocation
 <installPath>/agents/<agent>.md             # YAML front matter: name, description
 ```
 
@@ -62,6 +63,8 @@ Plugins appear in two sections:
 ## Viewing skills and agents
 
 Each plugin row shows a skill count badge. Click it to expand an inline list of skill names and descriptions.
+
+A skill tagged **manual only** cannot be invoked by the model — you must call it yourself. Model invocation is the default, so skills without the tag can be invoked either way.
 
 ## Installing from a marketplace
 

@@ -67,6 +67,8 @@ The change is written to `.claude/settings.local.json` in the workspace root. Cl
 
 Each plugin row shows a skill count badge. Click it to expand an inline list of skill names and descriptions.
 
+A skill tagged **manual only** cannot be invoked by the model — you must call it yourself. Model invocation is the default, so skills without the tag can be invoked either way.
+
 ## Installing plugins from a marketplace
 
 1. Click **+ Install plugin** (right of the bulk-actions row).
