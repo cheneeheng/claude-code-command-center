@@ -23,6 +23,7 @@ Reading `~/.claude/plugins/installed_plugins.json` and each plugin's
 | `normalise_path` | Cross-platform path normalisation for project-root comparison. |
 | `load_installed_plugins(project_root)` / `loadInstalledPlugins(projectRoot)` | Bucket installed plugins by **scope** (`local` / `project` / `user`), matching `projectPath` against the project root. |
 | `parse_frontmatter` / `parseSkillFrontmatter` | Extract `(name, description)` from a markdown file's YAML frontmatter (regex; handles inline and `>-`/`>`/`\|` block scalars). |
+| `disable-model-invocation: true` opt-out | Flag a skill the model cannot invoke. Python surfaces it as `PluginMember.manual_only` (filled by `load_plugin_skills`, not returned by `parse_frontmatter`); Node returns `manualOnly` from `parseSkillFrontmatter`. |
 | skill / agent / hook enumeration | Walk `<installPath>/skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`. |
 
 ## The implementations
@@ -58,6 +59,10 @@ view, port `loose_bases` there and update this section.
   the Node copy should match (return empty rather than throw).
 - Display quirks inherited from the shared parser (e.g. a quoted `name: "x"` renders with quotes)
   apply to all copies — fix them in the library and #4 together.
+- `disable-model-invocation` is a **skill** concept. Python fills `manual_only` in
+  `load_plugin_skills` only, leaving agents at `False`; the Node copy parses skills and agents
+  through one `parseSkillFrontmatter`, so its agent objects carry `manualOnly` as well. Nothing
+  reads it for agents on either side.
 
 # Shared plan-lifecycle sidecar format — kept-in-sync contract
 

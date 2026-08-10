@@ -1449,3 +1449,15 @@ model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke te
 **Decision:** Moved every script-written per-run log to `logs/<yyyy>/<MM>/`, deriving the folder from the same timestamp already used in the filename (one `Get-Date` / one `date` call per script, so filename and folder can never disagree across a month boundary). Left the Linux cron redirect flat. Cron opens that redirect before the script runs, so a dated path would need `%`-escaped `date` expansion plus an inline `mkdir -p` inside the crontab entry — fragile for a file whose whole job is catching failures that happen before the trigger can open its own log. It is three stable files, not accumulation, and it stays a working `tail -f` target.
 **Impact / Risk:** Existing flat logs stay where they are; nothing reads them programmatically (repo-wide grep found no consumers). The root-anchored `/logs/` gitignore line and `git rm -r --cached logs` in git-sync both cover subdirectories, so the local-only log policy is unaffected.
 **Outcome:** Applied to 5 PowerShell and 5 Bash scripts. Parse-checked and `bash -n` clean; path construction verified on both platforms.
+
+### Entry 60
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-08-10T00:00:00Z
+**Task:** per-project-plugin-toggler — surface `disable-model-invocation: true` on skill rows
+
+**Context:** The request named one member (the toggler), but the toggler does not parse SKILL.md itself — its Python surface consumes `libs/claude-plugins`. Reading the new frontmatter key inside `html/server.py` would keep the diff inside the named member but fork frontmatter parsing away from the library that owns it.
+**Decision:** Added the flag to the library (`PluginMember.manual_only`, set by `load_plugin_skills`) and consumed it in the toggler, plus the registered Node duplicate in `vscode-extension/extension.js`. Scope discipline is about not retrofitting conventions across unrelated members; the library is the toggler's own parsing layer, so it is inside the request's scope. `parse_frontmatter` keeps its 2-tuple public signature — the new field is read through private helpers (`_frontmatter`, `_name_description`, `_manual_only`) that split the existing body, so the one file read stays one read and no consumer unpacking breaks.
+**Impact / Risk:** `PluginMember` gains a defaulted field, so `claude-component-browser` (the other consumer) keeps working untouched; it simply ignores `manual_only` until someone wires it. Agents are unaffected — `load_plugin_agents` leaves the default `False`, since the key is a skill concept.
+**Outcome:** Library at 100% line+branch coverage with a new test; both parsers agree on a real `SKILL.md` carrying the key.

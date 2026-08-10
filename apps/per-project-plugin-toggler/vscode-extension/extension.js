@@ -139,7 +139,8 @@ function saveSettingsUser(settings) {
 
 function parseSkillFrontmatter(text, fallbackName) {
   const fmMatch = text.match(/^---\s*\n([\s\S]*?)\n---/);
-  if (!fmMatch) return { name: fallbackName, description: "" };
+  if (!fmMatch)
+    return { name: fallbackName, description: "", manualOnly: false };
   const fm = fmMatch[1];
 
   const nameMatch = fm.match(/^name:\s*(.+)$/m);
@@ -160,7 +161,12 @@ function parseSkillFrontmatter(text, fallbackName) {
     if (descInlineMatch) description = descInlineMatch[1].trim();
   }
 
-  return { name, description };
+  // Model invocation is the default; `disable-model-invocation: true` opts out.
+  const manualOnlyMatch = fm.match(/^disable-model-invocation:\s*(.+)$/m);
+  const manualOnly =
+    !!manualOnlyMatch && /^(["']?)true\1$/i.test(manualOnlyMatch[1].trim());
+
+  return { name, description, manualOnly };
 }
 
 function loadPluginSkills(installPath) {

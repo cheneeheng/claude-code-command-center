@@ -30,11 +30,19 @@ function renderPlugins() {
   });
 }
 
+// Model invocation is the default; only the opt-out (disable-model-invocation: true)
+// is worth showing.
+function manualOnlyTag(skill) {
+  return skill.manualOnly
+    ? `<span class="manual-only-tag" title="disable-model-invocation: true — the model cannot invoke this skill; call it yourself">manual only</span>`
+    : "";
+}
+
 function renderSkillsDisclosure(skills) {
   if (!skills || skills.length === 0) return "";
   const rows = skills.map((s) => `
     <div class="skill-row">
-      <div class="skill-name">${esc(s.name)}</div>
+      <div class="skill-name">${esc(s.name)}${manualOnlyTag(s)}</div>
       ${s.description ? `<div class="skill-description">${esc(s.description)}</div>` : ""}
     </div>`).join("");
   return `

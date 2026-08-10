@@ -11,6 +11,12 @@ this log starts at the first release tracked here.
 
 ## [Unreleased]
 
+### Added
+- **manual only** tag on skills whose `SKILL.md` front matter sets
+  `disable-model-invocation: true`, on both surfaces (HTML and VSCode webview). The tag
+  marks a skill the model cannot invoke; model invocation is the default, so skills
+  without the key are untagged.
+
 ## [0.9.1] - 2026-06-12
 
 First release tracked in the claude-code-command-center monorepo. Capabilities at this
