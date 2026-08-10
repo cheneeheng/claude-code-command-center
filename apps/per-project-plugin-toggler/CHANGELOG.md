@@ -9,7 +9,7 @@ Releases are tagged `pppt-vX.Y.Z` (see [`docs/releasing.md`](../../docs/releasin
 Development through 0.9.x predates this monorepo and happened in a previous repository;
 this log starts at the first release tracked here.
 
-## [Unreleased]
+## [0.9.2] - 2026-08-10
 
 ### Added
 - **manual only** tag on skills whose `SKILL.md` front matter sets

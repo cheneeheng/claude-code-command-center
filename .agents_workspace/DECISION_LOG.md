@@ -1461,3 +1461,15 @@ model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke te
 **Decision:** Added the flag to the library (`PluginMember.manual_only`, set by `load_plugin_skills`) and consumed it in the toggler, plus the registered Node duplicate in `vscode-extension/extension.js`. Scope discipline is about not retrofitting conventions across unrelated members; the library is the toggler's own parsing layer, so it is inside the request's scope. `parse_frontmatter` keeps its 2-tuple public signature — the new field is read through private helpers (`_frontmatter`, `_name_description`, `_manual_only`) that split the existing body, so the one file read stays one read and no consumer unpacking breaks.
 **Impact / Risk:** `PluginMember` gains a defaulted field, so `claude-component-browser` (the other consumer) keeps working untouched; it simply ignores `manual_only` until someone wires it. Agents are unaffected — `load_plugin_agents` leaves the default `False`, since the key is a skill concept.
 **Outcome:** Library at 100% line+branch coverage with a new test; both parsers agree on a real `SKILL.md` carrying the key.
+
+### Entry 61
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-08-10T00:00:00Z
+**Task:** per-project-plugin-toggler — cut release pppt-v0.9.2
+
+**Context:** The release flow prescribes a `chore/release-vX.Y.Z` branch cut from latest `main`, but the content being released (Entry 60, the manual-only skill tag) sat unmerged on `feat/toggler-manual-only-skill-badge` with no PR. Two shapes were possible: merge the feature first and open a second bump-only PR, or fold the bump into the existing branch and ship one PR. Bump level was also open — the changelog entry is under `Added`, which semver reads as MINOR.
+**Decision:** User chose both forks: one PR carrying feat + release on the existing branch, and PATCH (0.9.2) rather than MINOR, treating a list badge as too small for a feature bump. The flow's intent — the bump lands through a reviewed PR, and the tag is cut on `main` at the merge commit — is preserved either way.
+**Impact / Risk:** The `pppt-v0.9.2` tag points at a merge commit whose diff contains both the feature and the bump, so the release tag and the feature commit are not separable by tag range. Acceptable for a single-feature release. Versions still only increase, and the tag matches the manifests that `release-extension.yml` asserts against.
+**Outcome:** Bumped `pyproject.toml`, `vscode-extension/package.json`, `vscode-extension/package-lock.json` to 0.9.2. Backfilled the user-facing docs the feature commit missed (extension README, both user guides) and corrected the member CLAUDE.md, which still claimed no test runner exists while `tests/smoke.{sh,ps1}` were present.

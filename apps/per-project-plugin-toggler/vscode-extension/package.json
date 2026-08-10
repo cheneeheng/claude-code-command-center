@@ -2,7 +2,7 @@
   "name": "skills-toggle",
   "displayName": "Skills Toggle",
   "description": "Manage Claude Code skill plugins per project from a VSCode sidebar.",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "publisher": "ceh-plugins",
   "repository": {
     "type": "git",
