@@ -11,13 +11,22 @@ $OtherDir   = "$ProjectDir-other"   # different project root; its plugin must be
 $PluginsDir = Join-Path $env:USERPROFILE ".claude\plugins"
 $ServerProcess = $null
 
+# server.py always reads the real ~/.claude, so this suite has to overwrite the developer's
+# own installed_plugins.json with a fixture — and one case deletes it outright to assert the
+# mock fallback. Stash the real file first and put it back in Cleanup, or running the tests
+# destroys the plugin registry of the machine they run on.
+$RealRegistry   = Join-Path $PluginsDir "installed_plugins.json"
+$RegistryBackup = "$ProjectDir-registry.bak"
+if (Test-Path $RealRegistry) { Copy-Item $RealRegistry $RegistryBackup -Force }
+
 function Cleanup {
   if ($null -ne $ServerProcess -and -not $ServerProcess.HasExited) {
     $ServerProcess.Kill()
     $ServerProcess.WaitForExit(3000) | Out-Null
   }
   Remove-Item -Recurse -Force $ProjectDir -ErrorAction SilentlyContinue
-  Remove-Item -Force "$PluginsDir\installed_plugins.json" -ErrorAction SilentlyContinue
+  Remove-Item -Force $RealRegistry -ErrorAction SilentlyContinue
+  if (Test-Path $RegistryBackup) { Move-Item $RegistryBackup $RealRegistry -Force }
 }
 
 # POST and return the HTTP status code (catching the throw on non-2xx).

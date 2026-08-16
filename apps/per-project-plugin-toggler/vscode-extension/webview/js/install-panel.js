@@ -67,8 +67,8 @@ function renderInstallPanel() {
 }
 
 function renderMpPluginRow(p) {
-  const escId = esc(p.id);
-  const e = CSS.escape(p.id);
+  const escId = esc(p.id);  // HTML attribute context
+  const jsId = jsStr(p.id); // inline-handler (JS string) context
   const installedScopes = installedScopesMap[p.id] || [];
   const notInstalled = SCOPES.filter((s) => !installedScopes.includes(s));
 
@@ -86,15 +86,15 @@ function renderMpPluginRow(p) {
       .map((s, i) => `<option value="${s}" ${i === 0 ? "selected" : ""}>${SCOPE_LABELS[s]}</option>`)
       .join("");
     installControl = `
-      <select class="mp-scope-select" id="mp-scope-${e}">${opts}</select>
-      <button class="mp-install-btn" id="mp-btn-${e}"
-              onclick="installPlugin('${escId}', mpScopeVal('${escId}'), mpEls('${escId}'))">
+      <select class="mp-scope-select" id="mp-scope-${escId}">${opts}</select>
+      <button class="mp-install-btn" id="mp-btn-${escId}"
+              onclick="installPlugin('${jsId}', mpScopeVal('${jsId}'), mpEls('${jsId}'))">
         Install &#8595;
       </button>`;
   }
 
   return `
-    <div class="mp-plugin-row" id="mp-row-${e}">
+    <div class="mp-plugin-row" id="mp-row-${escId}">
       <div class="mp-plugin-main">
         <span class="mp-plugin-name">${esc(p.name)}</span>
         ${p.version ? `<span class="version-badge">v${esc(p.version)}</span>` : ""}
@@ -103,7 +103,7 @@ function renderMpPluginRow(p) {
       <div class="mp-install-col">${installControl}</div>
       ${p.description ? `<div class="mp-plugin-description">${esc(p.description)}</div>` : ""}
       ${keywords ? `<div class="mp-keyword-list">${keywords}</div>` : ""}
-      <div class="mp-install-error" id="mp-err-${e}"></div>
-      <div class="mp-install-log" id="mp-log-${e}"></div>
+      <div class="mp-install-error" id="mp-err-${escId}"></div>
+      <div class="mp-install-log" id="mp-log-${escId}"></div>
     </div>`;
 }

@@ -20,10 +20,21 @@ OTHER_DIR="${PROJECT_DIR}-other"   # a different project root; its plugin must b
 PLUGINS_DIR="$HOME/.claude/plugins"
 SERVER_PID=""
 
+# server.py always reads the real ~/.claude, so this suite has to overwrite the developer's
+# own installed_plugins.json with a fixture — and one case deletes it outright to assert the
+# mock fallback. Stash the real file first and put it back in cleanup, or running the tests
+# destroys the plugin registry of the machine they run on.
+REAL_REGISTRY="$PLUGINS_DIR/installed_plugins.json"
+REGISTRY_BACKUP="${PROJECT_DIR}-registry.bak"
+[ -f "$REAL_REGISTRY" ] && cp "$REAL_REGISTRY" "$REGISTRY_BACKUP"
+
 cleanup() {
   [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null || true
   rm -rf "$PROJECT_DIR"
-  rm -f "$PLUGINS_DIR/installed_plugins.json"
+  rm -f "$REAL_REGISTRY"
+  if [ -f "$REGISTRY_BACKUP" ]; then
+    mv "$REGISTRY_BACKUP" "$REAL_REGISTRY"
+  fi
 }
 trap cleanup EXIT
 

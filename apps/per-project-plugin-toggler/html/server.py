@@ -7,6 +7,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from socketserver import ThreadingMixIn
+from urllib.parse import urlsplit
 
 import claude_plugins
 
@@ -404,7 +405,32 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+    def _origin_is_local(self) -> bool:
+        """Whether a POST may proceed.
+
+        Every POST here has a side effect: writing settings files, running the `claude`
+        CLI, or stopping the server. CORS does not protect them — it stops a cross-origin
+        page from *reading* the response, not from *sending* the request, and a simple
+        POST (no custom headers) is not preflighted at all. So any page the user visits
+        while the server runs could install a plugin or repoint the project root.
+
+        A missing Origin means a non-browser client (curl, PowerShell, the smoke tests),
+        which is allowed. A browser always sends Origin on POST, and both Origin and Host
+        come from the same URL, so for the page this server itself served they always
+        agree. Anything else is cross-site and is rejected: a remote page, and also
+        another service on this machine at a different port, which a host-only check
+        would have let through. `null` (sandboxed iframe, file://) matches nothing.
+        """
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True
+        return urlsplit(origin).netloc == self.headers.get("Host")
+
     def do_POST(self):
+        if not self._origin_is_local():
+            self._send_json({"ok": False, "error": "Cross-site request rejected"}, 403)
+            return
+
         if self.path == "/api/toggle":
             body = self._read_body()
             plugin_id = body.get("id", "")

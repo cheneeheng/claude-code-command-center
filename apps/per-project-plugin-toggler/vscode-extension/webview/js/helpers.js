@@ -21,22 +21,33 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
-// Scope-qualified element-id bundles (ITER_13/15/17).
+// For values dropped into an inline onclick="fn('…')". That is a JS context nested in an
+// HTML attribute, and the browser HTML-decodes the attribute before parsing the script —
+// so esc() alone is not enough: it leaves ' untouched, and even &#39; would decode back to
+// a quote and break out of the string literal. Escape for JS first (JSON.stringify covers
+// backslashes, quotes and control chars), then esc() to keep the attribute intact.
+function jsStr(s) {
+  return esc(JSON.stringify(String(s)).slice(1, -1).replace(/'/g, "\\'"));
+}
+
+// Scope-qualified element-id bundles (ITER_13/15/17). The plugin id goes in raw, because
+// getElementById matches an id literally — it is not a selector. These once ran the id
+// through CSS.escape, which was not just unnecessary: the renderers escaped the same way,
+// so the backslashes CSS.escape adds ended up inside the rendered id="…" attribute, and an
+// id carrying a double quote closed the attribute. The renderers now write these ids with
+// esc(), which the browser decodes back to the raw id the lookups here use.
 function sectionInstallEls(scope, id) {
-  const e = CSS.escape(id);
-  return { btn: `btn-install-${scope}-${e}`, log: `log-${scope}-${e}`, err: `err-${scope}-${e}` };
+  return { btn: `btn-install-${scope}-${id}`, log: `log-${scope}-${id}`, err: `err-${scope}-${id}` };
 }
 function sectionUninstallEls(scope, id) {
-  const e = CSS.escape(id);
-  return { btn: `btn-uninstall-${scope}-${e}`, log: `log-${scope}-${e}`, err: `err-${scope}-${e}` };
+  return { btn: `btn-uninstall-${scope}-${id}`, log: `log-${scope}-${id}`, err: `err-${scope}-${id}` };
 }
 function mpEls(id) {
-  const e = CSS.escape(id);
-  return { btn: `mp-btn-${e}`, log: `mp-log-${e}`, err: `mp-err-${e}` };
+  return { btn: `mp-btn-${id}`, log: `mp-log-${id}`, err: `mp-err-${id}` };
 }
-// Read the selected install scope at click time (CSS.escape applied at runtime so it
-// matches the select's id attribute — never embed the escaped form into an onclick literal).
+// Read the selected install scope at click time, so the onclick literal never has to carry
+// anything but the plain id.
 function mpScopeVal(id) {
-  const sel = document.getElementById(`mp-scope-${CSS.escape(id)}`);
+  const sel = document.getElementById(`mp-scope-${id}`);
   return sel ? sel.value : "local";
 }

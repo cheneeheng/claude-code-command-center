@@ -1473,3 +1473,93 @@ model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke te
 **Decision:** User chose both forks: one PR carrying feat + release on the existing branch, and PATCH (0.9.2) rather than MINOR, treating a list badge as too small for a feature bump. The flow's intent — the bump lands through a reviewed PR, and the tag is cut on `main` at the merge commit — is preserved either way.
 **Impact / Risk:** The `pppt-v0.9.2` tag points at a merge commit whose diff contains both the feature and the bump, so the release tag and the feature commit are not separable by tag range. Acceptable for a single-feature release. Versions still only increase, and the tag matches the manifests that `release-extension.yml` asserts against.
 **Outcome:** Bumped `pyproject.toml`, `vscode-extension/package.json`, `vscode-extension/package-lock.json` to 0.9.2. Backfilled the user-facing docs the feature commit missed (extension README, both user guides) and corrected the member CLAUDE.md, which still claimed no test runner exists while `tests/smoke.{sh,ps1}` were present.
+
+### Entry 62
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-08-13T00:00:00Z
+**Task:** per-project-plugin-toggler — loading state for the VSCode panel, then an audit of the app
+
+**Context:** Three forks. (1) The user asked for a loading animation; the underlying cause is that VSCode disposes a hidden webview view, so `retainContextWhenHidden` would remove the wait rather than decorate it — one fix or both? (2) The audit found a command-injection path: `spawn("claude", […], { shell: true })` does not quote arguments, and plugin ids come from `marketplace.json` / `installed_plugins.json`, files this tool does not own. Removing `shell: true` is the root fix but breaks Windows, where `claude` resolves to a `.cmd` shim that `spawn` cannot execute directly. (3) The same inline-`onclick` escaping bug exists in both surfaces, but the user's request pointed only at the VSCode extension.
+
+**Decision:** (1) Both, and documented as such in the member README under "Panel loading behaviour" — they cover different moments: `retainContextWhenHidden` removes the rebuild on container switches, the loading state covers the genuine first open, which no option can remove. The README records the unmeasured memory cost and says to drop the option first if the extension is ever reported as heavy. (2) Kept `shell: true` and validated the id against the documented `name@marketplace` format at the message boundary, per the trust-boundary rule; resolving the Windows shim by hand is a larger, riskier change for the same outcome. (3) Fixed both surfaces. It is one member and one bug class reached through the same untrusted files, so leaving the HTML copy exploitable would be a scope reading that ships a known hole. Escaping only — the inline handlers were not refactored into delegated listeners, which is the real fix and a much larger diff.
+
+**Impact / Risk:** The id regex rejects any id outside `[A-Za-z0-9._-]+@[A-Za-z0-9._-]+`. If a real marketplace ever publishes a name outside that alphabet, install/uninstall refuses it with a visible error instead of running — a deliberate fail-closed choice. The CSP carries `'unsafe-inline'` for both script and style, so it is containment (no remote code, no network egress), not injection prevention; a delegated-listener refactor would let it be tightened. `retainContextWhenHidden` holds one idle webview per window for the session, unmeasured.
+
+**Outcome:** `jsStr()` round-trips exactly through HTML-decode plus JS-parse for quotes, backslashes, and an `x')+alert(1)+('` payload. Not validated at runtime in VSCode — the extension was not launched.
+
+### Entry 63
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-08-13T00:00:00Z
+**Task:** per-project-plugin-toggler — second audit pass (HTTP surface and test suite)
+
+**Context:** Two findings. (1) `html/server.py` binds `127.0.0.1`, but binding locally does not make it private to the app: a simple cross-origin POST is not preflighted, so any page the user visits while the server runs could reach `/api/install-stream`, `/api/toggle`, `/api/set-project` or `/api/shutdown`. The existing `Access-Control-Allow-Origin: http://localhost` header only governs reading responses. Fixes available: check `Origin`, require `Content-Type: application/json` (which forces a preflight), or add a CSRF token. (2) Both smoke suites overwrite the developer's real `~/.claude/plugins/installed_plugins.json` with a fixture and delete it in cleanup, with no backup — the "mock fallback" case deletes it deliberately. The target audience is developers with Claude Code installed, so running the repo's own tests destroys live state.
+
+**Decision:** (1) `Origin` check, rejecting non-local hosts with 403 and allowing a missing `Origin` for non-browser clients. It states the intent directly rather than relying on a Content-Type side effect, and it keeps curl/PowerShell/the smoke tests working unchanged. A token would need session state the stateless server does not have. Hostnames are compared exactly, so `localhost.evil.com` does not pass. (2) Stash-and-restore inside each suite, rather than teaching `server.py` a config-dir override (`C4_CLAUDE_DIR`, which this member does not read). The override is the better long-term fix — it would let the tests point at a temp dir and never touch real state — but it is a feature change to both surfaces, outside an audit's remit.
+
+**Impact / Risk:** The `Origin` check is browser-facing only; a non-browser client that omits `Origin` still has full access, which is the intended local-tool posture. The test fix leaves one gap: a hard kill (SIGKILL, closed terminal) between the fixture write and cleanup still leaves the fixture in place with the backup alongside it as `<tmp>-registry.bak`. Recoverable, and better than the previous unconditional delete.
+
+**Outcome:** Origin predicate verified against local, IPv6, `null` and `localhost.evil.com` origins. Both suites parse clean. The suites were NOT executed — they write to the user's live `~/.claude` even with the fix, so running them was left to the user.
+
+### Entry 64
+
+**Type:** Correction
+**Mode:** Autonomous
+**Timestamp:** 2026-08-13T00:00:00Z
+**Task:** per-project-plugin-toggler — revert `retainContextWhenHidden` (Entry 62 partially reversed)
+
+**Context:** Entry 62 recorded implementing `retainContextWhenHidden` *and* documenting it. The instruction was "document the alternative in the apps readme so that we can revisit in the future" — documenting something in order to revisit it later means it was not adopted. Entry 62 read "fix those issues" as covering the alternative too; the issues in question were the watcher leak and the audit findings, not the option. The user also raised a freshness objection.
+
+**Decision:** Reverted the option; the README now records it as considered-and-not-taken, with both the memory cost and the freshness argument. On the freshness question itself: refresh-on-show (`onDidChangeVisibility` → `_refresh`) means a retained panel would still re-read on every show, so the objection is not exactly right as stated — but it lands, because two of the four file watchers are created from absolute string paths outside the workspace, which VSCode matches against workspace files only, so they almost certainly never fire. Retaining the panel would have narrowed freshness onto the visibility event while that gap is open. The dead watchers are documented as a known gap and left unfixed: unverified at runtime, and outside what was asked.
+
+**Impact / Risk:** Container switches rebuild the panel again, which is what the loading state was built for. The watcher-leak fix (Entry 62) becomes load-bearing rather than incidental — without retention, `resolveWebviewView` runs on every switch, which is exactly the path that leaked four watchers per rebuild.
+
+**Outcome:** Only the README mentions the option now. All security and data-loss fixes from Entries 62 and 63 are untouched.
+
+### Entry 65
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-08-14T00:00:00Z
+**Task:** per-project-plugin-toggler — review the loading-state branch (Entries 62-64) for defects
+
+**Context:** Two review findings sat on a fix-or-document fork. (1) `_origin_is_local` compares the Origin *hostname*, so a page served from another port on the same machine (a dev server on `localhost:3000`) still passes — but its docstring claimed cross-site requests are rejected. (2) `CSS.escape(p.id)` is interpolated raw into `id="…"` attributes in both webviews. `CSS.escape('"')` is `\"`, which closes the attribute, so an untrusted id can inject markup — the same trust boundary the branch's `jsStr()` fix hardened for the inline-handler context.
+
+**Decision:** Documented both, fixed neither. (1) Tightening to an exact `Origin.netloc == Host` comparison is stricter and one line, but it breaks any access path where those differ (a reverse proxy) while the residual gap needs an attacker already serving from the user's own machine — the remote attacker, which is the threat this control exists for, is still rejected. The docstring now states the limit and names the tighter check. (2) The `id=` interpolation is pre-existing, not introduced by this branch, and `CSS.escape` also escapes `=`, so an injected attribute cannot form an event handler — markup injection, not script execution. Fixing it properly means dropping `CSS.escape`-in-`id` for a `data-id` + delegated-listener refactor across both surfaces, which is a much larger diff than a review warrants.
+
+**Impact / Risk:** The HTTP surface keeps its current posture; anyone tightening it later has the exact change written down. The `id=` gap stays open against a hostile `marketplace.json`, bounded to markup injection inside the panel.
+
+**Outcome:** Reviewed the rest of the branch and found no functional defect. `jsStr()` was re-verified by round-tripping eight payloads (quotes, backslash, newline, `x')+alert(1)+('`) through HTML-decode plus JS-parse — all exact. The one-tick `_refresh` deferral was checked by reasoning through Node's event-loop phases: VSCode's RPC writer flushes on `setImmediate` (check phase), the deferred scan runs on `setTimeout(0)` (timers phase of the next iteration), so the `$setHtml` RPC reaches the renderer before the blocking filesystem walk. Not verified at runtime — the extension was not launched.
+
+### Entry 66
+
+**Type:** Correction
+**Mode:** Autonomous
+**Timestamp:** 2026-08-14T00:00:00Z
+**Task:** per-project-plugin-toggler — fix the review findings Entry 65 chose to document (Entry 65 reversed)
+
+**Context:** Entry 65 recorded documenting the `id=` markup-injection gap and the hostname-only `Origin` check rather than fixing them, on scope and regression-risk grounds. The user then asked for every finding to be fixed, which overrides that call.
+
+**Decision:** Fixed all four open findings. (1) `CSS.escape` is gone from both webviews: it was never needed, because these ids are only ever read back with `getElementById`, which matches an id literally rather than as a selector — the renderers now write `id="…"` with `esc()` and the lookups take the plain id, which is both shorter and closed. (2) The `Origin` check is now `urlsplit(origin).netloc == Host`, exact same-origin. (3) The two user-level `FileSystemWatcher`s are rebuilt with a `RelativePattern` rooted at `vscode.Uri.file(os.homedir())`, so they can actually match files outside the workspace. (4) The project card is hidden until the first `load` message fills it.
+
+**Impact / Risk:** The `Origin` change rejects one case the previous check allowed beyond cross-site pages: a client whose Origin and Host legitimately differ — access through a reverse proxy. The server binds `127.0.0.1`, so that is a fringe setup, and no-Origin clients (curl, PowerShell, both smoke suites) are unaffected. The watcher change makes two watchers fire that never fired, so a CLI `claude plugin install` now refreshes an open panel: new behaviour, and the extra refreshes are the same synchronous filesystem walk. Dropping `CSS.escape` changes every rendered element id for ids outside `[A-Za-z0-9_-]`; generation and lookup were changed together, and nothing reaches these ids through a CSS selector.
+
+**Outcome:** The `Origin` predicate was re-verified against eight origin/Host pairs, including the `localhost:3000` case it now rejects. A hostile id (`x" onmouseover=alert(1) y="@mp`) was confirmed to render with no raw quote inside the attribute and to still resolve through `getElementById`. JS parses clean in all files; `ruff check` passes. Not verified at runtime: the extension was not launched, so the rebuilt watchers are unproven in VSCode. `ruff format` still reports drift on `server.py` — pre-existing, the file uses hand-aligned assignments, and reformatting it was left alone as unrelated.
+
+### Entry 67
+
+**Type:** Correction
+**Mode:** Autonomous
+**Timestamp:** 2026-08-17T00:00:00Z
+**Task:** per-project-plugin-toggler — VSCode panel intermittently stuck on the loading skeleton
+
+**Context:** The user reported the new loading state sometimes never clears, with the extension confirmed activated in the log. Entry 65 had cleared the one-tick `_refresh` deferral by reasoning about RPC ordering alone: `$setHtml` flushes before the deferred scan, so the `content` message reaches the renderer first and the later `load` message is buffered against the pending frame. That reasoning is incomplete. In VSCode's webview host (`workbench/contrib/webview/browser/pre/index.html`), `hookupOnLoadHandlers` arms a **200ms fallback timer** that calls `onLoad` whether or not the inner document has finished loading; `onLoad` promotes the pending frame to active and flushes `pendingMessages` into it. The panel's seven classic scripts and `styles.css` are fetched over the service worker, so exceeding 200ms is ordinary at window startup — and a `load` flushed then lands in a document that has not yet run `messages.js`. There is no listener, no retry, and no handshake, so the skeleton stays up. Buffering ordering was never the protection; it only ever narrowed the window.
+
+**Decision:** Inverted the direction of the first load. `main.js` (loaded last, after `messages.js` registers the listener) posts `{ type: "ready" }`, and `_onMessage` runs `_refresh` on receipt. The `setTimeout(0)` and its `clearTimeout` in `onDidDispose` are gone. Webview-to-extension messages do not have the reverse problem — `acquireVsCodeApi()` exists only once the host messaging channel is up.
+
+**Impact / Risk:** The deferral's original benefit is kept and strengthened: the scan now starts strictly after the panel has painted, not merely one tick later. `onDidChangeVisibility` was left in place rather than removed as redundant — the view is rebuilt on show today, so `ready` covers that path, but the handler is the only refresh that would survive someone enabling `retainContextWhenHidden`. Cost is one duplicate scan if visibility toggles without a rebuild.
+
+**Outcome:** The 200ms fallback and the `pendingMessages` flush were read directly out of the installed VSCode build (`a5b5009513`, lines 1143–1172 and 1244–1255 of `pre/index.html`), not inferred. `node --check` passes on both edited files. Not verified at runtime — the extension was not launched, and the failure is timing-dependent, so confirmation needs repeated cold opens of the dev host.

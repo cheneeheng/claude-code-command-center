@@ -324,6 +324,13 @@ function loadMarketplacePlugins(marketplaceKey, installLocation) {
 }
 
 
+// The `claude` CLI is spawned with `shell: true` (on Windows it resolves to a .cmd shim
+// that spawn cannot execute directly), and Node does not quote arguments in shell mode.
+// Plugin ids come from marketplace.json / installed_plugins.json — files this tool does
+// not own — so an id carrying `&`, `|` or a quote would run as a second shell command.
+// Ids are `name@marketplace`; anything outside that alphabet is rejected before spawning.
+const PLUGIN_ID_RE = /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/;
+
 function streamInstall(pluginId, scope, projectRoot, onLine) {
   return new Promise((resolve, reject) => {
     const proc = spawn("claude", ["plugin", "install", pluginId, "--scope", scope], {
@@ -434,9 +441,8 @@ function streamMarketplaceRefresh(projectRoot, onLine) {
 class SkillsViewProvider {
   static viewType = "skillsToggle.pluginList";
 
-  constructor(extensionUri, context) {
+  constructor(extensionUri) {
     this._extensionUri = extensionUri;
-    this._context = context;
   }
 
   resolveWebviewView(webviewView) {
@@ -451,7 +457,13 @@ class SkillsViewProvider {
       localResourceRoots: [vscode.Uri.joinPath(this._extensionUri, "webview")],
     };
     webviewView.webview.html = this._getHtml(webviewView.webview, stylesUri, jsBaseUri);
-    this._refresh(webviewView.webview);
+    // No first refresh is posted from here. The webview asks for it with a `ready`
+    // message once its scripts have run — see _onMessage. Pushing it on a timer (or
+    // synchronously with the html) dropped it whenever the panel's scripts took longer
+    // than ~200ms to load: VSCode's webview host promotes the frame from pending to
+    // active on a 200ms fallback timer and flushes its buffered messages into it, so a
+    // `load` arriving in that window hits a document that has not yet registered its
+    // message listener. Nothing retried it, and the panel sat on the skeleton forever.
     webviewView.webview.onDidReceiveMessage((msg) =>
       this._onMessage(webviewView.webview, msg)
     );
@@ -459,16 +471,14 @@ class SkillsViewProvider {
       if (webviewView.visible) this._refresh(webviewView.webview);
     });
 
-    // File watchers — auto-refresh on settings or installed_plugins change
+    // File watchers — auto-refresh on settings or installed_plugins change.
+    // They belong to this view, not to the extension: resolveWebviewView runs again every
+    // time the view is rebuilt, so pushing them onto context.subscriptions accumulated a
+    // fresh set on each rebuild that nothing disposed until deactivate — and every
+    // settings change then triggered one full plugin scan per leaked set.
+    const watchers = [];
     const folders = vscode.workspace.workspaceFolders;
     if (folders && folders.length > 0) {
-      const installedPath = path.join(
-        os.homedir(),
-        ".claude",
-        "plugins",
-        "installed_plugins.json"
-      );
-
       const onchange = () => this._refresh(webviewView.webview);
 
       // Local + project settings — workspace-relative
@@ -478,20 +488,30 @@ class SkillsViewProvider {
       const projectSettingsWatcher = vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(folders[0], ".claude/settings.json")
       );
-      // User settings + install registry — absolute paths (outside the workspace)
+      // User settings + install registry — outside the workspace, so they need a
+      // RelativePattern rooted at the home directory. A bare absolute path string is a
+      // glob, and VSCode matches globs against workspace files only: built that way these
+      // two never fired, so a CLI `claude plugin install` left an open panel stale.
+      // Neither pattern contains `**`, so neither watches the home directory recursively.
+      const home = vscode.Uri.file(os.homedir());
       const userSettingsWatcher = vscode.workspace.createFileSystemWatcher(
-        path.join(os.homedir(), ".claude", "settings.json")
+        new vscode.RelativePattern(home, ".claude/settings.json")
       );
-      const installedWatcher =
-        vscode.workspace.createFileSystemWatcher(installedPath);
+      const installedWatcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(home, ".claude/plugins/installed_plugins.json")
+      );
 
       for (const w of [settingsWatcher, projectSettingsWatcher, userSettingsWatcher, installedWatcher]) {
         w.onDidChange(onchange);
         w.onDidCreate(onchange);
         w.onDidDelete(onchange);
-        this._context.subscriptions.push(w);
+        watchers.push(w);
       }
     }
+
+    webviewView.onDidDispose(() => {
+      for (const w of watchers) w.dispose();
+    });
   }
 
   _projectRoot() {
@@ -566,6 +586,12 @@ class SkillsViewProvider {
   }
 
   async _onMessage(webview, msg) {
+    if (msg.type === "ready") {
+      // The webview drives the first load: it only asks once its message listener is
+      // installed, so the reply cannot be delivered into a document that would ignore it.
+      this._refresh(webview);
+      return;
+    }
     if (msg.type === "toggle") {
       const { id, enabled, scope } = msg;
       const projectRoot = this._projectRoot();
@@ -619,6 +645,10 @@ class SkillsViewProvider {
       const projectRoot = this._projectRoot();
       if (!projectRoot) return;
       const installScope = ["local", "project", "user"].includes(scope) ? scope : "local";
+      if (!PLUGIN_ID_RE.test(id)) {
+        webview.postMessage({ type: "installDone", id, ok: false, error: `Refusing to install "${id}": not a valid name@marketplace plugin id.` });
+        return;
+      }
 
       webview.postMessage({ type: "installStart", id });
 
@@ -636,6 +666,10 @@ class SkillsViewProvider {
       const projectRoot = this._projectRoot();
       if (!projectRoot) return;
       if (!["local", "project", "user"].includes(scope)) return;
+      if (!PLUGIN_ID_RE.test(id)) {
+        webview.postMessage({ type: "uninstallDone", id, ok: false, error: `Refusing to uninstall "${id}": not a valid name@marketplace plugin id.` });
+        return;
+      }
 
       if (confirmActionsEnabled()) {
         const scopeLabel = { local: "Local", project: "Project", user: "User" }[scope];
@@ -677,6 +711,7 @@ class SkillsViewProvider {
     );
     const iconSvg = fs.readFileSync(iconSvgPath.fsPath, "utf8").trim();
     let html = fs.readFileSync(panelHtmlPath.fsPath, "utf8");
+    html = html.replace(/__CSP_SOURCE__/g, webview.cspSource);
     html = html.replace("__STYLES_URI__", stylesUri.toString());
     html = html.replace(/__JS_BASE__/g, jsBaseUri.toString());
     html = html.replace(/__ICON_SVG__/g, () => iconSvg);
@@ -685,7 +720,7 @@ class SkillsViewProvider {
 }
 
 function activate(context) {
-  const provider = new SkillsViewProvider(context.extensionUri, context);
+  const provider = new SkillsViewProvider(context.extensionUri);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       SkillsViewProvider.viewType,
