@@ -415,13 +415,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         while the server runs could install a plugin or repoint the project root.
 
         A missing Origin means a non-browser client (curl, PowerShell, the smoke tests),
-        which is allowed. A browser always sends Origin on POST, so a cross-site request
-        is rejected here; `null` (sandboxed iframe, file://) has no hostname and fails too.
+        which is allowed. A browser always sends Origin on POST, and both Origin and Host
+        come from the same URL, so for the page this server itself served they always
+        agree. Anything else is cross-site and is rejected: a remote page, and also
+        another service on this machine at a different port, which a host-only check
+        would have let through. `null` (sandboxed iframe, file://) matches nothing.
         """
         origin = self.headers.get("Origin")
         if origin is None:
             return True
-        return urlsplit(origin).hostname in ("localhost", "127.0.0.1", "::1")
+        return urlsplit(origin).netloc == self.headers.get("Host")
 
     def do_POST(self):
         if not self._origin_is_local():

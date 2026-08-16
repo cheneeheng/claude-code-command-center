@@ -8,6 +8,8 @@ window.addEventListener("message", (event) => {
       : "";
     document.getElementById("project-name").textContent = folderName;
     document.getElementById("project-path").textContent = projectRoot;
+    // Drop the inline display:none from panel.html; the stylesheet owns the value.
+    document.getElementById("project-card").style.display = "";
     document.getElementById("mock-notice").style.display = msg.mock ? "flex" : "none";
     document.getElementById("error").style.display = "none";
     state.local = (msg.plugins && msg.plugins.local) || [];

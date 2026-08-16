@@ -55,24 +55,22 @@ walk cannot block the extension host from serving the webview's own resources.
 >    footprint should be modest, **but it has not been measured**.
 > 2. **Freshness rests on fewer legs.** A rebuild is an unconditional re-read of every
 >    source file. Retaining the panel replaces that with `onDidChangeVisibility` →
->    `_refresh`, which should be equivalent, plus the file watchers — and two of those four
->    watchers are registered with absolute string paths outside the workspace, which VSCode
->    likely never matches (see below). It also removes an accidental recovery path: webview
->    JS state survives, so a stuck `operationInProgress` flag can no longer be cleared by
->    switching away and back.
+>    `_refresh`, which should be equivalent, plus the file watchers. It also removes an
+>    accidental recovery path: webview JS state survives, so a stuck `operationInProgress`
+>    flag can no longer be cleared by switching away and back.
 >
-> Revisit if the rebuild becomes the top complaint again, and pair it with a fix for the
-> watchers so freshness does not depend on the visibility event alone.
+> Revisit if the rebuild becomes the top complaint again.
 
-**Known gap — the out-of-workspace watchers.** `resolveWebviewView` creates four
-`FileSystemWatcher`s. The two workspace-relative ones (`.claude/settings.json`,
-`.claude/settings.local.json`) use `RelativePattern` and work. The other two —
-`~/.claude/settings.json` and `~/.claude/plugins/installed_plugins.json` — are created from
-plain absolute path strings, which VSCode matches against workspace files only, so they
-almost certainly never fire. Installing a plugin from the CLI while the panel is open
-therefore does not auto-refresh it; switching away and back does. **Not verified at
-runtime**, and not fixed. The fix is to build them with `RelativePattern` rooted at the home
-directory.
+**The four file watchers.** `resolveWebviewView` creates one `FileSystemWatcher` per source
+file, and all four are built with `RelativePattern` — the two workspace ones
+(`.claude/settings.json`, `.claude/settings.local.json`) rooted at the workspace folder, the
+two user ones (`~/.claude/settings.json`, `~/.claude/plugins/installed_plugins.json`) rooted
+at the home directory. Rooting matters: a bare absolute path string is a glob, and VSCode
+matches globs against workspace files only, so the user-level pair silently never fired
+until they were rebuilt this way. No pattern contains `**`, so none of them watches a
+directory recursively. **Not verified at runtime.** The watchers belong to the view, not to
+the extension, and are disposed with it — `resolveWebviewView` runs again on every container
+switch, so registering them on `context.subscriptions` leaked a set per rebuild.
 
 Still on the list: `_refresh` re-reads every `SKILL.md` on every refresh with no caching.
 
@@ -88,9 +86,10 @@ python3 /path/to/claude-code-plugin-toggler/html/server.py 8080   # custom port
 
 Convenience scripts in `html/`: `start.sh` (Linux/macOS), `start.ps1` / `start.bat` (Windows).
 
-The server binds `127.0.0.1` and rejects any `POST` whose `Origin` header names a non-local
-host, so a page you happen to visit cannot drive it. Requests with no `Origin` at all — curl,
-PowerShell, the smoke tests — are still accepted.
+The server binds `127.0.0.1` and rejects any `POST` whose `Origin` is not its own origin —
+same host *and* same port — so neither a page you happen to visit nor another local service
+can drive it. Requests with no `Origin` at all — curl, PowerShell, the smoke tests — are
+still accepted.
 
 **VSCode extension** — dev mode: open `vscode-extension/` and press `F5`. To package:
 

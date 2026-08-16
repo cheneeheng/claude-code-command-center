@@ -109,7 +109,6 @@ function toggleDisclosure(btn) {
 function sectionRowHtml(p, scope) {
   const escId = esc(p.id);   // HTML attribute/text context
   const jsId = jsStr(p.id);  // inline-handler (JS string) context
-  const e = CSS.escape(p.id);
   const installed = p.installed !== false;
 
   const disclosures = installed
@@ -117,13 +116,13 @@ function sectionRowHtml(p, scope) {
     : "";
 
   const actionBtn = installed
-    ? `<button class="mp-install-btn mp-install-btn--uninstall" id="btn-uninstall-${scope}-${e}"
+    ? `<button class="mp-install-btn mp-install-btn--uninstall" id="btn-uninstall-${scope}-${escId}"
                onclick="uninstallPlugin('${jsId}','${scope}', sectionUninstallEls('${scope}','${jsId}'))">Uninstall</button>`
-    : `<button class="mp-install-btn" id="btn-install-${scope}-${e}"
+    : `<button class="mp-install-btn" id="btn-install-${scope}-${escId}"
                onclick="installPlugin('${jsId}','${scope}', sectionInstallEls('${scope}','${jsId}'))">Install &#8595;</button>`;
 
   return `
-    <div class="plugin-row" id="row-${scope}-${e}" data-id="${escId}">
+    <div class="plugin-row" id="row-${scope}-${escId}" data-id="${escId}">
       <div class="plugin-row-main">
         <div class="plugin-info">
           <span class="plugin-name">${esc(p.name)}</span>
@@ -135,12 +134,12 @@ function sectionRowHtml(p, scope) {
           ${disclosures}
         </div>
         <div class="row-actions">
-          <input type="checkbox" class="toggle" id="toggle-${scope}-${e}"
+          <input type="checkbox" class="toggle" id="toggle-${scope}-${escId}"
                  data-id="${escId}" data-scope="${scope}" ${p.enabled ? "checked" : ""} />
           ${actionBtn}
         </div>
       </div>
-      <div class="mp-install-error" id="err-${scope}-${e}"></div>
-      <div class="mp-install-log" id="log-${scope}-${e}"></div>
+      <div class="mp-install-error" id="err-${scope}-${escId}"></div>
+      <div class="mp-install-log" id="log-${scope}-${escId}"></div>
     </div>`;
 }

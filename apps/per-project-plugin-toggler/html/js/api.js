@@ -49,7 +49,7 @@ async function toggle(id, enabled, el, scope) {
   const prev = !enabled;
   const p = (state[scope] || []).find((x) => x.id === id);
   if (p) p.enabled = enabled;
-  const errEl = document.getElementById(`err-${scope}-${CSS.escape(id)}`);
+  const errEl = document.getElementById(`err-${scope}-${id}`);
   if (errEl) { errEl.textContent = ""; errEl.classList.remove("visible"); }
   try {
     const res = await fetch("/api/toggle", {
@@ -81,7 +81,7 @@ async function bulkToggle(enabled) {
   buttons.forEach((b) => (b.disabled = true));
   for (const p of state.local) {
     if (p.enabled !== enabled) {
-      const el = document.getElementById(`toggle-local-${CSS.escape(p.id)}`);
+      const el = document.getElementById(`toggle-local-${p.id}`);
       if (el) await toggle(p.id, enabled, el, "local");
     }
   }

@@ -1518,3 +1518,33 @@ model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke te
 **Impact / Risk:** Container switches rebuild the panel again, which is what the loading state was built for. The watcher-leak fix (Entry 62) becomes load-bearing rather than incidental — without retention, `resolveWebviewView` runs on every switch, which is exactly the path that leaked four watchers per rebuild.
 
 **Outcome:** Only the README mentions the option now. All security and data-loss fixes from Entries 62 and 63 are untouched.
+
+### Entry 65
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-08-14T00:00:00Z
+**Task:** per-project-plugin-toggler — review the loading-state branch (Entries 62-64) for defects
+
+**Context:** Two review findings sat on a fix-or-document fork. (1) `_origin_is_local` compares the Origin *hostname*, so a page served from another port on the same machine (a dev server on `localhost:3000`) still passes — but its docstring claimed cross-site requests are rejected. (2) `CSS.escape(p.id)` is interpolated raw into `id="…"` attributes in both webviews. `CSS.escape('"')` is `\"`, which closes the attribute, so an untrusted id can inject markup — the same trust boundary the branch's `jsStr()` fix hardened for the inline-handler context.
+
+**Decision:** Documented both, fixed neither. (1) Tightening to an exact `Origin.netloc == Host` comparison is stricter and one line, but it breaks any access path where those differ (a reverse proxy) while the residual gap needs an attacker already serving from the user's own machine — the remote attacker, which is the threat this control exists for, is still rejected. The docstring now states the limit and names the tighter check. (2) The `id=` interpolation is pre-existing, not introduced by this branch, and `CSS.escape` also escapes `=`, so an injected attribute cannot form an event handler — markup injection, not script execution. Fixing it properly means dropping `CSS.escape`-in-`id` for a `data-id` + delegated-listener refactor across both surfaces, which is a much larger diff than a review warrants.
+
+**Impact / Risk:** The HTTP surface keeps its current posture; anyone tightening it later has the exact change written down. The `id=` gap stays open against a hostile `marketplace.json`, bounded to markup injection inside the panel.
+
+**Outcome:** Reviewed the rest of the branch and found no functional defect. `jsStr()` was re-verified by round-tripping eight payloads (quotes, backslash, newline, `x')+alert(1)+('`) through HTML-decode plus JS-parse — all exact. The one-tick `_refresh` deferral was checked by reasoning through Node's event-loop phases: VSCode's RPC writer flushes on `setImmediate` (check phase), the deferred scan runs on `setTimeout(0)` (timers phase of the next iteration), so the `$setHtml` RPC reaches the renderer before the blocking filesystem walk. Not verified at runtime — the extension was not launched.
+
+### Entry 66
+
+**Type:** Correction
+**Mode:** Autonomous
+**Timestamp:** 2026-08-14T00:00:00Z
+**Task:** per-project-plugin-toggler — fix the review findings Entry 65 chose to document (Entry 65 reversed)
+
+**Context:** Entry 65 recorded documenting the `id=` markup-injection gap and the hostname-only `Origin` check rather than fixing them, on scope and regression-risk grounds. The user then asked for every finding to be fixed, which overrides that call.
+
+**Decision:** Fixed all four open findings. (1) `CSS.escape` is gone from both webviews: it was never needed, because these ids are only ever read back with `getElementById`, which matches an id literally rather than as a selector — the renderers now write `id="…"` with `esc()` and the lookups take the plain id, which is both shorter and closed. (2) The `Origin` check is now `urlsplit(origin).netloc == Host`, exact same-origin. (3) The two user-level `FileSystemWatcher`s are rebuilt with a `RelativePattern` rooted at `vscode.Uri.file(os.homedir())`, so they can actually match files outside the workspace. (4) The project card is hidden until the first `load` message fills it.
+
+**Impact / Risk:** The `Origin` change rejects one case the previous check allowed beyond cross-site pages: a client whose Origin and Host legitimately differ — access through a reverse proxy. The server binds `127.0.0.1`, so that is a fringe setup, and no-Origin clients (curl, PowerShell, both smoke suites) are unaffected. The watcher change makes two watchers fire that never fired, so a CLI `claude plugin install` now refreshes an open panel: new behaviour, and the extra refreshes are the same synchronous filesystem walk. Dropping `CSS.escape` changes every rendered element id for ids outside `[A-Za-z0-9_-]`; generation and lookup were changed together, and nothing reaches these ids through a CSS selector.
+
+**Outcome:** The `Origin` predicate was re-verified against eight origin/Host pairs, including the `localhost:3000` case it now rejects. A hostile id (`x" onmouseover=alert(1) y="@mp`) was confirmed to render with no raw quote inside the attribute and to still resolve through `getElementById`. JS parses clean in all files; `ruff check` passes. Not verified at runtime: the extension was not launched, so the rebuilt watchers are unproven in VSCode. `ruff format` still reports drift on `server.py` — pre-existing, the file uses hand-aligned assignments, and reformatting it was left alone as unrelated.

@@ -477,13 +477,6 @@ class SkillsViewProvider {
     const watchers = [];
     const folders = vscode.workspace.workspaceFolders;
     if (folders && folders.length > 0) {
-      const installedPath = path.join(
-        os.homedir(),
-        ".claude",
-        "plugins",
-        "installed_plugins.json"
-      );
-
       const onchange = () => this._refresh(webviewView.webview);
 
       // Local + project settings — workspace-relative
@@ -493,12 +486,18 @@ class SkillsViewProvider {
       const projectSettingsWatcher = vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(folders[0], ".claude/settings.json")
       );
-      // User settings + install registry — absolute paths (outside the workspace)
+      // User settings + install registry — outside the workspace, so they need a
+      // RelativePattern rooted at the home directory. A bare absolute path string is a
+      // glob, and VSCode matches globs against workspace files only: built that way these
+      // two never fired, so a CLI `claude plugin install` left an open panel stale.
+      // Neither pattern contains `**`, so neither watches the home directory recursively.
+      const home = vscode.Uri.file(os.homedir());
       const userSettingsWatcher = vscode.workspace.createFileSystemWatcher(
-        path.join(os.homedir(), ".claude", "settings.json")
+        new vscode.RelativePattern(home, ".claude/settings.json")
       );
-      const installedWatcher =
-        vscode.workspace.createFileSystemWatcher(installedPath);
+      const installedWatcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(home, ".claude/plugins/installed_plugins.json")
+      );
 
       for (const w of [settingsWatcher, projectSettingsWatcher, userSettingsWatcher, installedWatcher]) {
         w.onDidChange(onchange);
