@@ -41,8 +41,15 @@ skeleton rows in place of a blank panel. Its markup *and* its CSS are inlined in
 and `webview/js` are fetched. Do not move these rules into `html/styles.css`; that file
 arrives too late to help, and it is shared with the HTML surface, which has no such gap.
 
-`_refresh` is also deferred one tick after the HTML is set, so its synchronous filesystem
-walk cannot block the extension host from serving the webview's own resources.
+**The webview asks for its own first load.** `main.js` posts `ready` once its scripts have
+run, and only then does the extension call `_refresh`. Do not "simplify" this back into a
+push from `resolveWebviewView`. VSCode promotes a webview frame from pending to active on a
+200ms fallback timer (`hookupOnLoadHandlers` in the webview host's `pre/index.html`) and
+flushes its buffered messages into it whether or not the inner document has finished
+loading. This panel routinely needs longer than that at startup, so a pushed `load` could
+land in a document with no listener yet — and nothing retried it, leaving the panel on the
+skeleton forever. The handshake also keeps what the earlier one-tick deferral was for: the
+synchronous filesystem walk now starts strictly after the panel has painted.
 
 > **Considered and not taken — `retainContextWhenHidden`.** Passing
 > `{ webviewOptions: { retainContextWhenHidden: true } }` as the third argument to

@@ -9,7 +9,7 @@ Releases are tagged `pppt-vX.Y.Z` (see [`docs/releasing.md`](../../docs/releasin
 Development through 0.9.x predates this monorepo and happened in a previous repository;
 this log starts at the first release tracked here.
 
-## [Unreleased]
+## [0.9.3] - 2026-08-17
 
 ### Added
 - Loading state in the VSCode panel — a spinner and skeleton rows replace the blank panel
