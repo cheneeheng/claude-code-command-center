@@ -457,11 +457,13 @@ class SkillsViewProvider {
       localResourceRoots: [vscode.Uri.joinPath(this._extensionUri, "webview")],
     };
     webviewView.webview.html = this._getHtml(webviewView.webview, stylesUri, jsBaseUri);
-    // Deferred by one tick: _refresh walks every plugin's skills/agents/hooks and every
-    // marketplace.json synchronously, which blocks the extension host from serving the
-    // webview's own styles.css/js requests. Yielding first lets the panel paint its
-    // loading state instead of staying blank until the walk finishes.
-    const firstRefresh = setTimeout(() => this._refresh(webviewView.webview), 0);
+    // No first refresh is posted from here. The webview asks for it with a `ready`
+    // message once its scripts have run — see _onMessage. Pushing it on a timer (or
+    // synchronously with the html) dropped it whenever the panel's scripts took longer
+    // than ~200ms to load: VSCode's webview host promotes the frame from pending to
+    // active on a 200ms fallback timer and flushes its buffered messages into it, so a
+    // `load` arriving in that window hits a document that has not yet registered its
+    // message listener. Nothing retried it, and the panel sat on the skeleton forever.
     webviewView.webview.onDidReceiveMessage((msg) =>
       this._onMessage(webviewView.webview, msg)
     );
@@ -508,7 +510,6 @@ class SkillsViewProvider {
     }
 
     webviewView.onDidDispose(() => {
-      clearTimeout(firstRefresh); // never post to a webview that is already gone
       for (const w of watchers) w.dispose();
     });
   }
@@ -585,6 +586,12 @@ class SkillsViewProvider {
   }
 
   async _onMessage(webview, msg) {
+    if (msg.type === "ready") {
+      // The webview drives the first load: it only asks once its message listener is
+      // installed, so the reply cannot be delivered into a document that would ignore it.
+      this._refresh(webview);
+      return;
+    }
     if (msg.type === "toggle") {
       const { id, enabled, scope } = msg;
       const projectRoot = this._projectRoot();

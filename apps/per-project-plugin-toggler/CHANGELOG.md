@@ -21,9 +21,12 @@ this log starts at the first release tracked here.
   panel cannot load remote code or reach the network.
 
 ### Changed
-- The initial plugin scan (`_refresh`) is deferred one tick after the webview HTML is set,
-  so its synchronous filesystem walk no longer blocks the extension host from serving the
-  webview's own resources.
+- The VSCode panel now asks for its first load with a `ready` message instead of the
+  extension pushing one after setting the HTML. Pushed early, that message was dropped
+  whenever the panel's scripts took longer than ~200ms to load — VSCode promotes a
+  webview frame from pending to active on a 200ms fallback timer and flushes its buffered
+  messages into it, so the message could land in a document that had not yet registered a
+  listener. Nothing retried it, so the panel could sit on the loading skeleton forever.
 
 ### Fixed
 - **Command injection on install/uninstall.** The `claude` CLI is spawned with `shell: true`,
