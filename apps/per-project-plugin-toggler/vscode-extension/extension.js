@@ -324,6 +324,13 @@ function loadMarketplacePlugins(marketplaceKey, installLocation) {
 }
 
 
+// The `claude` CLI is spawned with `shell: true` (on Windows it resolves to a .cmd shim
+// that spawn cannot execute directly), and Node does not quote arguments in shell mode.
+// Plugin ids come from marketplace.json / installed_plugins.json — files this tool does
+// not own — so an id carrying `&`, `|` or a quote would run as a second shell command.
+// Ids are `name@marketplace`; anything outside that alphabet is rejected before spawning.
+const PLUGIN_ID_RE = /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/;
+
 function streamInstall(pluginId, scope, projectRoot, onLine) {
   return new Promise((resolve, reject) => {
     const proc = spawn("claude", ["plugin", "install", pluginId, "--scope", scope], {
@@ -434,9 +441,8 @@ function streamMarketplaceRefresh(projectRoot, onLine) {
 class SkillsViewProvider {
   static viewType = "skillsToggle.pluginList";
 
-  constructor(extensionUri, context) {
+  constructor(extensionUri) {
     this._extensionUri = extensionUri;
-    this._context = context;
   }
 
   resolveWebviewView(webviewView) {
@@ -451,7 +457,11 @@ class SkillsViewProvider {
       localResourceRoots: [vscode.Uri.joinPath(this._extensionUri, "webview")],
     };
     webviewView.webview.html = this._getHtml(webviewView.webview, stylesUri, jsBaseUri);
-    this._refresh(webviewView.webview);
+    // Deferred by one tick: _refresh walks every plugin's skills/agents/hooks and every
+    // marketplace.json synchronously, which blocks the extension host from serving the
+    // webview's own styles.css/js requests. Yielding first lets the panel paint its
+    // loading state instead of staying blank until the walk finishes.
+    const firstRefresh = setTimeout(() => this._refresh(webviewView.webview), 0);
     webviewView.webview.onDidReceiveMessage((msg) =>
       this._onMessage(webviewView.webview, msg)
     );
@@ -459,7 +469,12 @@ class SkillsViewProvider {
       if (webviewView.visible) this._refresh(webviewView.webview);
     });
 
-    // File watchers — auto-refresh on settings or installed_plugins change
+    // File watchers — auto-refresh on settings or installed_plugins change.
+    // They belong to this view, not to the extension: resolveWebviewView runs again every
+    // time the view is rebuilt, so pushing them onto context.subscriptions accumulated a
+    // fresh set on each rebuild that nothing disposed until deactivate — and every
+    // settings change then triggered one full plugin scan per leaked set.
+    const watchers = [];
     const folders = vscode.workspace.workspaceFolders;
     if (folders && folders.length > 0) {
       const installedPath = path.join(
@@ -489,9 +504,14 @@ class SkillsViewProvider {
         w.onDidChange(onchange);
         w.onDidCreate(onchange);
         w.onDidDelete(onchange);
-        this._context.subscriptions.push(w);
+        watchers.push(w);
       }
     }
+
+    webviewView.onDidDispose(() => {
+      clearTimeout(firstRefresh); // never post to a webview that is already gone
+      for (const w of watchers) w.dispose();
+    });
   }
 
   _projectRoot() {
@@ -619,6 +639,10 @@ class SkillsViewProvider {
       const projectRoot = this._projectRoot();
       if (!projectRoot) return;
       const installScope = ["local", "project", "user"].includes(scope) ? scope : "local";
+      if (!PLUGIN_ID_RE.test(id)) {
+        webview.postMessage({ type: "installDone", id, ok: false, error: `Refusing to install "${id}": not a valid name@marketplace plugin id.` });
+        return;
+      }
 
       webview.postMessage({ type: "installStart", id });
 
@@ -636,6 +660,10 @@ class SkillsViewProvider {
       const projectRoot = this._projectRoot();
       if (!projectRoot) return;
       if (!["local", "project", "user"].includes(scope)) return;
+      if (!PLUGIN_ID_RE.test(id)) {
+        webview.postMessage({ type: "uninstallDone", id, ok: false, error: `Refusing to uninstall "${id}": not a valid name@marketplace plugin id.` });
+        return;
+      }
 
       if (confirmActionsEnabled()) {
         const scopeLabel = { local: "Local", project: "Project", user: "User" }[scope];
@@ -677,6 +705,7 @@ class SkillsViewProvider {
     );
     const iconSvg = fs.readFileSync(iconSvgPath.fsPath, "utf8").trim();
     let html = fs.readFileSync(panelHtmlPath.fsPath, "utf8");
+    html = html.replace(/__CSP_SOURCE__/g, webview.cspSource);
     html = html.replace("__STYLES_URI__", stylesUri.toString());
     html = html.replace(/__JS_BASE__/g, jsBaseUri.toString());
     html = html.replace(/__ICON_SVG__/g, () => iconSvg);
@@ -685,7 +714,7 @@ class SkillsViewProvider {
 }
 
 function activate(context) {
-  const provider = new SkillsViewProvider(context.extensionUri, context);
+  const provider = new SkillsViewProvider(context.extensionUri);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       SkillsViewProvider.viewType,

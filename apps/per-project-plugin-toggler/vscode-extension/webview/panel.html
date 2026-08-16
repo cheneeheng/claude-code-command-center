@@ -2,9 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- default-src 'none' is the part that earns its keep: the panel renders names and
+       descriptions read from plugin files this tool does not own, and this stops any
+       script that does get in from loading remote code or talking to the network.
+       'unsafe-inline' is unavoidable while the rows use inline onclick handlers, so
+       treat this as containment, not as injection prevention. __CSP_SOURCE__ is
+       replaced by extension.js with webview.cspSource. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src __CSP_SOURCE__ 'unsafe-inline'; script-src __CSP_SOURCE__ 'unsafe-inline'; img-src __CSP_SOURCE__ data:;" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Skills Toggle</title>
   <link rel="stylesheet" href="__STYLES_URI__" />
+  <style>
+    /* Loading state, inlined on purpose: styles.css and webview/js are fetched from the
+       extension host, and that fetch is what leaves the panel blank for a moment when you
+       switch back to this view. Inline rules paint on the webview's first frame instead.
+       Colours fall back to VSCode's own theme vars for the same reason. */
+    .boot-loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.75rem 0;
+      font-size: 0.88rem;
+      color: var(--vscode-descriptionForeground, #8b8b8b);
+    }
+    .boot-spinner {
+      width: 12px;
+      height: 12px;
+      border: 1.5px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: boot-spin 0.7s linear infinite;
+    }
+    @keyframes boot-spin { to { transform: rotate(360deg); } }
+    .boot-skeleton { display: flex; flex-direction: column; gap: 8px; }
+    /* Tinted with the theme's foreground, not a surface colour: every theme guarantees
+       foreground contrasts with background, so the bars read as placeholders instead of
+       near-invisible smudges. The base opacity also carries the reduced-motion case,
+       where the pulse is switched off and the bars must still be visible. */
+    .boot-bar {
+      height: 34px;
+      border-radius: 6px;
+      background: var(--vscode-foreground, #cccccc);
+      opacity: 0.14;
+      animation: boot-pulse 1.4s ease-in-out infinite;
+    }
+    .boot-bar.is-title { height: 10px; width: 90px; margin-top: 6px; }
+    .boot-bar:nth-child(2) { animation-delay: 0.15s; }
+    .boot-bar:nth-child(3) { animation-delay: 0.3s; }
+    .boot-bar:nth-child(4) { animation-delay: 0.45s; }
+    @keyframes boot-pulse { 0%, 100% { opacity: 0.09; } 50% { opacity: 0.22; } }
+    @media (prefers-reduced-motion: reduce) {
+      .boot-spinner, .boot-bar { animation: none; }
+    }
+  </style>
   <script>
     if (typeof acquireVsCodeApi !== "undefined") {
       document.documentElement.setAttribute("data-context", "vscode");
@@ -32,7 +83,17 @@
     <button onclick="document.getElementById('mock-notice').style.display='none'">&#10005;</button>
   </div>
 
-  <div id="status" class="status">Loading plugins...</div>
+  <!-- The skeleton lives inside #status so it clears itself: showStatus() overwrites this
+       markup, and render.js / showError() hide the element. No extra wiring needed. -->
+  <div id="status" class="status" role="status" aria-live="polite">
+    <div class="boot-loading"><span class="boot-spinner" aria-hidden="true"></span>Loading plugins…</div>
+    <div class="boot-skeleton" aria-hidden="true">
+      <div class="boot-bar is-title"></div>
+      <div class="boot-bar"></div>
+      <div class="boot-bar"></div>
+      <div class="boot-bar"></div>
+    </div>
+  </div>
   <div id="error" class="error-msg" style="display:none"></div>
 
   <div id="plugin-sections" style="display:none">

@@ -1473,3 +1473,48 @@ model_mix shapes unchanged. session_stats.py now fully ruff+mypy clean. Smoke te
 **Decision:** User chose both forks: one PR carrying feat + release on the existing branch, and PATCH (0.9.2) rather than MINOR, treating a list badge as too small for a feature bump. The flow's intent — the bump lands through a reviewed PR, and the tag is cut on `main` at the merge commit — is preserved either way.
 **Impact / Risk:** The `pppt-v0.9.2` tag points at a merge commit whose diff contains both the feature and the bump, so the release tag and the feature commit are not separable by tag range. Acceptable for a single-feature release. Versions still only increase, and the tag matches the manifests that `release-extension.yml` asserts against.
 **Outcome:** Bumped `pyproject.toml`, `vscode-extension/package.json`, `vscode-extension/package-lock.json` to 0.9.2. Backfilled the user-facing docs the feature commit missed (extension README, both user guides) and corrected the member CLAUDE.md, which still claimed no test runner exists while `tests/smoke.{sh,ps1}` were present.
+
+### Entry 62
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-08-13T00:00:00Z
+**Task:** per-project-plugin-toggler — loading state for the VSCode panel, then an audit of the app
+
+**Context:** Three forks. (1) The user asked for a loading animation; the underlying cause is that VSCode disposes a hidden webview view, so `retainContextWhenHidden` would remove the wait rather than decorate it — one fix or both? (2) The audit found a command-injection path: `spawn("claude", […], { shell: true })` does not quote arguments, and plugin ids come from `marketplace.json` / `installed_plugins.json`, files this tool does not own. Removing `shell: true` is the root fix but breaks Windows, where `claude` resolves to a `.cmd` shim that `spawn` cannot execute directly. (3) The same inline-`onclick` escaping bug exists in both surfaces, but the user's request pointed only at the VSCode extension.
+
+**Decision:** (1) Both, and documented as such in the member README under "Panel loading behaviour" — they cover different moments: `retainContextWhenHidden` removes the rebuild on container switches, the loading state covers the genuine first open, which no option can remove. The README records the unmeasured memory cost and says to drop the option first if the extension is ever reported as heavy. (2) Kept `shell: true` and validated the id against the documented `name@marketplace` format at the message boundary, per the trust-boundary rule; resolving the Windows shim by hand is a larger, riskier change for the same outcome. (3) Fixed both surfaces. It is one member and one bug class reached through the same untrusted files, so leaving the HTML copy exploitable would be a scope reading that ships a known hole. Escaping only — the inline handlers were not refactored into delegated listeners, which is the real fix and a much larger diff.
+
+**Impact / Risk:** The id regex rejects any id outside `[A-Za-z0-9._-]+@[A-Za-z0-9._-]+`. If a real marketplace ever publishes a name outside that alphabet, install/uninstall refuses it with a visible error instead of running — a deliberate fail-closed choice. The CSP carries `'unsafe-inline'` for both script and style, so it is containment (no remote code, no network egress), not injection prevention; a delegated-listener refactor would let it be tightened. `retainContextWhenHidden` holds one idle webview per window for the session, unmeasured.
+
+**Outcome:** `jsStr()` round-trips exactly through HTML-decode plus JS-parse for quotes, backslashes, and an `x')+alert(1)+('` payload. Not validated at runtime in VSCode — the extension was not launched.
+
+### Entry 63
+
+**Type:** Decision
+**Mode:** Autonomous
+**Timestamp:** 2026-08-13T00:00:00Z
+**Task:** per-project-plugin-toggler — second audit pass (HTTP surface and test suite)
+
+**Context:** Two findings. (1) `html/server.py` binds `127.0.0.1`, but binding locally does not make it private to the app: a simple cross-origin POST is not preflighted, so any page the user visits while the server runs could reach `/api/install-stream`, `/api/toggle`, `/api/set-project` or `/api/shutdown`. The existing `Access-Control-Allow-Origin: http://localhost` header only governs reading responses. Fixes available: check `Origin`, require `Content-Type: application/json` (which forces a preflight), or add a CSRF token. (2) Both smoke suites overwrite the developer's real `~/.claude/plugins/installed_plugins.json` with a fixture and delete it in cleanup, with no backup — the "mock fallback" case deletes it deliberately. The target audience is developers with Claude Code installed, so running the repo's own tests destroys live state.
+
+**Decision:** (1) `Origin` check, rejecting non-local hosts with 403 and allowing a missing `Origin` for non-browser clients. It states the intent directly rather than relying on a Content-Type side effect, and it keeps curl/PowerShell/the smoke tests working unchanged. A token would need session state the stateless server does not have. Hostnames are compared exactly, so `localhost.evil.com` does not pass. (2) Stash-and-restore inside each suite, rather than teaching `server.py` a config-dir override (`C4_CLAUDE_DIR`, which this member does not read). The override is the better long-term fix — it would let the tests point at a temp dir and never touch real state — but it is a feature change to both surfaces, outside an audit's remit.
+
+**Impact / Risk:** The `Origin` check is browser-facing only; a non-browser client that omits `Origin` still has full access, which is the intended local-tool posture. The test fix leaves one gap: a hard kill (SIGKILL, closed terminal) between the fixture write and cleanup still leaves the fixture in place with the backup alongside it as `<tmp>-registry.bak`. Recoverable, and better than the previous unconditional delete.
+
+**Outcome:** Origin predicate verified against local, IPv6, `null` and `localhost.evil.com` origins. Both suites parse clean. The suites were NOT executed — they write to the user's live `~/.claude` even with the fix, so running them was left to the user.
+
+### Entry 64
+
+**Type:** Correction
+**Mode:** Autonomous
+**Timestamp:** 2026-08-13T00:00:00Z
+**Task:** per-project-plugin-toggler — revert `retainContextWhenHidden` (Entry 62 partially reversed)
+
+**Context:** Entry 62 recorded implementing `retainContextWhenHidden` *and* documenting it. The instruction was "document the alternative in the apps readme so that we can revisit in the future" — documenting something in order to revisit it later means it was not adopted. Entry 62 read "fix those issues" as covering the alternative too; the issues in question were the watcher leak and the audit findings, not the option. The user also raised a freshness objection.
+
+**Decision:** Reverted the option; the README now records it as considered-and-not-taken, with both the memory cost and the freshness argument. On the freshness question itself: refresh-on-show (`onDidChangeVisibility` → `_refresh`) means a retained panel would still re-read on every show, so the objection is not exactly right as stated — but it lands, because two of the four file watchers are created from absolute string paths outside the workspace, which VSCode matches against workspace files only, so they almost certainly never fire. Retaining the panel would have narrowed freshness onto the visibility event while that gap is open. The dead watchers are documented as a known gap and left unfixed: unverified at runtime, and outside what was asked.
+
+**Impact / Risk:** Container switches rebuild the panel again, which is what the loading state was built for. The watcher-leak fix (Entry 62) becomes load-bearing rather than incidental — without retention, `resolveWebviewView` runs on every switch, which is exactly the path that leaked four watchers per rebuild.
+
+**Outcome:** Only the README mentions the option now. All security and data-loss fixes from Entries 62 and 63 are untouched.

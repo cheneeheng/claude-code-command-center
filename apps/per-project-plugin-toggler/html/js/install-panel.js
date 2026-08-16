@@ -67,7 +67,7 @@ function renderInstallPanel() {
 }
 
 function renderMpPluginRow(p) {
-  const escId = esc(p.id);
+  const jsId = jsStr(p.id); // inline-handler (JS string) context
   const e = CSS.escape(p.id);
   const installedScopes = installedScopesMap[p.id] || [];
   const notInstalled = SCOPES.filter((s) => !installedScopes.includes(s));
@@ -88,7 +88,7 @@ function renderMpPluginRow(p) {
     installControl = `
       <select class="mp-scope-select" id="mp-scope-${e}">${opts}</select>
       <button class="mp-install-btn" id="mp-btn-${e}"
-              onclick="installPlugin('${escId}', mpScopeVal('${escId}'), mpEls('${escId}'))">
+              onclick="installPlugin('${jsId}', mpScopeVal('${jsId}'), mpEls('${jsId}'))">
         Install &#8595;
       </button>`;
   }

@@ -107,7 +107,8 @@ function toggleDisclosure(btn) {
 }
 
 function sectionRowHtml(p, scope) {
-  const escId = esc(p.id);
+  const escId = esc(p.id);   // HTML attribute/text context
+  const jsId = jsStr(p.id);  // inline-handler (JS string) context
   const e = CSS.escape(p.id);
   const installed = p.installed !== false;
 
@@ -117,9 +118,9 @@ function sectionRowHtml(p, scope) {
 
   const actionBtn = installed
     ? `<button class="mp-install-btn mp-install-btn--uninstall" id="btn-uninstall-${scope}-${e}"
-               onclick="uninstallPlugin('${escId}','${scope}', sectionUninstallEls('${scope}','${escId}'))">Uninstall</button>`
+               onclick="uninstallPlugin('${jsId}','${scope}', sectionUninstallEls('${scope}','${jsId}'))">Uninstall</button>`
     : `<button class="mp-install-btn" id="btn-install-${scope}-${e}"
-               onclick="installPlugin('${escId}','${scope}', sectionInstallEls('${scope}','${escId}'))">Install &#8595;</button>`;
+               onclick="installPlugin('${jsId}','${scope}', sectionInstallEls('${scope}','${jsId}'))">Install &#8595;</button>`;
 
   return `
     <div class="plugin-row" id="row-${scope}-${e}" data-id="${escId}">

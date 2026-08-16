@@ -28,6 +28,54 @@ Both surfaces use the same read/merge/write logic (implemented independently in 
 > then land where Claude actually reads. A free-form UI dir picker is deliberately deferred: this
 > tool *writes* enablement state, so pointing it at a dir Claude isn't using is a silent footgun.
 
+## Panel loading behaviour (VSCode)
+
+Switching to another activity-bar container and back leaves the panel briefly empty. VSCode
+disposes a hidden webview view, so returning re-runs `resolveWebviewView`: re-parse
+`panel.html`, re-fetch `styles.css` and the seven `webview/js` files through the extension
+host, then walk every plugin's `skills/`, `agents/`, `hooks/` and every `marketplace.json`.
+
+What covers it today is **a loading state** (`#status` in `panel.html`): a spinner and
+skeleton rows in place of a blank panel. Its markup *and* its CSS are inlined in
+`panel.html` on purpose — they must paint on the webview's first frame, before `styles.css`
+and `webview/js` are fetched. Do not move these rules into `html/styles.css`; that file
+arrives too late to help, and it is shared with the HTML surface, which has no such gap.
+
+`_refresh` is also deferred one tick after the HTML is set, so its synchronous filesystem
+walk cannot block the extension host from serving the webview's own resources.
+
+> **Considered and not taken — `retainContextWhenHidden`.** Passing
+> `{ webviewOptions: { retainContextWhenHidden: true } }` as the third argument to
+> `registerWebviewViewProvider` keeps the hidden panel alive, so a container switch stops
+> rebuilding it entirely and returning is instant. Scroll position and expanded skill lists
+> would survive too. Two reasons it is not on:
+>
+> 1. **Memory.** VSCode documents the option as expensive: one idle webview held per window
+>    for the whole session. This panel is plain DOM plus seven small classic scripts, so the
+>    footprint should be modest, **but it has not been measured**.
+> 2. **Freshness rests on fewer legs.** A rebuild is an unconditional re-read of every
+>    source file. Retaining the panel replaces that with `onDidChangeVisibility` →
+>    `_refresh`, which should be equivalent, plus the file watchers — and two of those four
+>    watchers are registered with absolute string paths outside the workspace, which VSCode
+>    likely never matches (see below). It also removes an accidental recovery path: webview
+>    JS state survives, so a stuck `operationInProgress` flag can no longer be cleared by
+>    switching away and back.
+>
+> Revisit if the rebuild becomes the top complaint again, and pair it with a fix for the
+> watchers so freshness does not depend on the visibility event alone.
+
+**Known gap — the out-of-workspace watchers.** `resolveWebviewView` creates four
+`FileSystemWatcher`s. The two workspace-relative ones (`.claude/settings.json`,
+`.claude/settings.local.json`) use `RelativePattern` and work. The other two —
+`~/.claude/settings.json` and `~/.claude/plugins/installed_plugins.json` — are created from
+plain absolute path strings, which VSCode matches against workspace files only, so they
+almost certainly never fire. Installing a plugin from the CLI while the panel is open
+therefore does not auto-refresh it; switching away and back does. **Not verified at
+runtime**, and not fixed. The fix is to build them with `RelativePattern` rooted at the home
+directory.
+
+Still on the list: `_refresh` re-reads every `SKILL.md` on every refresh with no caching.
+
 ## Quick start
 
 **HTML version** — run from the root of the project you want to manage:
@@ -39,6 +87,10 @@ python3 /path/to/claude-code-plugin-toggler/html/server.py 8080   # custom port
 ```
 
 Convenience scripts in `html/`: `start.sh` (Linux/macOS), `start.ps1` / `start.bat` (Windows).
+
+The server binds `127.0.0.1` and rejects any `POST` whose `Origin` header names a non-local
+host, so a page you happen to visit cannot drive it. Requests with no `Origin` at all — curl,
+PowerShell, the smoke tests — are still accepted.
 
 **VSCode extension** — dev mode: open `vscode-extension/` and press `F5`. To package:
 

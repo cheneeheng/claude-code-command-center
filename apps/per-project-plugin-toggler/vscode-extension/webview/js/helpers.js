@@ -21,6 +21,15 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
+// For values dropped into an inline onclick="fn('…')". That is a JS context nested in an
+// HTML attribute, and the browser HTML-decodes the attribute before parsing the script —
+// so esc() alone is not enough: it leaves ' untouched, and even &#39; would decode back to
+// a quote and break out of the string literal. Escape for JS first (JSON.stringify covers
+// backslashes, quotes and control chars), then esc() to keep the attribute intact.
+function jsStr(s) {
+  return esc(JSON.stringify(String(s)).slice(1, -1).replace(/'/g, "\\'"));
+}
+
 // Scope-qualified element-id bundles (ITER_13/15/17).
 function sectionInstallEls(scope, id) {
   const e = CSS.escape(id);
