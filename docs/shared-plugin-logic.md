@@ -22,7 +22,7 @@ Reading `~/.claude/plugins/installed_plugins.json` and each plugin's
 |-------|---------|
 | `normalise_path` | Cross-platform path normalisation for project-root comparison. |
 | `load_installed_plugins(project_root)` / `loadInstalledPlugins(projectRoot)` | Bucket installed plugins by **scope** (`local` / `project` / `user`), matching `projectPath` against the project root. |
-| `parse_frontmatter` / `parseSkillFrontmatter` | Extract `(name, description)` from a markdown file's YAML frontmatter (regex; handles inline and `>-`/`>`/`\|` block scalars). |
+| `parse_frontmatter` / `parseSkillFrontmatter` | Extract `(name, description)` from a markdown file's YAML frontmatter (regex; handles inline, wrapped and `>-`/`>`/`\|` block scalars, always in full). |
 | `disable-model-invocation: true` opt-out | Flag a skill the model cannot invoke. Python surfaces it as `PluginMember.manual_only` (filled by `load_plugin_skills`, not returned by `parse_frontmatter`); Node returns `manualOnly` from `parseSkillFrontmatter`. |
 | skill / agent / hook enumeration | Walk `<installPath>/skills/*/SKILL.md`, `agents/*.md`, `hooks/hooks.json`. |
 

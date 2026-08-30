@@ -95,16 +95,24 @@ def _name_description(fm: str, fallback: str) -> tuple[str, str]:
         raw = block_match.group(1)
         description = " ".join(ln.strip() for ln in raw.splitlines() if ln.strip())
     else:
-        inline = re.search(r"^description:\s*(.+)$", fm, re.MULTILINE)
-        description = _unquote(inline.group(1).strip()) if inline else ""
+        # A plain (unmarked) scalar may still wrap onto more-indented lines; take
+        # them all, or a long description shows up cut at its first line break.
+        inline = re.search(r"^description:\s*(.+(?:\n[ \t]+\S.*)*)$", fm, re.MULTILINE)
+        if inline:
+            joined = " ".join(
+                ln.strip() for ln in inline.group(1).splitlines() if ln.strip()
+            )
+            description = _unquote(joined)
+        else:
+            description = ""
     return name, description
 
 
 def parse_frontmatter(path: Path, fallback: str = "") -> tuple[str, str]:
     """Return ``(name, description)`` from a markdown file's YAML frontmatter.
 
-    Regex-based (no PyYAML); handles both inline and block (``>-``/``>``/``|``)
-    description scalars.
+    Regex-based (no PyYAML); handles inline, wrapped (continued on more-indented
+    lines) and block (``>-``/``>``/``|``) description scalars.
 
     Args:
         path: The markdown file to read.
