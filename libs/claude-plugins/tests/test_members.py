@@ -31,6 +31,16 @@ def test_parse_frontmatter_block_scalar_description(tmp_path: Path) -> None:
     assert parse_frontmatter(md) == ("blk", "line one line two")
 
 
+def test_parse_frontmatter_wrapped_plain_scalar_description(tmp_path: Path) -> None:
+    md = tmp_path / "SKILL.md"
+    md.write_text(
+        "---\nname: wrap\ndescription: line one\n  line two\n  line three\n"
+        "model: opus\n---\n",
+        encoding="utf-8",
+    )
+    assert parse_frontmatter(md) == ("wrap", "line one line two line three")
+
+
 def test_parse_frontmatter_missing_name_uses_fallback(tmp_path: Path) -> None:
     md = tmp_path / "agent.md"
     md.write_text("---\ndescription: no name here\n---\n", encoding="utf-8")

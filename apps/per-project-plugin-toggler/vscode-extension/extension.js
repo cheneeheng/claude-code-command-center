@@ -146,8 +146,10 @@ function parseSkillFrontmatter(text, fallbackName) {
   const nameMatch = fm.match(/^name:\s*(.+)$/m);
   const name = nameMatch ? nameMatch[1].trim() : fallbackName;
 
+  // Take every indented line of the block, not just the first: a lazy match with
+  // a `$` lookahead stopped at the first line break and cut the description.
   const descBlockMatch = fm.match(
-    /^description:\s*(?:>-|>|[|][-]?)?\s*\n([\s\S]*?)(?=\n\S|\s*$)/m
+    /^description:[ \t]*(?:>-|>|[|][-]?)?[ \t]*\n((?:[ \t]+\S.*\n?)*)/m
   );
   let description = "";
   if (descBlockMatch) {
@@ -157,8 +159,15 @@ function parseSkillFrontmatter(text, fallbackName) {
       .filter(Boolean)
       .join(" ");
   } else {
-    const descInlineMatch = fm.match(/^description:\s*(.+)$/m);
-    if (descInlineMatch) description = descInlineMatch[1].trim();
+    // A plain (unmarked) scalar may still wrap onto more-indented lines; take
+    // them all, or a long description shows up cut at its first line break.
+    const descInlineMatch = fm.match(/^description:\s*(.+(?:\n[ \t]+\S.*)*)$/m);
+    if (descInlineMatch)
+      description = descInlineMatch[1]
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .join(" ");
   }
 
   // Model invocation is the default; `disable-model-invocation: true` opts out.
