@@ -9,7 +9,7 @@ Releases are tagged `pppt-vX.Y.Z` (see [`docs/releasing.md`](../../docs/releasin
 Development through 0.9.x predates this monorepo and happened in a previous repository;
 this log starts at the first release tracked here.
 
-## [Unreleased]
+## [0.9.4] - 2026-08-30
 
 ### Fixed
 - Skill and agent descriptions in the expanded plugin view now show the frontmatter text in
