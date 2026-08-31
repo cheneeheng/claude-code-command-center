@@ -105,6 +105,8 @@ docs/      monorepo-wide docs
 
 ## Decisions
 
-Agent decisions are logged in [`.agents_workspace/DECISION_LOG.md`](.agents_workspace/DECISION_LOG.md).
-Historical per-member logs are consolidated in
-[`.agents_workspace/archive/decision-log.md`](.agents_workspace/archive/decision-log.md).
+Agent decisions are logged in `.agents_workspace/DECISION_LOG.md`, with historical per-member
+logs consolidated in `.agents_workspace/archive/decision-log.md`. That folder is **not tracked
+here** — it is its own git repo on the `claude-code-command-center` orphan branch of a private
+`agents-workspace` remote, git-ignored by this repo and pushed daily by
+[`agents-workspace-sync`](tools/agents-workspace-sync/).
