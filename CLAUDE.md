@@ -121,3 +121,7 @@ it a self-descriptive name, a README, and (for Python) a `uv` project.
 - Active decision log: `.agents_workspace/DECISION_LOG.md` (append here when you resolve
   genuine ambiguity).
 - Archived per-member logs: `.agents_workspace/archive/decision-log.md` (frozen history).
+- `.agents_workspace/` is a **nested git repo**, not part of this one: it sits on the
+  `claude-code-command-center` orphan branch of a private `agents-workspace` remote and is
+  git-ignored here. Read and write it as usual; just never expect its files in this repo's
+  `git status`, and commit it from inside the folder (or leave it to `agents-workspace-sync`).
