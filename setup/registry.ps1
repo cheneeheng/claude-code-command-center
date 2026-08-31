@@ -206,6 +206,39 @@ function Get-CommandCenterRegistry {
         }
     }
 
+    # --- agents-workspace-sync -----------------------------------------------
+    $awsDir = Join-Path $tools 'agents-workspace-sync'
+    $agentsWorkspaceSync = [pscustomobject]@{
+        Name           = 'agents-workspace-sync'
+        DisplayName    = 'Agents workspace sync'
+        Category       = 'tools'
+        SetupScript    = Join-Path $awsDir 'agents-workspace-sync-setup.ps1'
+        Version        = Read-MemberVersion $awsDir
+        RequiredConfig = @('repos')   # no sensible default repo list exists
+        Install        = {
+            param($SetupScript, $Config)
+            if (-not $Config -or -not $Config.repos) {
+                throw "agents-workspace-sync needs a 'repos' array in config (.agents_workspace repo paths)."
+            }
+            $repos = @($Config.repos)
+            $time  = if ($Config.scheduleTime) { $Config.scheduleTime } else { '04:00' }
+            $splat = @{ Action = 'install'; NonInteractive = $true; Repos = $repos; ScheduleTime = $time }
+            if ($Config.metaDir) { $splat.MetaDir = $Config.metaDir }
+            & $SetupScript @splat | Out-Null
+            @{ repos = $repos; scheduleTime = $time; metaDir = $Config.metaDir }
+        }
+        Uninstall      = {
+            param($SetupScript, $Entry)
+            $splat = @{ Action = 'uninstall' }
+            if ($Entry -and $Entry.metaDir) { $splat.MetaDir = $Entry.metaDir }
+            & $SetupScript @splat | Out-Null
+        }
+        Detect         = {
+            param($Entry)
+            [bool](Get-ScheduledTask -TaskName 'agents-workspace-sync' -TaskPath '\ClaudeAutomation\' -ErrorAction SilentlyContinue)
+        }
+    }
+
     # --- usage-dashboard -----------------------------------------------------
     $udDir = Join-Path $apps 'usage-dashboard'
     $usageDashboard = [pscustomobject]@{
@@ -223,5 +256,5 @@ function Get-CommandCenterRegistry {
         }
     }
 
-    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $usageDashboard)
+    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $agentsWorkspaceSync, $usageDashboard)
 }
