@@ -28,6 +28,7 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 | [`session-name-date-prefixer`](tools/session-name-date-prefixer/) | Prefix Claude Code session names with the date. |
 | [`file-sync`](tools/file-sync/) | Keep a named file in sync across two folders (newer wins): `CLAUDE.md` (raw copy) and `settings.json` (JSON merge, excluded keys preserved), via one generic engine. |
 | [`scheduled-session-digests`](tools/scheduled-session-digests/) | Unattended scheduled Claude Code runs that digest your session transcripts into daily/weekly summaries and lessons. |
+| [`agents-workspace-sync`](tools/agents-workspace-sync/) | Daily unattended commit and push of a configured list of `.agents_workspace` repos; each must be a standalone git repo, and each is pushed on the branch it is already on. |
 | [`usage-report`](tools/usage-report/) | CLI summary of token usage and estimated cost across sessions — the terminal counterpart to `usage-dashboard`. |
 
 > `statusline-hook`, `session-name-date-prefixer`, `claude-md-sync`,
@@ -72,7 +73,7 @@ never collides with Claude Code's or the OS's variables:
 | Variable | Used by | Purpose |
 |----------|---------|---------|
 | `C4_CLAUDE_DIR` | `usage-report`, `usage-dashboard`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. |
-| `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). |
+| `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `agents-workspace-sync`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). |
 | `C4_STATUSLINE_EXPORT` | `statusline-hook` | Opt-in to the JSONL export when set to `1`/`true`/`yes`. |
 | `C4_STATUSLINE_LIVE_TIMEOUT` | `usage-dashboard` | Seconds a session may be idle before dropping out of the live view (default `1800`). |
 | `C4_PLAN_PRICE_USD` | `usage-dashboard` | Monthly Claude subscription price; lights up the dashboard's Plan Value (ROI) card when set. |
