@@ -9,7 +9,7 @@ date-stamped commit, and pushes.
 
 | | |
 |---|---|
-| **Default trigger** | 04:00 daily (Task Scheduler `\ClaudeAutomation\agents-workspace-sync`, or cron) |
+| **Default trigger** | 04:00 daily (Task Scheduler `\ClaudeAutomation\agents-workspace-sync\agents-workspace-sync`, or cron) |
 | **Config** | `$C4_CLAUDE_META_DIR/.claude/scripts/agents-workspace-sync-config.json` |
 | **Logs** | `$C4_CLAUDE_META_DIR/logs/<yyyy>/<MM>/<timestamp>_agents-workspace-sync.log` |
 | **Needs** | `git` on PATH. Linux also needs `jq`. No `claude` CLI — this tool never calls Claude. |
