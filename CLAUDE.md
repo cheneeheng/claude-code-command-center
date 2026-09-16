@@ -79,9 +79,11 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   `C4_ROUNDTABLE_HOME` (multi-repo-workspace state dir, default `~/.roundtable`). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
-- **Scheduled tasks:** a member that registers a Windows Task Scheduler task uses its own folder
-  name as the task name (e.g. `usage-dashboard`), registered under the shared task folder
-  `\ClaudeAutomation`. This keeps task names collision-free and self-identifying to the member.
+- **Scheduled tasks:** a member that registers a Windows Task Scheduler task registers it under
+  its own folder name nested in the shared task folder: `\ClaudeAutomation\<member>\<taskname>`
+  (e.g. `\ClaudeAutomation\usage-dashboard\usage-dashboard`,
+  `\ClaudeAutomation\file-sync\<per-pair name>`). This keeps task names collision-free and
+  groups every task of a member together.
 - **Docs:** **one `README.md` per member** (apps/tools/libs/setup) plus the root README,
   which is the catalog. Deeper end-user docs live under a member's `docs/` (e.g.
   `multi-repo-plan-runner/docs/guide/`, `per-project-plugin-toggler/docs/user-guide-*.md`) and the

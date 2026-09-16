@@ -18,7 +18,7 @@ See `README.md`. Install via `agents-workspace-sync-setup.ps1` / `.sh`, or throu
 - `agents-workspace-sync.ps1` / `.sh` — the worker. Reads the config, loops the repos, and for
   each: validates, `add -A`, commit, push. Installed into `$C4_CLAUDE_META_DIR/.claude/scripts/`.
 - `agents-workspace-sync-setup.ps1` / `.sh` — install/uninstall. Writes the config, copies the
-  worker, registers the daily Task Scheduler task (`\ClaudeAutomation\agents-workspace-sync`)
+  worker, registers the daily Task Scheduler task (`\ClaudeAutomation\agents-workspace-sync\agents-workspace-sync`)
   or crontab entry.
 - Config: `$C4_CLAUDE_META_DIR/.claude/scripts/agents-workspace-sync-config.json`
   (`{scheduleTime, repos[]}`), re-read every run so editing it needs no reinstall.

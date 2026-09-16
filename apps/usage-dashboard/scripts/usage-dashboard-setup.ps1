@@ -10,16 +10,15 @@ param(
     [string]$Action = 'install'
 )
 
-$taskFolder = "\ClaudeAutomation"
+# Task folder nests the app's folder name (the parent of scripts\) under the shared
+# \ClaudeAutomation\ root (\ClaudeAutomation\usage-dashboard), matching file-sync.
+$taskFolder = "\ClaudeAutomation\$(Split-Path -Leaf (Split-Path $PSScriptRoot))"
 $taskName   = "usage-dashboard"
 $wrapperPath = Join-Path $PSScriptRoot "usage-dashboard-start-once.ps1"
 
 function Install-UsageDashboardTask {
-    # Ensure the task folder exists
+    # Register-ScheduledTask creates the nested task folder itself.
     $svc = New-Object -ComObject Schedule.Service
-    $svc.Connect()
-    try { $svc.GetFolder($taskFolder) | Out-Null }
-    catch { $svc.GetFolder((Split-Path $taskFolder)).CreateFolder((Split-Path $taskFolder -Leaf)) | Out-Null }
 
     # The wrapper checks if the server is already running before launching,
     # making it safe to call from both the logon and wake triggers.

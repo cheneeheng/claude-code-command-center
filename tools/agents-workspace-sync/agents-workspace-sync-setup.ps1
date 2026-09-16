@@ -4,7 +4,7 @@
 #   1. Ensures $C4_CLAUDE_META_DIR exists and sets the env var if missing
 #   2. Copies agents-workspace-sync.ps1 into <meta>\.claude\scripts\
 #   3. Writes <meta>\.claude\scripts\agents-workspace-sync-config.json (repo list + time)
-#   4. Registers the \ClaudeAutomation\agents-workspace-sync daily task
+#   4. Registers the \ClaudeAutomation\agents-workspace-sync\agents-workspace-sync daily task
 #
 # Uninstall removes the task, the installed script, and (unless -KeepConfig) the config.
 # The claude-meta repo, its logs, and every target repo are left untouched.
@@ -31,7 +31,9 @@ $ErrorActionPreference = "Stop"
 $Here = $PSScriptRoot
 
 $TaskName   = "agents-workspace-sync"
-$TaskFolder = "\ClaudeAutomation\"
+# Task folder nests this tool's folder name under the shared \ClaudeAutomation\ root
+# (\ClaudeAutomation\agents-workspace-sync\), matching file-sync and the digests.
+$TaskFolder = "\ClaudeAutomation\$(Split-Path -Leaf $PSScriptRoot)\"
 
 $Step = 0
 function Step($Msg) { $script:Step++; Write-Host "[$script:Step] $Msg" -ForegroundColor Yellow }

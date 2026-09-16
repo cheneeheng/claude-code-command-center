@@ -235,7 +235,7 @@ function Get-CommandCenterRegistry {
         }
         Detect         = {
             param($Entry)
-            [bool](Get-ScheduledTask -TaskName 'agents-workspace-sync' -TaskPath '\ClaudeAutomation\' -ErrorAction SilentlyContinue)
+            [bool](Get-ScheduledTask -TaskName 'agents-workspace-sync' -TaskPath '\ClaudeAutomation\agents-workspace-sync\'-ErrorAction SilentlyContinue)
         }
     }
 
@@ -252,7 +252,7 @@ function Get-CommandCenterRegistry {
         Uninstall      = { param($SetupScript, $Entry)  & $SetupScript -Action uninstall | Out-Null }
         Detect         = {
             param($Entry)
-            [bool](Get-ScheduledTask -TaskName 'usage-dashboard' -TaskPath '\ClaudeAutomation\' -ErrorAction SilentlyContinue)
+            [bool](Get-ScheduledTask -TaskName 'usage-dashboard' -TaskPath '\ClaudeAutomation\usage-dashboard\'-ErrorAction SilentlyContinue)
         }
     }
 
