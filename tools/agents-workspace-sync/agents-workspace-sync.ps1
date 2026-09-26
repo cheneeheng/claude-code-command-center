@@ -1,6 +1,7 @@
 # agents-workspace-sync.ps1
 #
-# Commits and pushes a list of `.agents_workspace` git repos, once per run.
+# Pulls (fast-forward only), commits and pushes a list of `.agents_workspace` git
+# repos, once per run.
 #
 # Each configured path must be a git repo *in its own right* (its own .git). That
 # is enforced, not assumed: a path that merely sits inside some outer repo is
@@ -154,6 +155,25 @@ function Sync-Repo {
         return
     }
 
+    $Remote = git -C $Repo remote 2>$null
+    $HasUpstream = $false
+    if ($Remote) {
+        git -C $Repo rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>$null | Out-Null
+        $HasUpstream = ($LASTEXITCODE -eq 0)
+    }
+
+    # Pull first, so remote changes land before we commit on top of them.
+    # Fast-forward only: a diverged branch, or incoming changes that overlap
+    # uncommitted edits, fail cleanly and are left for a human - never a merge
+    # or rebase that could stop mid-conflict in an unattended run.
+    if ($HasUpstream) {
+        git -C $Repo pull -q --ff-only
+        if ($LASTEXITCODE -ne 0) {
+            Log "ERROR [$Name]: pull --ff-only failed (exit $LASTEXITCODE) - skipping."
+            $script:Failed++; return
+        }
+    }
+
     git -C $Repo add -A
     if ($LASTEXITCODE -ne 0) {
         Log "ERROR [$Name]: git add failed (exit $LASTEXITCODE)."
@@ -173,14 +193,10 @@ function Sync-Repo {
         Log "[$Name] Nothing to commit."
     }
 
-    $Remote = git -C $Repo remote 2>$null
     if (-not $Remote) {
         Log "[$Name] No remote configured - commit only."
         return
     }
-
-    git -C $Repo rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>$null | Out-Null
-    $HasUpstream = ($LASTEXITCODE -eq 0)
 
     if ($HasUpstream) {
         $Ahead = git -C $Repo rev-list --count "@{u}..HEAD" 2>$null

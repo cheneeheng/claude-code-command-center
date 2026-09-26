@@ -4,8 +4,8 @@ Commits and pushes a list of `.agents_workspace` git repos once a day, unattende
 
 Agent working notes (decision logs, handoffs, architecture docs, plans) accumulate across
 several projects and are easy to leave uncommitted for weeks. This tool walks a configured
-list of `.agents_workspace` repos and, for each one, stages everything, makes one
-date-stamped commit, and pushes.
+list of `.agents_workspace` repos and, for each one, pulls remote changes (fast-forward
+only), stages everything, makes one date-stamped commit, and pushes.
 
 | | |
 |---|---|
@@ -158,7 +158,9 @@ One bad repo never aborts the batch. Sample log:
   is killed. Use an ssh-agent key or a credential helper that works without a prompt.
 - **Push failures are not retried in-run.** The commit is already made locally, so the next
   day's run pushes it along with whatever is new.
-- **Nothing is ever pulled, merged, or rebased.** A push rejected because the remote moved
-  ahead is logged as a failure for you to resolve; the tool will not resolve it for you.
+- **Pull is fast-forward only.** A branch with an upstream runs `git pull --ff-only` before
+  staging. If that fails (local and remote diverged, or incoming changes touch files you have
+  uncommitted edits in) the repo is logged as a failure and skipped. The tool never merges or
+  rebases, so it never leaves a repo mid-conflict.
 - **The 15-minute task limit** is generous for a handful of pushes and exists so a wedged
   network call dies rather than lingering.

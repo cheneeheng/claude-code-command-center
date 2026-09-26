@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # agents-workspace-sync.sh
 #
-# Commits and pushes a list of `.agents_workspace` git repos, once per run.
+# Pulls (fast-forward only), commits and pushes a list of `.agents_workspace` git
+# repos, once per run.
 #
 # Each configured path must be a git repo *in its own right* (its own .git). That
 # is enforced, not assumed: a path that merely sits inside some outer repo is
@@ -45,7 +46,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --config)  CONFIG_FILE="$2"; shift 2 ;;
         --dry-run) DRY_RUN=1; shift ;;
-        -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
         *)         REPOS+=("$1"); shift ;;
     esac
 done
@@ -120,7 +121,7 @@ resolve_target() {
 # Sync one repo. Returns 0 on success, 1 on a logged failure.
 sync_repo() {
     local raw="$1"
-    local repo name top prefix branch staged ahead remote origin
+    local repo name top prefix branch staged ahead remote origin has_upstream
     repo="$(resolve_target "$raw")"
     # Label by the parent project - ".agents_workspace" alone identifies nothing.
     name="$(basename "$(dirname "$repo")")"
@@ -166,6 +167,21 @@ sync_repo() {
         return 0
     fi
 
+    remote="$(git -C "$repo" remote 2>/dev/null | head -1)"
+    has_upstream=""
+    if [[ -n "$remote" ]] && git -C "$repo" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+        has_upstream=1
+    fi
+
+    # Pull first, so remote changes land before we commit on top of them.
+    # Fast-forward only: a diverged branch, or incoming changes that overlap
+    # uncommitted edits, fail cleanly and are left for a human - never a merge
+    # or rebase that could stop mid-conflict in an unattended run.
+    if [[ -n "$has_upstream" ]] && ! git -C "$repo" pull -q --ff-only; then
+        log "ERROR [$name]: pull --ff-only failed - skipping."
+        return 1
+    fi
+
     if ! git -C "$repo" add -A; then
         log "ERROR [$name]: git add failed."
         return 1
@@ -182,13 +198,12 @@ sync_repo() {
         log "[$name] Nothing to commit."
     fi
 
-    remote="$(git -C "$repo" remote 2>/dev/null | head -1)"
     if [[ -z "$remote" ]]; then
         log "[$name] No remote configured - commit only."
         return 0
     fi
 
-    if git -C "$repo" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    if [[ -n "$has_upstream" ]]; then
         ahead="$(git -C "$repo" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
         if [[ "$ahead" -eq 0 ]]; then
             log "[$name] Up to date with upstream - nothing to push."
