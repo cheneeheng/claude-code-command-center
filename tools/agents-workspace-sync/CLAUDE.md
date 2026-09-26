@@ -16,7 +16,7 @@ See `README.md`. Install via `agents-workspace-sync-setup.ps1` / `.sh`, or throu
 ## Architecture
 
 - `agents-workspace-sync.ps1` / `.sh` — the worker. Reads the config, loops the repos, and for
-  each: validates, `add -A`, commit, push. Installed into `$C4_CLAUDE_META_DIR/.claude/scripts/`.
+  each: validates, `pull --ff-only`, `add -A`, commit, push. Installed into `$C4_CLAUDE_META_DIR/.claude/scripts/`.
 - `agents-workspace-sync-setup.ps1` / `.sh` — install/uninstall. Writes the config, copies the
   worker, registers the daily Task Scheduler task (`\ClaudeAutomation\agents-workspace-sync\agents-workspace-sync`)
   or crontab entry.
@@ -38,8 +38,10 @@ See `README.md`. Install via `agents-workspace-sync-setup.ps1` / `.sh`, or throu
   remote, and the tool must be safe to run against a repo someone is working in. This is the
   deliberate difference from `scheduled-session-digests/git-sync`, which *does* merge to the
   default branch because it owns `claude-meta` outright.
-- **Never pull, merge, or rebase**, and never force-push. A rejected push is logged and left
-  for a human.
+- **Pull fast-forward only, before staging; never merge, rebase, or force-push.** A branch with
+  an upstream gets `git pull --ff-only` first, so remote changes land before the commit. A
+  failed pull (diverged history, or incoming changes overlapping uncommitted edits) is logged
+  and the repo skipped. A rejected push is likewise logged and left for a human.
 - **One repo's failure must not abort the batch.** Log it, count it, continue; exit `2` at the
   end. Exit `1` is reserved for fatal setup problems (no meta dir, no config, no repos).
 - **`Log` writes to the PowerShell success stream**, so a function that calls it must not also
