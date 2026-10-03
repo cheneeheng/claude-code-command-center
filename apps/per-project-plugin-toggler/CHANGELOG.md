@@ -9,6 +9,20 @@ Releases are tagged `pppt-vX.Y.Z` (see [`docs/releasing.md`](../../docs/releasin
 Development through 0.9.x predates this monorepo and happened in a previous repository;
 this log starts at the first release tracked here.
 
+## [0.10.0] - 2026-10-03
+
+### Added
+- Search box under the marketplace picker in the install panel. It filters the selected
+  marketplace's plugins by name, description and keywords.
+
+### Changed
+- The install panel's Close button now has the Refresh button's shape, in the Uninstall
+  button's red.
+- Plugin rows: the name, toggle and Uninstall sit on the top line, and the tags and the
+  skills/agents/hooks lists use the full row width below it.
+- Installed plugin rows are separated by a 5px gap and a full rounded border instead of a
+  single hairline.
+
 ## [0.9.4] - 2026-08-30
 
 ### Fixed
