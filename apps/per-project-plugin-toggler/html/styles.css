@@ -317,6 +317,7 @@ h1 {
 .plugin-list {
   display: flex;
   flex-direction: column;
+  gap: 5px;
   margin-bottom: 1rem;
 }
 
@@ -325,14 +326,13 @@ h1 {
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   padding: 6px 10px;
   gap: 0.4rem;
   overflow: hidden;
   transition: background 130ms ease-out;
 }
-
-.plugin-row:last-child { border-bottom: none; }
 
 .plugin-row:hover { background: var(--surface-2); }
 
@@ -357,7 +357,7 @@ h1 {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 /* Muted empty-state line per scope section */
@@ -372,16 +372,18 @@ h1 {
   opacity: 0.85;
 }
 
+/* Full-width block under the name/actions line: tags, then skills/agents/hooks */
 .plugin-info {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.15rem;
   min-width: 0;
-  flex: 1;
 }
 
 .plugin-name {
+  flex: 1;
+  min-width: 0;
   font-size: 0.88rem;
   font-weight: 500;
   color: var(--fg);
@@ -684,13 +686,20 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   color: var(--fg);
 }
 
+/* Same shape as .marketplace-refresh-btn, in the uninstall button's red */
 .install-panel-close {
-  background: none;
-  border: none;
-  color: var(--fg-muted);
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--error, #c0392b);
+  background: transparent;
+  color: var(--error, #c0392b);
   cursor: pointer;
-  font-size: 0.85rem;
-  padding: 0 4px;
+}
+
+.install-panel-close:hover {
+  background: var(--error, #c0392b);
+  color: #ffffff;
 }
 
 .marketplace-select-row {
@@ -698,6 +707,19 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.marketplace-search {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
 }
 
 .marketplace-select-label {

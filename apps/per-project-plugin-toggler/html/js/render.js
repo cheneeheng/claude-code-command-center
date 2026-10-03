@@ -120,20 +120,20 @@ function sectionRowHtml(p, scope) {
   return `
     <div class="plugin-row" id="row-${scope}-${escId}" data-id="${escId}">
       <div class="plugin-row-main">
-        <div class="plugin-info">
-          <span class="plugin-name">${esc(p.name)}</span>
-          <div class="plugin-badges">
-            ${p.marketplace ? `<span class="marketplace-badge">@${esc(p.marketplace)}</span>` : ""}
-            ${p.version ? `<span class="version-badge">v${esc(p.version)}</span>` : ""}
-            ${!installed ? `<span class="not-installed-tag">Not installed</span>` : ""}
-          </div>
-          ${disclosures}
-        </div>
+        <span class="plugin-name">${esc(p.name)}</span>
         <div class="row-actions">
           <input type="checkbox" class="toggle" id="toggle-${scope}-${escId}"
                  data-id="${escId}" data-scope="${scope}" ${p.enabled ? "checked" : ""} />
           ${actionBtn}
         </div>
+      </div>
+      <div class="plugin-info">
+        <div class="plugin-badges">
+          ${p.marketplace ? `<span class="marketplace-badge">@${esc(p.marketplace)}</span>` : ""}
+          ${p.version ? `<span class="version-badge">v${esc(p.version)}</span>` : ""}
+          ${!installed ? `<span class="not-installed-tag">Not installed</span>` : ""}
+        </div>
+        ${disclosures}
       </div>
       <div class="mp-install-error" id="err-${scope}-${escId}"></div>
       <div class="mp-install-log" id="log-${scope}-${escId}"></div>
