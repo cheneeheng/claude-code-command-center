@@ -1,0 +1,1 @@
+{"model":{"display_name":"Claude Opus 5.5 (1M context)"},"context_window":{"used_percentage":12},"cost":{"total_duration_ms":61000,"total_cost_usd":10.999},"rate_limits":{"five_hour":{"used_percentage":21,"resets_at":1738425600}}}

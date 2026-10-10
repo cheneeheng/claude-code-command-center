@@ -17,14 +17,14 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 | [`multi-repo-plan-runner`](apps/multi-repo-plan-runner/) | A command center over the Claude Code repos you work across: surface every plan and its lifecycle status, and run plans without leaving the tool. |
 | [`multi-repo-workspace`](apps/multi-repo-workspace/) | Turn-based workspace over your Claude Code repos (internal name *roundtable*): a board of repos with live git/plan state, in-app Claude Code planning sessions, rounds of orders executed headlessly with live streams and per-run cost, and a review phase with diffs, commits, and carried follow-ups. Successor to `multi-repo-plan-runner`; both share the same lifecycle sidecar format. |
 | [`per-project-plugin-toggler`](apps/per-project-plugin-toggler/) | Enable/disable Claude Code plugins per project from a browser UI or inside VSCode; browse and install from known marketplaces. |
-| [`usage-dashboard`](apps/usage-dashboard/) | Interactive local web dashboard for token usage, cost, and rate limits: range/project scoping, plan ROI, trend deltas, activity/model/tool profiles, drill-down with shareable URLs, session economics, a live rate-limit trajectory with cap ETA, and Markdown/CSV export. Reads Claude Code transcripts; live rate limits come from the optional `statusline-hook` tool. |
+| [`usage-dashboard`](apps/usage-dashboard/) | Interactive local web dashboard for token usage, cost, and rate limits: range/project scoping, plan ROI, trend deltas, activity/model/tool profiles, drill-down with shareable URLs, session economics, a live rate-limit trajectory with cap ETA, and Markdown/CSV export. Reads Claude Code transcripts; live rate limits read an optional statusline JSONL export, which no tool in this repo writes yet. |
 | [`claude-component-browser`](apps/claude-component-browser/) | Local web app to search and read every Claude Code component — skill, agent, and hook — on your machine, from installed plugins and from loose (non-plugin) `.claude` skills/agents, grouped by source. |
 
 ### `tools/` — single-purpose utilities & scripts
 
 | Tool | What it does |
 |------|--------------|
-| [`statusline-hook`](tools/statusline-hook/) | Claude Code `StatusLine` hook (PowerShell/Bash/Python) printing a colour-coded one-liner; optionally exports JSONL for the `usage-dashboard` app. |
+| [`statusline-hook`](tools/statusline-hook/) | Claude Code statusline (bash + jq, or PowerShell) with model, context, runtime and cost on one row and aligned 5-hour / 7-day rate-limit gauges below. |
 | [`session-name-date-prefixer`](tools/session-name-date-prefixer/) | Prefix Claude Code session names with the date. |
 | [`file-sync`](tools/file-sync/) | Keep a named file in sync across two folders (newer wins): `CLAUDE.md` (raw copy) and `settings.json` (JSON merge, excluded keys preserved), via one generic engine. |
 | [`scheduled-session-digests`](tools/scheduled-session-digests/) | Unattended scheduled Claude Code runs that digest your session transcripts into daily/weekly summaries and lessons. |
@@ -74,7 +74,7 @@ never collides with Claude Code's or the OS's variables:
 |----------|---------|---------|
 | `C4_CLAUDE_DIR` | `usage-report`, `usage-dashboard`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. |
 | `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `agents-workspace-sync`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). |
-| `C4_STATUSLINE_EXPORT` | `statusline-hook` | Opt-in to the JSONL export when set to `1`/`true`/`yes`. |
+| `C4_STATUSLINE_NOW` | `statusline-hook` | Test-only: pins "now" (epoch seconds) for the golden fixtures. |
 | `C4_STATUSLINE_LIVE_TIMEOUT` | `usage-dashboard` | Seconds a session may be idle before dropping out of the live view (default `1800`). |
 | `C4_PLAN_PRICE_USD` | `usage-dashboard` | Monthly Claude subscription price; lights up the dashboard's Plan Value (ROI) card when set. |
 | `C4_ROUNDTABLE_REGISTRY` | `multi-repo-workspace` | Registry file path (overridden by `--registry`, ahead of `./.roundtable.json`). |

@@ -80,7 +80,7 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
 - **Env vars:** every environment variable this repo defines and reads is prefixed `C4_`
   (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
   Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir
-  for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in),
+  for scheduled digests), `C4_STATUSLINE_NOW` (statusline-hook test-only clock override),
   `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout),
   `C4_PLAN_PRICE_USD` (usage-dashboard monthly plan price for the Plan Value card),
   `C4_ROUNDTABLE_REGISTRY` (multi-repo-workspace registry path override),

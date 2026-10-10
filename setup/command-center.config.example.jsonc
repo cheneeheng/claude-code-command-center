@@ -3,7 +3,7 @@
 // only documentation). Only members you want `install -All` to configure need an entry.
 {
   // statusline-hook: which implementation to wire into settings.json.
-  // "ps1" (Windows), "sh" (bash + jq), or "py" (python3). Optional; defaults to ps1.
+  // "ps1" (PowerShell) or "sh" (bash + jq). Optional; defaults to ps1.
   // claudeDir sets the config dir to install into (default ~/.claude); optional.
   "statusline-hook": { "variant": "ps1" },
   // To wire the hook into more than one config dir, use an instances array instead
@@ -11,7 +11,7 @@
   // "statusline-hook": {
   //   "instances": [
   //     { "variant": "ps1", "claudeDir": "C:/Users/you/.claude" },
-  //     { "variant": "ps1", "claudeDir": "C:/Users/you/.claude_devcontainer" }
+  //     { "variant": "sh", "claudeDir": "C:/Users/you/.claude_work" }
   //   ]
   // },
 
