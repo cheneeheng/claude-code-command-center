@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
 # Combined install/uninstall for the statusline-hook.
-# Copies the chosen hook script into the Claude config dir and wires it up as the
+# Copies the chosen script into the Claude config dir and wires it up as the
 # `statusLine` command in settings.json (other keys are preserved).
 # Usage:
 #   .\statusline-hook-setup.ps1                          # install ps1 variant (default)
-#   .\statusline-hook-setup.ps1 -Variant py
+#   .\statusline-hook-setup.ps1 -Variant sh              # bash variant (needs jq)
 #   .\statusline-hook-setup.ps1 -Action uninstall
 #   .\statusline-hook-setup.ps1 -ClaudeDir D:\claude     # override config dir
 
@@ -13,11 +13,11 @@ param(
     [string]$Action = 'install',
 
     # Which implementation to wire up (see README).
-    [ValidateSet('ps1', 'sh', 'py')]
+    [ValidateSet('ps1', 'sh')]
     [string]$Variant = 'ps1',
 
     # Claude config dir to install into (defaults to ~/.claude).
-    [string]$ClaudeDir = (Join-Path $env:USERPROFILE ".claude")
+    [string]$ClaudeDir = (Join-Path $HOME ".claude")
 )
 
 $settingsPath = Join-Path $ClaudeDir "settings.json"
@@ -25,9 +25,12 @@ $scriptName   = "statusline-hook.$Variant"
 $destScript   = Join-Path $ClaudeDir $scriptName
 $source       = Join-Path $PSScriptRoot $scriptName
 
-# The statusLine command Claude Code runs each turn — points at the installed hook so
-# each install (any config dir) runs and exports from its own copy.
-$runnerFor = @{ ps1 = "pwsh -NoProfile -File"; sh = "bash"; py = "python3" }
+# Every script name an install of this hook has ever used, including the retired .py port.
+$knownScripts = 'statusline-hook.ps1', 'statusline-hook.sh', 'statusline-hook.py'
+
+# The statusLine command Claude Code runs each turn. Prefer PowerShell 7, fall back to 5.1.
+$shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { 'powershell' }
+$runnerFor = @{ ps1 = "$shell -NoProfile -File"; sh = "bash" }
 $command   = '{0} "{1}"' -f $runnerFor[$Variant], $destScript
 
 function Read-Settings {
@@ -43,6 +46,19 @@ function Save-Settings($obj) {
     $obj | ConvertTo-Json -Depth 20 | Set-Content -Path $settingsPath -Encoding utf8
 }
 
+# Delete installed copies of this hook, except $Keep. Clears out other variants and the
+# retired .py port so a reinstall leaves exactly one script behind.
+function Remove-InstalledScripts([string]$Keep) {
+    foreach ($name in $knownScripts) {
+        if ($name -eq $Keep) { continue }
+        $p = Join-Path $ClaudeDir $name
+        if (Test-Path $p) {
+            Remove-Item -Force $p
+            Write-Host "Removed $p"
+        }
+    }
+}
+
 function Install-StatusLine {
     if (-not (Test-Path $source)) {
         throw "Hook script not found: $source"
@@ -54,6 +70,7 @@ function Install-StatusLine {
 
     Copy-Item -Force $source $destScript
     Write-Host "Installed hook to $destScript"
+    Remove-InstalledScripts -Keep $scriptName
 
     $settings = Read-Settings
     $value = [pscustomobject]@{ type = "command"; command = $command }
@@ -61,7 +78,9 @@ function Install-StatusLine {
     Save-Settings $settings
     Write-Host "Wired statusLine -> $command in $settingsPath"
 
-    if ($Variant -eq 'sh') { Write-Host "Note: the .sh hook requires 'jq' on PATH." }
+    if ($Variant -eq 'sh' -and -not (Get-Command jq -ErrorAction SilentlyContinue)) {
+        Write-Warning "jq is not on PATH; the bash statusline prints nothing until jq is installed."
+    }
 }
 
 function Uninstall-StatusLine {
@@ -78,14 +97,7 @@ function Uninstall-StatusLine {
         Write-Host "$settingsPath not found — skipped"
     }
 
-    # Remove whichever variant script we may have copied in.
-    foreach ($v in @('ps1', 'sh', 'py')) {
-        $p = Join-Path $ClaudeDir "statusline-hook.$v"
-        if (Test-Path $p) {
-            Remove-Item -Force $p
-            Write-Host "Removed $p"
-        }
-    }
+    Remove-InstalledScripts -Keep ''
 }
 
 switch ($Action) {

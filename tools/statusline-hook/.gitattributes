@@ -1,0 +1,5 @@
+# Keep LF on every checkout (Windows autocrlf included): bash rejects a CRLF script, and the
+# golden fixtures compare output byte for byte.
+*.sh   text eol=lf
+*.json text eol=lf
+*.out  text eol=lf

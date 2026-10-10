@@ -1,71 +1,74 @@
 # statusline-hook
 
-A Claude Code `StatusLine` hook that prints a colour-coded one-liner each turn:
+A clean, rate-limit-first statusline for Claude Code. Each turn it prints up to three aligned rows:
 
 ```
-model | ▓▓▓▓░░░░░░ 42% | 1h 1m 1s | $1.2345 | 5H: 35% (↺ 14:00) | 7D: 80% (↺ Mon 09:00)
+Opus 5.5   ctx ━━━━────── 42% · 1h 12m · $1.23
+           5h  ━━━━━━──── 63%  ↺ 17:00
+           7d  ━━━━━━━━── 85%  ↺ Thu 17:00
 ```
 
-`model | context bar | runtime | cost | 5-hour rate | 7-day rate`. Three equivalent
-implementations — pick the one for your shell:
+- **Row 1:** model, context-window gauge, session runtime, session cost.
+- **Rows 2–3:** your 5-hour and 7-day rate-limit usage, with the local time each window resets.
+  Claude Code sends these only to Pro/Max subscribers, after the session's first response; a row
+  is left out while its window is absent.
 
-| File | Platform | Notes |
-|------|----------|-------|
-| `statusline-hook.ps1` | Windows (PowerShell) | Forces UTF-8 output. |
-| `statusline-hook.sh` | Linux / macOS (Bash) | Requires `jq`. |
-| `statusline-hook.py` | Cross-platform (Python stdlib) | UTF-8-safe stdin/stdout; run with `python3 statusline-hook.py`. Managed with `uv`. |
+Colour carries meaning, not decoration: every gauge turns green below 50%, yellow below 80%, and red
+from 80%. Labels, separators, and reset times are dimmed. Each row stays under about 55 characters,
+so it fits a split pane. Plain Unicode only, so no Nerd Font is needed.
 
-Each hook can also append the turn to `~/.claude/statusline/<project>/<session_id>.jsonl`
-(`{session_id, ts, data}`) — the data that powers the live rate-limit panel in the
-[`usage-dashboard`](../../apps/usage-dashboard/) app. This export is **opt-in**: it is off by
-default and only runs when you set `C4_STATUSLINE_EXPORT` to `1` (or `true`/`yes`). Leave it unset
-and the hook just prints the status line and writes nothing. The dashboard reads the export if
-present and silently skips it if not.
+Two equivalent single-file scripts. Pick the one for your shell:
 
-## Quick start
+| File | Needs | Notes |
+|------|-------|-------|
+| `statusline-hook.sh` | `bash`, [`jq`](https://jqlang.org/) | Linux, macOS, and Git Bash on Windows. |
+| `statusline-hook.ps1` | Windows PowerShell 5.1 or PowerShell 7 | No modules. |
 
-Run the setup script — it copies the chosen hook into `~/.claude/` and wires up the `statusLine`
-key in `settings.json` (preserving your other settings):
+Bad or unexpected input never breaks your session: the script prints nothing and exits 0.
+
+## Install
+
+**With the setup script** (PowerShell). It copies the script into your Claude config dir and wires
+the `statusLine` key in `settings.json`, keeping your other settings:
 
 ```powershell
-./statusline-hook-setup.ps1            # ps1 variant (default)
-./statusline-hook-setup.ps1 -Variant py
+./statusline-hook-setup.ps1                  # PowerShell variant (default)
+./statusline-hook-setup.ps1 -Variant sh      # bash variant
 ./statusline-hook-setup.ps1 -Action uninstall
+./statusline-hook-setup.ps1 -ClaudeDir D:\claude   # a config dir other than ~/.claude
 ```
 
-Installs into `~/.claude` by default; pass `-ClaudeDir <dir>` to install into another config dir.
-This tool is also managed by the repo-wide [`setup/`](../../setup/) installer
+It runs the PowerShell variant with `pwsh` when PowerShell 7 is installed, and with `powershell`
+otherwise. It also removes scripts left behind by earlier versions of this hook. This tool is also
+managed by the repo-wide [`setup/`](../../setup/) installer
 (`command-center.ps1 install -Member statusline-hook`).
 
-Or wire it up by hand — add the hook to `~/.claude/settings.json` (PowerShell shown; use
-`.sh`/`.py` analogously):
+**By hand.** Copy one script into `~/.claude/`, then add it to `~/.claude/settings.json`:
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "pwsh -NoProfile -File ~/.claude/statusline-hook.ps1"
+    "command": "bash ~/.claude/statusline-hook.sh"
   }
 }
 ```
 
-The hook writes its JSONL export under the config dir it lives in — it derives that dir from its
-own script location, so installing into a different `-ClaudeDir` exports there with no extra config.
-To enable the export, set `C4_STATUSLINE_EXPORT=1` in the environment Claude Code runs the hook in.
+For PowerShell, use `"command": "pwsh -NoProfile -File ~/.claude/statusline-hook.ps1"` (or
+`powershell` instead of `pwsh` on a machine without PowerShell 7).
 
-## Why the `pyproject.toml`?
+## Development
 
-The hook is **not** an installable package — all three scripts run directly, and the Python
-version uses only the standard library (`dependencies = []`, `[tool.uv] package = false`). The
-`pyproject.toml` exists solely to follow the monorepo rule that every Python member is a `uv`
-project: it pins the Python version and holds the shared `ruff`/`mypy` config. The `dev`
-dependency group brings in `ruff` and `mypy` for linting and type-checking the `.py` script.
-
-So nothing is required to *run* the hook beyond the script itself. `uv sync` is only needed if
-you want to lint or type-check the Python implementation:
+The `fixtures/` folder is the spec: each `<case>.json` is the stdin Claude Code sends, and
+`<case>.out` is the exact expected output, with each ESC byte written as `\e`. Both scripts must
+pass every fixture:
 
 ```bash
-uv sync          # installs the dev tools (ruff, mypy) into .venv
-uv run ruff check .
-uv run mypy statusline-hook.py
+bash tests/golden.sh bash statusline-hook.sh
+bash tests/golden.sh pwsh -NoProfile -File statusline-hook.ps1
+bash tests/smoke.sh     # installs each variant into a temp dir and runs it (needs pwsh + jq)
 ```
+
+The harness pins `TZ=UTC` so reset times are deterministic. PowerShell on Windows ignores `TZ` and
+always uses the system time zone, so on a machine that isn't set to UTC, the PowerShell run shows
+reset-time differences only. CI runs everything in UTC on Ubuntu and Windows.
