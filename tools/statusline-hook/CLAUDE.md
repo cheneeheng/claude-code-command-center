@@ -34,6 +34,9 @@ On a machine whose time zone isn't UTC, the PowerShell runs show reset-time diff
   anything that throws.
 - **Output is `\n`-terminated rows with no `\r`, on every OS.** The bash port strips the `\r` that
   jq writes on Windows, and the PowerShell port writes with `[Console]::Out.Write`.
+- **Rows 2–3 start with U+2800 (Braille blank), not a space.** Claude Code trims leading
+  whitespace from each row, which collapsed the alignment. U+2800 renders empty but isn't
+  whitespace. The indent is U+2800 plus (model + effort width + 2) spaces.
 - **`statusline-hook.ps1` stays ASCII-only.** PowerShell 5.1 reads a BOM-less script as ANSI, so
   glyphs are built from code points (`[char]0x2501`).
 - **Dependencies:** bash needs only `jq`. PowerShell needs no modules.

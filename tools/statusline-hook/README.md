@@ -3,12 +3,13 @@
 A clean, rate-limit-first statusline for Claude Code. Each turn it prints up to three aligned rows:
 
 ```
-Opus 5.5   ctx ━━━━────── 42% · 1h 12m · $1.23
-           5h  ━━━━━━──── 63%  ↺ 17:00
-           7d  ━━━━━━━━── 85%  ↺ Thu 17:00
+Opus 5.5 high   ctx ━━━━────── 42% · 1h 12m · $1.23
+                5h  ━━━━━━──── 63%  ↺ 17:00
+                7d  ━━━━━━━━── 85%  ↺ Thu 17:00
 ```
 
-- **Row 1:** model, context-window gauge, session runtime, session cost.
+- **Row 1:** model and reasoning effort (shown when the model supports effort), context-window
+  gauge, session runtime, session cost.
 - **Rows 2–3:** your 5-hour and 7-day rate-limit usage, with the local time each window resets.
   Claude Code sends these only to Pro/Max subscribers, after the session's first response; a row
   is left out while its window is absent.

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Claude Code statusline (bash port). Needs jq.
 #
-#   Opus 5.5   ctx ━━━━────── 42% · 1h 12m · $1.23
-#              5h  ━━━━━━──── 63%  ↺ 16:00
-#              7d  ━━━━━━━━── 85%  ↺ Thu 16:00
+#   Opus 5.5 high   ctx ━━━━────── 42% · 1h 12m · $1.23
+#                   5h  ━━━━━━──── 63%  ↺ 16:00
+#                   7d  ━━━━━━━━── 85%  ↺ Thu 16:00
 #
 # Reads the JSON Claude Code pipes to stdin. A rate-limit row is shown only when Claude Code
 # sends that window. Bad input prints nothing. The render spec is the fixtures/ folder;
@@ -43,9 +43,15 @@ jq -rj '
 
   objects
   | (.model.display_name // "") as $model
-  | rep(" "; ($model | length) + 3) as $indent
+  | (.effort.level // "" | tostring) as $effort
+  | ($model + (if $effort != "" then " " + $effort else "" end) | length) as $width
+  # Claude Code trims leading whitespace from each row, so the indent opens with U+2800
+  # (Braille blank): it renders as an empty cell but is not whitespace.
+  | ("⠀" + rep(" "; $width + 2)) as $indent
   | (" " + c(2) + "·" + c(0) + " ") as $sep
-  | [ c(1) + c(36) + $model + c(0) + "   " + c(2) + "ctx" + c(0) + " "
+  | [ c(1) + c(36) + $model + c(0)
+        + (if $effort != "" then " " + c(36) + $effort + c(0) else "" end)
+        + "   " + c(2) + "ctx" + c(0) + " "
         + (.context_window.used_percentage | gauge)
         + $sep + (.cost.total_duration_ms | runtime)
         + $sep + "$" + (.cost.total_cost_usd | cost),

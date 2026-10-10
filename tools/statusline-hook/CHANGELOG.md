@@ -15,6 +15,7 @@ First public release: a rebuild of the hook from the ground up.
 - Three-row layout: model, context gauge, runtime and cost on row 1, then aligned 5-hour and
   7-day rate-limit gauges with local reset times. A row is shown only when Claude Code sends
   that window.
+- Reasoning effort (`effort.level`) next to the model name, when the model supports effort.
 - One colour scale for every gauge: green below 50%, yellow below 80%, red from 80%.
 - Golden fixtures (`fixtures/`) and `tests/golden.sh`, which hold both ports to identical output.
 - Windows PowerShell 5.1 support alongside PowerShell 7.

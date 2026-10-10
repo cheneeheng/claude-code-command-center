@@ -1,8 +1,8 @@
 # Claude Code statusline (PowerShell port). Runs on Windows PowerShell 5.1 and PowerShell 7.
 #
-#   Opus 5.5   ctx [context gauge] 42% . 1h 12m . $1.23
-#              5h  [5-hour gauge]  63%  reset 16:00
-#              7d  [7-day gauge]   85%  reset Thu 16:00
+#   Opus 5.5 high   ctx [context gauge] 42% . 1h 12m . $1.23
+#                   5h  [5-hour gauge]  63%  reset 16:00
+#                   7d  [7-day gauge]   85%  reset Thu 16:00
 #
 # Reads the JSON Claude Code pipes to stdin. A rate-limit row is shown only when Claude Code
 # sends that window. Bad input prints nothing. The render spec is the fixtures/ folder;
@@ -61,9 +61,18 @@ try {
     if ($data -isnot [System.Management.Automation.PSCustomObject]) { exit 0 }
 
     $model  = if ($null -eq $data.model.display_name) { '' } else { [string]$data.model.display_name }
-    $indent = ' ' * ($model.Length + 3)
+    $effort = if ($null -eq $data.effort.level) { '' } else { [string]$data.effort.level }
+    $label  = "$ESC[1m$ESC[36m$model$RESET"
+    $width  = $model.Length
+    if ($effort) {
+        $label += " $ESC[36m$effort$RESET"
+        $width += 1 + $effort.Length
+    }
+    # Claude Code trims leading whitespace from each row, so the indent opens with U+2800
+    # (Braille blank): it renders as an empty cell but is not whitespace.
+    $indent = [string][char]0x2800 + (' ' * ($width + 2))
     $rows = @(
-        "$ESC[1m$ESC[36m$model$RESET   ${DIM}ctx$RESET " +
+        "$label   ${DIM}ctx$RESET " +
         (Get-Gauge $data.context_window.used_percentage) +
         $SEP + (Get-Runtime $data.cost.total_duration_ms) +
         $SEP + '$' + (Get-Cost $data.cost.total_cost_usd)
