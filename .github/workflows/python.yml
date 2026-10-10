@@ -22,7 +22,6 @@ jobs:
           - apps/per-project-plugin-toggler
           - apps/usage-dashboard
           - apps/claude-component-browser
-          - tools/statusline-hook
           - tools/usage-report
           - libs/claude-usage
           - libs/claude-plugins
@@ -111,7 +110,6 @@ jobs:
           - apps/claude-component-browser
           - apps/usage-dashboard
           - tools/usage-report
-          - tools/statusline-hook
     defaults:
       run:
         working-directory: ${{ matrix.member }}
