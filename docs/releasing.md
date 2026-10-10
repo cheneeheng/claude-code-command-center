@@ -19,6 +19,7 @@ here and a release workflow under `.github/workflows/`.
 | Alias | Component | Version manifest | Release workflow |
 |-------|-----------|------------------|------------------|
 | `pppt` | `apps/per-project-plugin-toggler` (VSCode extension) | `apps/per-project-plugin-toggler/vscode-extension/package.json` | `.github/workflows/release-extension.yml` |
+| `slh` | `tools/statusline-hook` | `tools/statusline-hook/VERSION` | none: users download the scripts from the tag, so steps 1–4 below are the whole release |
 
 ## Cutting a component release
 
