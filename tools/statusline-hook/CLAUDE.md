@@ -10,7 +10,8 @@ then 5-hour and 7-day rate-limit gauges with reset times). Two single-file ports
 - `statusline-hook.sh`: bash; renders everything in one `jq` program.
 - `statusline-hook.ps1`: Windows PowerShell 5.1 and PowerShell 7.
 
-`statusline-hook-setup.ps1` installs either one into a Claude config dir and wires `statusLine`.
+`statusline-hook-setup.ps1` and `statusline-hook-setup.sh` (needs `jq`) each install either one
+into a Claude config dir and wire `statusLine`. Keep the two setup scripts behaving alike.
 
 ## Running / checking
 

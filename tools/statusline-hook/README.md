@@ -30,8 +30,8 @@ Bad or unexpected input never breaks your session: the script prints nothing and
 
 ## Install
 
-**With the setup script** (PowerShell). It copies the script into your Claude config dir and wires
-the `statusLine` key in `settings.json`, keeping your other settings:
+**With a setup script.** It copies the script into your Claude config dir and wires the
+`statusLine` key in `settings.json`, keeping your other settings. Use the one for your shell:
 
 ```powershell
 ./statusline-hook-setup.ps1                  # PowerShell variant (default)
@@ -40,7 +40,14 @@ the `statusLine` key in `settings.json`, keeping your other settings:
 ./statusline-hook-setup.ps1 -ClaudeDir D:\claude   # a config dir other than ~/.claude
 ```
 
-It runs the PowerShell variant with `pwsh` when PowerShell 7 is installed, and with `powershell`
+```bash
+./statusline-hook-setup.sh                   # bash variant (default), needs jq
+./statusline-hook-setup.sh --variant ps1     # PowerShell variant
+./statusline-hook-setup.sh uninstall
+./statusline-hook-setup.sh --claude-dir ~/claude   # a config dir other than ~/.claude
+```
+
+Both run the PowerShell variant with `pwsh` when PowerShell 7 is installed, and with `powershell`
 otherwise. It also removes scripts left behind by earlier versions of this hook. This tool is also
 managed by the repo-wide [`setup/`](../../setup/) installer
 (`command-center.ps1 install -Member statusline-hook`).
@@ -68,7 +75,7 @@ pass every fixture:
 ```bash
 bash tests/golden.sh bash statusline-hook.sh
 bash tests/golden.sh pwsh -NoProfile -File statusline-hook.ps1
-bash tests/smoke.sh     # installs each variant into a temp dir and runs it (needs pwsh + jq)
+bash tests/smoke.sh     # installs each variant with each setup script, runs it (needs pwsh + jq)
 ```
 
 The harness pins `TZ=UTC` and the clock (`C4_STATUSLINE_NOW`, epoch seconds, a test-only
