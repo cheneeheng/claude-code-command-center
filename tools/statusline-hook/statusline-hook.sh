@@ -1,117 +1,71 @@
-#!/bin/bash
-input=$(cat)
+#!/usr/bin/env bash
+# Claude Code statusline (bash port). Needs jq.
+#
+#   Opus 5.5 high   ctx ━━━━────── 42% · ◷ 1h 12m · $1.23
+#                   5h  ━━━━━━──── 63%  ↺ 16:00 (7h 6m)
+#                   7d  ━━━━━━━━── 85%  ↺ Thu 16:00 (5d 7h)
+#
+# Reads the JSON Claude Code pipes to stdin. A rate-limit row is shown only when Claude Code
+# sends that window. Bad input prints nothing. The render spec is the fixtures/ folder;
+# statusline-hook.ps1 must produce the same bytes.
+#
+# Setup: "statusLine": { "type": "command", "command": "bash ~/.claude/statusline-hook.sh" }
 
-# --- Extract fields ---
-MODEL=$(echo "$input" | jq -r '.model.id')
+# One jq program renders everything, so a turn costs one process and no `date` portability.
+# tr drops the \r that jq on Windows writes before each \n.
+jq -rj '
+  def c($n): "\u001b[\($n)m";
+  def rep($s; $n): [range($n) | $s] | add // "";
+  def level: if . < 50 then c(32) elif . < 80 then c(33) else c(31) end;
+  def gauge:
+    ((. // 0) | floor) as $p
+    | ([[$p, 0] | max, 100] | min | . * 10 / 100 | floor) as $f
+    | ($p | level) as $l
+    | $l + rep("━"; $f) + c(0) + c(2) + rep("─"; 10 - $f) + c(0)
+      + " " + $l + "\($p)%" + c(0);
+  # Time left until a reset, e.g. "5d 7h", "7h 6m", "12m".
+  def left:
+    ([., 0] | max | floor) as $s
+    | ($s / 86400 | floor) as $d | (($s % 86400) / 3600 | floor) as $h
+    | (($s % 3600) / 60 | floor) as $m
+    | if $d > 0 then "\($d)d \($h)h" elif $h > 0 then "\($h)h \($m)m" else "\($m)m" end;
+  def reset($day; $now):
+    if (. // 0) > 0 then
+      (floor | localtime) as $t
+      | "  " + c(2) + "↺ "
+        + (if $day then ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][$t[6]] + " " else "" end)
+        + ($t | strftime("%H:%M")) + " (" + (. - $now | left) + ")" + c(0)
+    else "" end;
+  def runtime:
+    ((. // 0) / 1000 | floor) as $s
+    | ($s / 3600 | floor) as $h | (($s % 3600) / 60 | floor) as $m
+    | if $h > 0 then "\($h)h \($m)m" else "\($m)m" end;
+  def cost:
+    ((. // 0) * 100 + 0.5 | floor) as $c
+    | "\($c / 100 | floor)." + ($c % 100 | tostring | if length < 2 then "0" + . else . end);
+  def row($label; $w; $indent; $day; $now):
+    $indent + c(2) + $label + c(0) + "  " + ($w.used_percentage | gauge)
+    + ($w.resets_at | reset($day; $now));
 
-DURATION_MS=$(echo "$input" | jq -r '.cost.total_duration_ms // 0')
-COST=$(echo "$input" | jq -r '.cost.total_cost_usd // 0')
-
-#PCT=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
-#PCT=$(($(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1) * 5))
-RAW=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
-SIZE=$(echo "$input" | jq -r '.context_window.context_window_size // 0')
-if [ "$SIZE" -eq 1000000 ]; then
-    PCT=$(( RAW * 5 ))
-else
-    PCT=$RAW
-fi
-
-RATE_5H=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // 0' | xargs printf '%.0f')
-RESET_5H=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // 0')
-RATE_7D=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // 0' | xargs printf '%.0f')
-RESET_7D=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // 0')
-
-# --- Format runtime ---
-DURATION_SEC=$((DURATION_MS / 1000))
-HOURS=$((DURATION_SEC / 3600))
-MINS=$(((DURATION_SEC % 3600) / 60))
-SECS=$((DURATION_SEC % 60))
-if [ "$HOURS" -gt 0 ]; then
-  RUNTIME="${HOURS}h ${MINS}m ${SECS}s"
-else
-  RUNTIME="${MINS}m ${SECS}s"
-fi
-
-# --- Format cost ---
-COST_FMT=$(printf '$%.4f' "$COST")
-
-# --- Build context bar (▓ filled, ░ empty) ---
-BAR_WIDTH=10
-PCT_CAPPED=$((PCT > 100 ? 100 : PCT))
-FILLED=$((PCT_CAPPED * BAR_WIDTH / 100))
-#FILLED=$((PCT * BAR_WIDTH / 100))
-EMPTY=$((BAR_WIDTH - FILLED))
-BAR=""
-[ "$FILLED" -gt 0 ] && printf -v FILL "%${FILLED}s" && BAR="${FILL// /▓}"
-[ "$EMPTY"  -gt 0 ] && printf -v PAD  "%${EMPTY}s"  && BAR="${BAR}${PAD// /░}"
-
-# --- Format rate limit reset times ---
-if [ "$RESET_5H" -gt 0 ]; then
-  RESET_5H_FMT=$(date -d "@$RESET_5H" '+%H:%M' 2>/dev/null || date -r "$RESET_5H" '+%H:%M' 2>/dev/null || echo "--:--")
-else
-  RESET_5H_FMT="--:--"
-fi
-if [ "$RESET_7D" -gt 0 ]; then
-  RESET_7D_FMT=$(date -d "@$RESET_7D" '+%a %H:%M' 2>/dev/null || date -r "$RESET_7D" '+%a %H:%M' 2>/dev/null || echo "---")
-else
-  RESET_7D_FMT="---"
-fi
-
-# --- ANSI colors ---
-GREEN='\033[32m'
-YELLOW='\033[33m'
-RED='\033[31m'
-RESET_COLOR='\033[0m'
-
-# Context: green <30, yellow 30-49, red >=50
-if [ "$PCT" -lt 30 ]; then
-  CTX_COLOR="$GREEN"
-elif [ "$PCT" -lt 50 ]; then
-  CTX_COLOR="$YELLOW"
-else
-  CTX_COLOR="$RED"
-fi
-
-# Rate limits: green <30, yellow 30-69, red >=70
-rate_color() {
-  local r=$1
-  if [ "$r" -lt 30 ]; then
-    echo "$GREEN"
-  elif [ "$r" -lt 70 ]; then
-    echo "$YELLOW"
-  else
-    echo "$RED"
-  fi
-}
-COLOR_5H=$(rate_color "$RATE_5H")
-COLOR_7D=$(rate_color "$RATE_7D")
-
-# --- Single-line output ---
-printf "${MODEL} | ${CTX_COLOR}${BAR} ${PCT}%%${RESET_COLOR} | ${RUNTIME} | ${COST_FMT} | ${COLOR_5H}5H: ${RATE_5H}%% (↺ ${RESET_5H_FMT})${RESET_COLOR} | ${COLOR_7D}7D: ${RATE_7D}%% (↺ ${RESET_7D_FMT})${RESET_COLOR}\n"
-
-# --- Log to per-project statusline/project_name/$session_id.jsonl (opt-in) ---
-# Export is off unless C4_STATUSLINE_EXPORT is 1/true/yes.
-case "$(echo "${C4_STATUSLINE_EXPORT:-}" | tr '[:upper:]' '[:lower:]')" in
-  1|true|yes) ;;
-  *) exit 0 ;;
-esac
-
-# This hook is installed into the Claude config dir, so its own location is that dir.
-CLAUDE_BASE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
-
-SESSION_ID=$(echo "$input" | jq -r '.session_id // "__unknown__"')
-CWD=$(echo "$input" | jq -r '.cwd // ""')
-
-PROJECT_DIR_NAME=$(echo "$CWD" | sed 's|:|-|g; s|[/\\]|-|g')
-LOG_DIR="$CLAUDE_BASE/statusline/$PROJECT_DIR_NAME"
-
-{
-  mkdir -p "$LOG_DIR"
-  TS_MS=$(date +%s%3N 2>/dev/null || echo $(($(date +%s) * 1000)))
-  LOG_ENTRY=$(printf '{"session_id":%s,"ts":%s,"data":%s}' \
-    "$(echo "$SESSION_ID" | jq -Rs .)" \
-    "$TS_MS" \
-    "$input")
-  echo "$LOG_ENTRY" >> "$LOG_DIR/$SESSION_ID.jsonl"
-} 2>/dev/null || true
+  objects
+  # C4_STATUSLINE_NOW (epoch seconds) pins the clock for the golden tests only.
+  | ($ENV.C4_STATUSLINE_NOW // now | tonumber) as $now
+  | (.model.display_name // "") as $model
+  | (.effort.level // "" | tostring) as $effort
+  | ($model + (if $effort != "" then " " + $effort else "" end) | length) as $width
+  # Claude Code trims leading whitespace from each row, so the indent opens with U+2800
+  # (Braille blank): it renders as an empty cell but is not whitespace.
+  | ("⠀" + rep(" "; $width + 2)) as $indent
+  | (" " + c(2) + "·" + c(0) + " ") as $sep
+  | [ c(1) + c(36) + $model + c(0)
+        + (if $effort != "" then " " + c(36) + $effort + c(0) else "" end)
+        + "   " + c(2) + "ctx" + c(0) + " "
+        + (.context_window.used_percentage | gauge)
+        + $sep + c(2) + "◷" + c(0) + " " + (.cost.total_duration_ms | runtime)
+        + $sep + "$" + (.cost.total_cost_usd | cost),
+      (.rate_limits.five_hour // empty | row("5h"; .; $indent; false; $now)),
+      (.rate_limits.seven_day // empty | row("7d"; .; $indent; true; $now))
+    ]
+  | join("\n") + "\n"
+' 2>/dev/null | tr -d '\r'
+exit 0

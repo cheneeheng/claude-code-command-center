@@ -4,51 +4,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A Claude Code `StatusLine` hook that prints a colour-coded one-liner each turn
-(`model | context bar | runtime | cost | 5h rate | 7d rate`). It can also append the turn to
-`~/.claude/statusline/<project>/<session_id>.jsonl`, which powers the live rate-limit panel in the
-`usage-dashboard` app.
+A public Claude Code statusline: up to three aligned rows (model, context gauge, runtime, cost;
+then 5-hour and 7-day rate-limit gauges with reset times). Two single-file ports:
 
-## Implementations — keep all three in step
+- `statusline-hook.sh`: bash; renders everything in one `jq` program.
+- `statusline-hook.ps1`: Windows PowerShell 5.1 and PowerShell 7.
 
-Three equivalent implementations, one per shell. A behaviour change to one must be mirrored in the
-others:
-
-- `statusline-hook.ps1` — Windows (PowerShell); forces UTF-8 output.
-- `statusline-hook.sh` — Linux / macOS (Bash); requires `jq`.
-- `statusline-hook.py` — cross-platform (Python stdlib); UTF-8-safe stdin/stdout.
+`statusline-hook-setup.ps1` installs either one into a Claude config dir and wires `statusLine`.
 
 ## Running / checking
 
-See README.md for setup (`statusline-hook-setup.ps1`, `-Variant`, `-Action uninstall`) and the
-manual `settings.json` wiring. The `pyproject.toml` exists **only** to satisfy the monorepo
-"every Python member is a `uv` project" rule and to hold shared ruff/mypy config — the hook is not
-an installable package (`dependencies = []`, `[tool.uv] package = false`); all three scripts run
-directly. `uv sync` is needed only to lint/type-check the Python variant:
+```
+bash tests/golden.sh bash statusline-hook.sh
+bash tests/golden.sh pwsh -NoProfile -File statusline-hook.ps1
+bash tests/golden.sh powershell -NoProfile -File statusline-hook.ps1
+bash tests/smoke.sh
+```
 
-```
-uv run ruff check .
-uv run mypy statusline-hook.py
-```
+On a machine whose time zone isn't UTC, the PowerShell runs show reset-time differences only
+(PowerShell ignores `TZ` on Windows). CI runs them in UTC.
 
 ## Invariants — do not break these
 
-- **The JSONL export is opt-in and off by default.** It runs only when `C4_STATUSLINE_EXPORT` is
-  `1`/`true`/`yes`. Unset → print the status line and write nothing. Do not make the export
-  unconditional; the dashboard treats it as optional.
-- **Export record shape is `{session_id, ts, data}`** at
-  `<config-dir>/statusline/<project>/<session_id>.jsonl` (default `~/.claude/statusline/...`) — this
-  is the contract `usage-dashboard` reads. Change both ends together.
-- **The hook derives its config dir from its own script location** (the dir it is installed into),
-  not from `$C4_CLAUDE_DIR` or any env var. The setup script's `-ClaudeDir` (default `~/.claude`)
-  chooses that dir at install time; keep all three variants self-locating so each install exports
-  under its own copy.
-- **Nothing beyond the script is required to run the hook.** Keep the Python variant stdlib-only.
+- **`fixtures/` is the spec, and both ports must produce the same bytes.** A behaviour change is a
+  fixture change plus the same edit in both scripts, with the golden harness green for both.
+- **The statusline only prints the statusline.** No export, no files written, no state between
+  turns. Data export belongs in a separate tool.
+- **Bad input prints nothing and exits 0.** That covers invalid JSON, a non-object payload, and
+  anything that throws.
+- **Output is `\n`-terminated rows with no `\r`, on every OS.** The bash port strips the `\r` that
+  jq writes on Windows, and the PowerShell port writes with `[Console]::Out.Write`.
+- **Rows 2–3 start with U+2800 (Braille blank), not a space.** Claude Code trims leading
+  whitespace from each row, which collapsed the alignment. U+2800 renders empty but isn't
+  whitespace. The indent is U+2800 plus (model + effort width + 2) spaces.
+- **`statusline-hook.ps1` stays ASCII-only.** PowerShell 5.1 reads a BOM-less script as ANSI, so
+  glyphs are built from code points (`[char]0x2501`).
+- **`C4_STATUSLINE_NOW` is test-only.** It pins "now" (epoch seconds) so the time left until a
+  reset is deterministic in the fixtures. Never document it as a user setting.
+- **Dependencies:** bash needs only `jq`. PowerShell needs no modules.
+- **`.gitattributes` pins LF** for scripts and fixtures. A CRLF checkout would break bash and the
+  byte comparison.
 
 ## Conventions
 
-- Cross-platform; primary dev platform is Windows (PowerShell), Bash tool also available. Keep the
-  three implementations behaviourally identical.
+- Version lives in `VERSION`; release tag `slh-vX.Y.Z` (see `docs/releasing.md`), changes in
+  `CHANGELOG.md`.
 - Also installable via the repo-wide `setup/` orchestrator
   (`command-center.ps1 install -Member statusline-hook`).
 - New decisions go in the repo-root `.agents_workspace/DECISION_LOG.md`.

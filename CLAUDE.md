@@ -42,6 +42,14 @@ a deliberate copy a Python library can't serve.
 Members are **self-contained**: each keeps its own README, tests, and CLAUDE.md.
 The umbrella adds a catalog and shared conventions; it does not flatten or rewrite members.
 
+**Each `apps/` and `tools/` member is a standalone repo.** Treat every subfolder of `apps/` and
+`tools/` as if it were its own repository: its root is that folder, not the monorepo root. Build,
+test, lint, and run it from inside the folder with its own manifest (`pyproject.toml` /
+`package.json`), lockfile, README, and CLAUDE.md. Never import, path-reference, or copy files from a
+sibling member. The only shared code it may depend on is a `libs/` package, declared as a normal
+dependency. A change to one member should never require a change to another. Every other folder
+(`libs/`, `setup/`, `plugins/`, `docs/`) is **not** a standalone repo: those are monorepo-level.
+
 **`setup/` (umbrella infra, not a member):** a single `command-center.ps1` that installs/uninstalls
 the installable `tools/` members and tracks state in a manifest under `~/.claude-command-center/`. It
 is a thin **delegator** — it calls each member's own setup script and never reimplements install logic,
@@ -72,7 +80,7 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
 - **Env vars:** every environment variable this repo defines and reads is prefixed `C4_`
   (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
   Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir
-  for scheduled digests), `C4_STATUSLINE_EXPORT` (statusline JSONL export opt-in),
+  for scheduled digests), `C4_STATUSLINE_NOW` (statusline-hook test-only clock override),
   `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout),
   `C4_PLAN_PRICE_USD` (usage-dashboard monthly plan price for the Plan Value card),
   `C4_ROUNDTABLE_REGISTRY` (multi-repo-workspace registry path override),

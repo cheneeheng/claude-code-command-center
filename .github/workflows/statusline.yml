@@ -1,0 +1,39 @@
+name: CI · statusline-hook
+
+# No path filter: this job is meant to be a required check, and a path-filtered required
+# check never reports on PRs that skip it.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: tools/statusline-hook
+
+jobs:
+  golden:
+    name: statusline (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      # Both runner images ship bash, jq, and pwsh; Windows also has powershell 5.1.
+      # Their system clock is UTC, so PowerShell's reset times match the fixtures too.
+      - name: Golden fixtures (bash)
+        run: bash tests/golden.sh bash statusline-hook.sh
+      - name: Golden fixtures (pwsh)
+        run: bash tests/golden.sh pwsh -NoProfile -File statusline-hook.ps1
+      - name: Golden fixtures (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        run: bash tests/golden.sh powershell -NoProfile -File statusline-hook.ps1
+      - name: Smoke test (setup install + run + uninstall)
+        run: bash tests/smoke.sh

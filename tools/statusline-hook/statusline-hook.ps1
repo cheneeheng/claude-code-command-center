@@ -1,112 +1,106 @@
-# Setup:
-# "statusLine": {
-#   "type": "command",
-#   "command": "pwsh -NoProfile -File ~/.claude/statusline-hook.ps1",
-#   "padding": 2
-# }
+# Claude Code statusline (PowerShell port). Runs on Windows PowerShell 5.1 and PowerShell 7.
+#
+#   Opus 5.5 high   ctx [context gauge] 42% . [clock] 1h 12m . $1.23
+#                   5h  [5-hour gauge]  63%  reset 16:00 (7h 6m)
+#                   7d  [7-day gauge]   85%  reset Thu 16:00 (5d 7h)
+#
+# Reads the JSON Claude Code pipes to stdin. A rate-limit row is shown only when Claude Code
+# sends that window. Bad input prints nothing. The render spec is the fixtures/ folder;
+# statusline-hook.sh must produce the same bytes.
+#
+# Setup: "statusLine": { "type": "command",
+#          "command": "pwsh -NoProfile -File ~/.claude/statusline-hook.ps1" }
+#
+# This file is kept ASCII-only: PowerShell 5.1 reads a BOM-less script as ANSI, so every
+# non-ASCII glyph is built from its code point.
 
-# Force UTF-8 output so special characters render correctly
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$ESC   = [char]27
+$RESET = "$ESC[0m"
+$DIM   = "$ESC[2m"
+$HEAVY = [string][char]0x2501  # filled bar segment
+$LIGHT = [string][char]0x2500  # empty bar segment
+$SEP   = " $DIM$([char]0x00B7)$RESET "
+$CYCLE = [char]0x21BA          # reset arrow
+$CLOCK = [char]0x25F7          # runtime marker
+$DAYS  = 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
 
-# Read JSON from stdin
-$data = [Console]::In.ReadToEnd() | ConvertFrom-Json
-
-# --- Extract fields ---
-$model      = $data.model.id
-$durationMs = if ($data.cost.total_duration_ms) { $data.cost.total_duration_ms } else { 0 }
-$cost       = if ($data.cost.total_cost_usd) { $data.cost.total_cost_usd } else { 0 }
-#$pct        = if ($data.context_window.used_percentage) { [int]$data.context_window.used_percentage } else { 0 }
-#$pct        = if ($data.context_window.used_percentage) { [int]$data.context_window.used_percentage * 5 } else { 0 }
-$pct = if ($data.context_window.used_percentage) {
-    $raw = [int]$data.context_window.used_percentage
-    if ($data.context_window.context_window_size -eq 1000000) {
-        $raw * 5
-    } else {
-        $raw
-    }
-} else {
-    0
+function Get-Level([long]$p) {
+    if ($p -lt 50) { "$ESC[32m" } elseif ($p -lt 80) { "$ESC[33m" } else { "$ESC[31m" }
 }
-$rate5h     = if ($data.rate_limits.five_hour.used_percentage) { [int]$data.rate_limits.five_hour.used_percentage } else { 0 }
-$reset5h    = if ($data.rate_limits.five_hour.resets_at) { $data.rate_limits.five_hour.resets_at } else { 0 }
-$rate7d     = if ($data.rate_limits.seven_day.used_percentage) { [int]$data.rate_limits.seven_day.used_percentage } else { 0 }
-$reset7d    = if ($data.rate_limits.seven_day.resets_at) { $data.rate_limits.seven_day.resets_at } else { 0 }
 
-# --- Format runtime ---
-$totalSec = [int]($durationMs / 1000)
-$hours    = [int]($totalSec / 3600)
-$mins     = [int](($totalSec % 3600) / 60)
-$secs     = $totalSec % 60
-$runtime  = if ($hours -gt 0) { "${hours}h ${mins}m ${secs}s" } else { "${mins}m ${secs}s" }
-
-# --- Format cost ---
-$costFmt = '$' + $cost.ToString('0.0000')
-
-# --- Build context bar (char codes avoid file encoding issues) ---
-$barWidth   = 10
-$pctCapped  = [math]::Min($pct, 100)
-$filled     = [int]($pctCapped * $barWidth / 100)
-#$filled     = [int]($pct * $barWidth / 100)
-$empty      = $barWidth - $filled
-$filledChar = [char]0x2593  # ▓
-$emptyChar  = [char]0x2591  # ░
-$resetSym   = [char]0x21BA  # ↺
-$bar        = ($filledChar.ToString() * $filled) + ($emptyChar.ToString() * $empty)
-
-# --- Format reset times ---
-$reset5hFmt = if ($reset5h -gt 0) {
-  [DateTimeOffset]::FromUnixTimeSeconds($reset5h).LocalDateTime.ToString('HH:mm')
-} else { '--:--' }
-
-$reset7dFmt = if ($reset7d -gt 0) {
-  [DateTimeOffset]::FromUnixTimeSeconds($reset7d).LocalDateTime.ToString('ddd HH:mm')
-} else { '---' }
-
-# --- ANSI color codes (char 27 = ESC; `e escape is PS 6+ only) ---
-$esc    = [char]27
-$Green  = "$esc[32m"
-$Yellow = "$esc[33m"
-$Red    = "$esc[31m"
-$Reset  = "$esc[0m"
-
-# Context: green <30, yellow 30-49, red >=50
-$ctxColor = if ($pct -lt 30) { $Green } elseif ($pct -lt 50) { $Yellow } else { $Red }
-
-# Rate limits: green <30, yellow 30-69, red >=70
-function Get-RateColor($r) {
-  if ($r -lt 30) { return $Green } elseif ($r -lt 70) { return $Yellow } else { return $Red }
+function Get-Gauge($value) {
+    $p = if ($null -eq $value) { [long]0 } else { [long][math]::Floor([double]$value) }
+    $fill = [long][math]::Floor([math]::Min([math]::Max($p, 0), 100) * 10 / 100)
+    $level = Get-Level $p
+    "$level$($HEAVY * $fill)$RESET$DIM$($LIGHT * (10 - $fill))$RESET $level$p%$RESET"
 }
-$color5h = Get-RateColor $rate5h
-$color7d = Get-RateColor $rate7d
 
-# --- Single-line output ---
-Write-Output "$model | ${ctxColor}${bar} ${pct}%${Reset} | $runtime | $costFmt | ${color5h}5H: $rate5h% ($resetSym $reset5hFmt)${Reset} | ${color7d}7D: $rate7d% ($resetSym $reset7dFmt)${Reset}"
+# Time left until a reset, e.g. "5d 7h", "7h 6m", "12m".
+function Get-Left([double]$seconds) {
+    $s = [long][math]::Floor([math]::Max($seconds, 0))
+    $d = [long][math]::Floor($s / 86400)
+    $h = [long][math]::Floor(($s % 86400) / 3600)
+    $m = [long][math]::Floor(($s % 3600) / 60)
+    if ($d -gt 0) { "${d}d ${h}h" } elseif ($h -gt 0) { "${h}h ${m}m" } else { "${m}m" }
+}
 
-# --- Log to per-project statusline/project_name/$session_id.jsonl (opt-in) ---
-# Export is off unless C4_STATUSLINE_EXPORT is 1/true/yes.
-if ($env:C4_STATUSLINE_EXPORT -notmatch '^(?i:1|true|yes)$') { return }
+function Get-Reset($resetsAt, [bool]$withDay) {
+    if ($null -eq $resetsAt -or [double]$resetsAt -le 0) { return '' }
+    $at = [long][math]::Floor([double]$resetsAt)
+    $t = [DateTimeOffset]::FromUnixTimeSeconds($at).ToLocalTime()
+    $day = if ($withDay) { $DAYS[[int]$t.DayOfWeek] + ' ' } else { '' }
+    $time = $t.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture)
+    "  $DIM$CYCLE $day$time ($(Get-Left ($at - $NOW)))$RESET"
+}
 
-# This hook is installed into the Claude config dir, so its own location is that dir.
-$claudeDir = $PSScriptRoot
+function Get-Runtime($ms) {
+    $s = if ($null -eq $ms) { [long]0 } else { [long][math]::Floor([double]$ms / 1000) }
+    $h = [long][math]::Floor($s / 3600)
+    $m = [long][math]::Floor(($s % 3600) / 60)
+    if ($h -gt 0) { "${h}h ${m}m" } else { "${m}m" }
+}
 
-$sessionId = if ($data.session_id) { $data.session_id } else { "__unknown__" }
-$cwd       = if ($data.cwd) { $data.cwd } else { $null }
-
-# Encode cwd into the same dir-name format Claude Code uses (: and separators → -)
-$projectDirName = $cwd -replace ':', '-' -replace '[/\\]', '-'
-$logDir = Join-Path $claudeDir "statusline\$projectDirName"
+function Get-Cost($usd) {
+    $usd = if ($null -eq $usd) { 0.0 } else { [double]$usd }
+    $cents = [long][math]::Floor($usd * 100 + 0.5)
+    "$([long][math]::Floor($cents / 100)).$(($cents % 100).ToString('00'))"
+}
 
 try {
-    if (-not (Test-Path $logDir)) {
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    [Console]::InputEncoding  = New-Object System.Text.UTF8Encoding $false
+    [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false
+    $data = [Console]::In.ReadToEnd() | ConvertFrom-Json
+    if ($data -isnot [System.Management.Automation.PSCustomObject]) { exit 0 }
+    # C4_STATUSLINE_NOW (epoch seconds) pins the clock for the golden tests only.
+    $NOW = if ($env:C4_STATUSLINE_NOW) { [double]$env:C4_STATUSLINE_NOW }
+           else { [double][DateTimeOffset]::UtcNow.ToUnixTimeSeconds() }
+
+    $model  = if ($null -eq $data.model.display_name) { '' } else { [string]$data.model.display_name }
+    $effort = if ($null -eq $data.effort.level) { '' } else { [string]$data.effort.level }
+    $label  = "$ESC[1m$ESC[36m$model$RESET"
+    $width  = $model.Length
+    if ($effort) {
+        $label += " $ESC[36m$effort$RESET"
+        $width += 1 + $effort.Length
     }
-    $tsMs     = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    $logEntry = [ordered]@{
-        session_id = $sessionId
-        ts         = $tsMs
-        data       = $data
-    } | ConvertTo-Json -Compress -Depth 10
-    Add-Content -Path (Join-Path $logDir "$sessionId.jsonl") -Value $logEntry -Encoding UTF8
+    # Claude Code trims leading whitespace from each row, so the indent opens with U+2800
+    # (Braille blank): it renders as an empty cell but is not whitespace.
+    $indent = [string][char]0x2800 + (' ' * ($width + 2))
+    $rows = @(
+        "$label   ${DIM}ctx$RESET " +
+        (Get-Gauge $data.context_window.used_percentage) +
+        $SEP + "$DIM$CLOCK$RESET " + (Get-Runtime $data.cost.total_duration_ms) +
+        $SEP + '$' + (Get-Cost $data.cost.total_cost_usd)
+    )
+    foreach ($w in @(@('5h', $data.rate_limits.five_hour, $false),
+                     @('7d', $data.rate_limits.seven_day, $true))) {
+        if ($null -eq $w[1]) { continue }
+        $rows += "$indent$DIM$($w[0])$RESET  " + (Get-Gauge $w[1].used_percentage) +
+                 (Get-Reset $w[1].resets_at $w[2])
+    }
+    # Write, not Write-Output: no trailing \r\n on Windows, one \n after each row.
+    [Console]::Out.Write(($rows -join "`n") + "`n")
 } catch {
-    # Logging is best-effort; never break the statusline display
+    # Never let a bad payload break the statusline: print nothing.
 }
+exit 0
