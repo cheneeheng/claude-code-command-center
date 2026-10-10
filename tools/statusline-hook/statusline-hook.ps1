@@ -1,8 +1,8 @@
 # Claude Code statusline (PowerShell port). Runs on Windows PowerShell 5.1 and PowerShell 7.
 #
-#   Opus 5.5 high   ctx [context gauge] 42% . 1h 12m . $1.23
-#                   5h  [5-hour gauge]  63%  reset 16:00
-#                   7d  [7-day gauge]   85%  reset Thu 16:00
+#   Opus 5.5 high   ctx [context gauge] 42% . [clock] 1h 12m . $1.23
+#                   5h  [5-hour gauge]  63%  reset 16:00 (7h 6m)
+#                   7d  [7-day gauge]   85%  reset Thu 16:00 (5d 7h)
 #
 # Reads the JSON Claude Code pipes to stdin. A rate-limit row is shown only when Claude Code
 # sends that window. Bad input prints nothing. The render spec is the fixtures/ folder;
@@ -21,6 +21,7 @@ $HEAVY = [string][char]0x2501  # filled bar segment
 $LIGHT = [string][char]0x2500  # empty bar segment
 $SEP   = " $DIM$([char]0x00B7)$RESET "
 $CYCLE = [char]0x21BA          # reset arrow
+$CLOCK = [char]0x25F7          # runtime marker
 $DAYS  = 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
 
 function Get-Level([long]$p) {
@@ -34,11 +35,22 @@ function Get-Gauge($value) {
     "$level$($HEAVY * $fill)$RESET$DIM$($LIGHT * (10 - $fill))$RESET $level$p%$RESET"
 }
 
+# Time left until a reset, e.g. "5d 7h", "7h 6m", "12m".
+function Get-Left([double]$seconds) {
+    $s = [long][math]::Floor([math]::Max($seconds, 0))
+    $d = [long][math]::Floor($s / 86400)
+    $h = [long][math]::Floor(($s % 86400) / 3600)
+    $m = [long][math]::Floor(($s % 3600) / 60)
+    if ($d -gt 0) { "${d}d ${h}h" } elseif ($h -gt 0) { "${h}h ${m}m" } else { "${m}m" }
+}
+
 function Get-Reset($resetsAt, [bool]$withDay) {
     if ($null -eq $resetsAt -or [double]$resetsAt -le 0) { return '' }
-    $t = [DateTimeOffset]::FromUnixTimeSeconds([long][math]::Floor([double]$resetsAt)).ToLocalTime()
+    $at = [long][math]::Floor([double]$resetsAt)
+    $t = [DateTimeOffset]::FromUnixTimeSeconds($at).ToLocalTime()
     $day = if ($withDay) { $DAYS[[int]$t.DayOfWeek] + ' ' } else { '' }
-    "  $DIM$CYCLE $day$($t.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture))$RESET"
+    $time = $t.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture)
+    "  $DIM$CYCLE $day$time ($(Get-Left ($at - $NOW)))$RESET"
 }
 
 function Get-Runtime($ms) {
@@ -59,6 +71,9 @@ try {
     [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false
     $data = [Console]::In.ReadToEnd() | ConvertFrom-Json
     if ($data -isnot [System.Management.Automation.PSCustomObject]) { exit 0 }
+    # C4_STATUSLINE_NOW (epoch seconds) pins the clock for the golden tests only.
+    $NOW = if ($env:C4_STATUSLINE_NOW) { [double]$env:C4_STATUSLINE_NOW }
+           else { [double][DateTimeOffset]::UtcNow.ToUnixTimeSeconds() }
 
     $model  = if ($null -eq $data.model.display_name) { '' } else { [string]$data.model.display_name }
     $effort = if ($null -eq $data.effort.level) { '' } else { [string]$data.effort.level }
@@ -74,7 +89,7 @@ try {
     $rows = @(
         "$label   ${DIM}ctx$RESET " +
         (Get-Gauge $data.context_window.used_percentage) +
-        $SEP + (Get-Runtime $data.cost.total_duration_ms) +
+        $SEP + "$DIM$CLOCK$RESET " + (Get-Runtime $data.cost.total_duration_ms) +
         $SEP + '$' + (Get-Cost $data.cost.total_cost_usd)
     )
     foreach ($w in @(@('5h', $data.rate_limits.five_hour, $false),

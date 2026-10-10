@@ -16,6 +16,9 @@ First public release: a rebuild of the hook from the ground up.
   7-day rate-limit gauges with local reset times. A row is shown only when Claude Code sends
   that window.
 - Reasoning effort (`effort.level`) next to the model name, when the model supports effort.
+- Time left until each rate-limit reset, in brackets after the reset time.
+- A `◷` marker before the session runtime.
+- `C4_STATUSLINE_NOW`: a test-only clock override (epoch seconds) used by the golden harness.
 - One colour scale for every gauge: green below 50%, yellow below 80%, red from 80%.
 - Golden fixtures (`fixtures/`) and `tests/golden.sh`, which hold both ports to identical output.
 - Windows PowerShell 5.1 support alongside PowerShell 7.

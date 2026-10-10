@@ -7,12 +7,14 @@
 #
 # fixtures/<case>.json is the stdin Claude Code would send; fixtures/<case>.out is the
 # expected stdout with each ESC byte written as \e so the file stays readable. Reset times
-# are pinned to UTC via TZ (PowerShell on Windows ignores TZ; see README).
+# are pinned to UTC via TZ (PowerShell on Windows ignores TZ; see README), and "now" is
+# pinned via C4_STATUSLINE_NOW so the time left until each reset is deterministic.
 set -uo pipefail
 
 [ $# -gt 0 ] || { echo "usage: $0 <command...>" >&2; exit 2; }
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 export TZ=UTC
+export C4_STATUSLINE_NOW=1738400000  # 2025-02-01 08:53:20 UTC
 failed=0
 
 for input in "$DIR"/fixtures/*.json; do

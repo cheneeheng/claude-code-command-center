@@ -3,14 +3,15 @@
 A clean, rate-limit-first statusline for Claude Code. Each turn it prints up to three aligned rows:
 
 ```
-Opus 5.5 high   ctx ━━━━────── 42% · 1h 12m · $1.23
-                5h  ━━━━━━──── 63%  ↺ 17:00
-                7d  ━━━━━━━━── 85%  ↺ Thu 17:00
+Opus 5.5 high   ctx ━━━━────── 42% · ◷ 1h 12m · $1.23
+                5h  ━━━━━━──── 63%  ↺ 17:00 (2h 14m)
+                7d  ━━━━━━━━── 85%  ↺ Thu 17:00 (5d 7h)
 ```
 
 - **Row 1:** model and reasoning effort (shown when the model supports effort), context-window
-  gauge, session runtime, session cost.
-- **Rows 2–3:** your 5-hour and 7-day rate-limit usage, with the local time each window resets.
+  gauge, session runtime (`◷`), session cost.
+- **Rows 2–3:** your 5-hour and 7-day rate-limit usage, with the local time each window resets
+  and, in brackets, how long until it does.
   Claude Code sends these only to Pro/Max subscribers, after the session's first response; a row
   is left out while its window is absent.
 
@@ -70,6 +71,7 @@ bash tests/golden.sh pwsh -NoProfile -File statusline-hook.ps1
 bash tests/smoke.sh     # installs each variant into a temp dir and runs it (needs pwsh + jq)
 ```
 
-The harness pins `TZ=UTC` so reset times are deterministic. PowerShell on Windows ignores `TZ` and
+The harness pins `TZ=UTC` and the clock (`C4_STATUSLINE_NOW`, epoch seconds, a test-only
+override) so reset times and time left are deterministic. PowerShell on Windows ignores `TZ` and
 always uses the system time zone, so on a machine that isn't set to UTC, the PowerShell run shows
 reset-time differences only. CI runs everything in UTC on Ubuntu and Windows.

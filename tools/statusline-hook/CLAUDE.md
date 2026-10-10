@@ -39,6 +39,8 @@ On a machine whose time zone isn't UTC, the PowerShell runs show reset-time diff
   whitespace. The indent is U+2800 plus (model + effort width + 2) spaces.
 - **`statusline-hook.ps1` stays ASCII-only.** PowerShell 5.1 reads a BOM-less script as ANSI, so
   glyphs are built from code points (`[char]0x2501`).
+- **`C4_STATUSLINE_NOW` is test-only.** It pins "now" (epoch seconds) so the time left until a
+  reset is deterministic in the fixtures. Never document it as a user setting.
 - **Dependencies:** bash needs only `jq`. PowerShell needs no modules.
 - **`.gitattributes` pins LF** for scripts and fixtures. A CRLF checkout would break bash and the
   byte comparison.

@@ -74,6 +74,7 @@ never collides with Claude Code's or the OS's variables:
 |----------|---------|---------|
 | `C4_CLAUDE_DIR` | `usage-report`, `usage-dashboard`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. |
 | `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `agents-workspace-sync`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). |
+| `C4_STATUSLINE_NOW` | `statusline-hook` | Test-only: pins "now" (epoch seconds) for the golden fixtures. |
 | `C4_STATUSLINE_LIVE_TIMEOUT` | `usage-dashboard` | Seconds a session may be idle before dropping out of the live view (default `1800`). |
 | `C4_PLAN_PRICE_USD` | `usage-dashboard` | Monthly Claude subscription price; lights up the dashboard's Plan Value (ROI) card when set. |
 | `C4_ROUNDTABLE_REGISTRY` | `multi-repo-workspace` | Registry file path (overridden by `--registry`, ahead of `./.roundtable.json`). |
