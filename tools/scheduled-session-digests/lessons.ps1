@@ -113,7 +113,7 @@ function Invoke-Install {
     $addTask = $false
     if (-not $NoSchedule) {
         if (Get-OurTask) { $changes.Add('Keep the existing hourly scheduled task.') }
-        else { $addTask = $true; $changes.Add("Add the hourly scheduled task $taskName (runs only what is due).") }
+        else { $addTask = $true; $changes.Add("Add the hourly task $taskName (it runs only what is due).") }
     }
     $roots = if ($env:C4_CLAUDE_DIR) { @($env:C4_CLAUDE_DIR -split [IO.Path]::PathSeparator | Where-Object { $_ }) }
              else { @((Join-Path $HOME '.claude'), (Join-Path $HOME '.claude_devcontainer')) }

@@ -492,7 +492,9 @@ suite_weekly() {
 # a meta dir that does not exist yet. Sets META, FX, CLI_OUT.
 cli_env() {
   local base="$1" f off
-  META="$base/my meta_dir"; FX="$base/fx"; mkdir -p "$FX" "$base/bin"
+  # The meta folder exists (empty) so its long Windows name can be resolved:
+  # cygpath -l cannot expand an 8.3 path that does not exist yet.
+  META="$base/my meta_dir"; FX="$base/fx"; mkdir -p "$FX" "$base/bin" "$META"
   cp -R "$HERE/fixtures/claude" "$HERE/fixtures/claude_devcontainer" "$FX/"
   mkdir -p "$FX/claude/projects/$(encode "$META")"
   cp "$HERE/fixtures/meta-session.jsonl" "$FX/claude/projects/$(encode "$META")/77777777-7777-4777-8777-777777777777.jsonl"
