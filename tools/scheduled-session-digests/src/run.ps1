@@ -7,7 +7,7 @@
 # Cross-reference: src/run.sh is the Bash twin.
 
 param(
-    [ValidateSet('daily', 'weekly')][string]$Job = 'daily',
+    [ValidateSet('', 'daily', 'weekly')][string]$Job = '',
     [switch]$All,
     [string]$Since,
     [switch]$ArchiveOnly,
@@ -18,7 +18,21 @@ param(
 
 . (Join-Path $PSScriptRoot 'lib.ps1')
 Initialize-SessionLessons
-if ($Scheduled) { $Yes = $true }
+
+# The scheduled entry calls -Scheduled with no job: run each due job in turn,
+# daily first, each as its own run (and so its own lock). Not due: exit quietly.
+if ($Scheduled) {
+    if (-not $Job) {
+        $rc = 0
+        foreach ($j in 'daily', 'weekly') {
+            if (Test-JobDue $j) { & $PSCommandPath -Scheduled -Job $j; if ($LASTEXITCODE -ne 0) { $rc = 1 } }
+        }
+        exit $rc
+    }
+    if (-not (Test-JobDue $Job)) { exit 0 }
+    $Yes = $true
+}
+if (-not $Job) { $Job = 'daily' }
 [Console]::OutputEncoding = $script:Utf8
 $OutputEncoding = $script:Utf8
 $trigger = if ($Scheduled) { 'scheduled' } else { 'manual' }

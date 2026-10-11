@@ -354,11 +354,11 @@ suite_daily() {
   # I. The cap: scheduled runs take the 2 oldest, never splitting a same-second
   #    group; the next run takes the rest. Manual runs ignore the cap.
   new_env "$T/i"; spread_mtimes; set_cfg '.maxSessionsPerRun = 2'
-  run_ut --scheduled >/dev/null
+  run_ut --scheduled --job daily >/dev/null
   eq "$(calls | cut -d: -f1 | tr '\n' ' ')" "$U1 $U6 " "scheduled run stages the 2 oldest"
   eq "$(lastrun .deferred)" 2 "the rest is deferred"
   eq "$(lastrun .trigger)" scheduled "last run: trigger scheduled"
-  clear_calls; run_ut --scheduled >/dev/null
+  clear_calls; run_ut --scheduled --job daily >/dev/null
   eq "$(calls | cut -d: -f1 | sort | tr '\n' ' ')" "$U8 $U9 " "the next run stages the same-second pair together"
   new_env "$T/j"; spread_mtimes; set_cfg '.maxSessionsPerRun = 2'
   run_ut --yes >/dev/null
@@ -485,6 +485,234 @@ suite_weekly() {
   rm -rf "$T"
 }
 
+# --- cli -------------------------------------------------------------------------
+# cli_env <dir>: fixtures as the Claude data dir, a fake claude first on PATH, and
+# a meta dir that does not exist yet. Sets META, FX, CLI_OUT.
+cli_env() {
+  local base="$1" f off
+  META="$base/my meta_dir"; FX="$base/fx"; mkdir -p "$FX" "$base/bin"
+  cp -R "$HERE/fixtures/claude" "$HERE/fixtures/claude_devcontainer" "$FX/"
+  mkdir -p "$FX/claude/projects/$(encode "$META")"
+  cp "$HERE/fixtures/meta-session.jsonl" "$FX/claude/projects/$(encode "$META")/77777777-7777-4777-8777-777777777777.jsonl"
+  long_session > "$FX/claude/projects/-home-dev-proj-alpha/$U9.jsonl"
+  while IFS=$'\t' read -r f off; do touch -d "@$((NOW + off))" "$FX/$f"; done < "$HERE/fixtures/mtimes.tsv"
+  touch -d "@$((NOW - 172800))" "$FX/claude/projects/$(encode "$META")"/*.jsonl
+  spread_mtimes
+  cp "$HERE/fake-claude.sh" "$base/bin/claude"; chmod +x "$base/bin/claude"
+  cp "$HERE/fake-claude.ps1" "$base/bin/claude.ps1"
+  CLI_PATH="$base/bin:$PATH"
+  if [[ "$SHELL_UT" == pwsh ]]; then CLI_ROOTS="$(native "$FX/claude");$(native "$FX/claude_devcontainer")"
+  else CLI_ROOTS="$FX/claude:$FX/claude_devcontainer"; fi
+}
+# cli_ut <command> <options, Bash spelling>: runs the CLI from the member folder.
+cli_ut() {
+  local args=() a
+  if [[ "$SHELL_UT" == bash ]]; then
+    PATH="$CLI_PATH" C4_CLAUDE_DIR="$CLI_ROOTS" bash "$MEMBER/lessons.sh" "$@" | tee -a "$CLI_OUT"
+    return "${PIPESTATUS[0]}"
+  fi
+  for a in "$@"; do
+    case "$a" in
+      --meta-dir) args+=(-MetaDir) ;; --no-schedule) args+=(-NoSchedule) ;; --no-archive) args+=(-NoArchive) ;;
+      --yes) args+=(-Yes) ;; --purge) args+=(-Purge) ;; --daily-at) args+=(-DailyAt) ;;
+      --weekly-day) args+=(-WeeklyDay) ;; --weekly-at) args+=(-WeeklyAt) ;; --job) args+=(-Job) ;;
+      --all) args+=(-All) ;; --dry-run) args+=(-DryRun) ;; --archive-only) args+=(-ArchiveOnly) ;;
+      --scheduled) args+=(-Scheduled) ;; --since) args+=(-Since) ;; *) args+=("$a") ;;
+    esac
+  done
+  PATH="$CLI_PATH" C4_CLAUDE_DIR="$CLI_ROOTS" pwsh -NoProfile -NonInteractive -File "$(native "$MEMBER/lessons.ps1")" "${args[@]}" | tee -a "$CLI_OUT"
+  return "${PIPESTATUS[0]}"
+}
+H_() { echo "$META/.claude/session-lessons"; }
+ijq() { "${JQ[@]}" -r "$1" "$(H_)/state/install.json"; }
+set_inst2() { local t; t="$(mktemp)"; "${JQ[@]}" "$1" "$(H_)/state/install.json" > "$t" && mv "$t" "$(H_)/state/install.json"; }
+set_cfg2()  { local t; t="$(mktemp)"; "${JQ[@]}" "$1" "$(H_)/config.json" > "$t" && mv "$t" "$(H_)/config.json"; }
+hm() { date -d "@$1" +%H:%M; }
+dayname() { LC_ALL=C date -d "@$1" +%A; }
+tree_sha() { (cd "$1" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16); }
+
+suite_cli() {
+  echo "suite cli ($SHELL_UT)"
+  local T rc out; T="$(mktemp -d)"; CLI_OUT="$T/cli-out.log"; : > "$CLI_OUT"
+  export GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=test@example.invalid GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@example.invalid
+  local sched=(--no-schedule)
+
+  # A. A fresh install.
+  cli_env "$T/a"
+  cli_ut install --meta-dir "$META" "${sched[@]}" --yes >/dev/null; rc=$?
+  eq "$rc" 0 "install exits 0"
+  check "install creates a git repo" test -d "$META/.git"
+  check "install writes config.json" test -f "$(H_)/config.json"
+  check "install copies the scripts" test -f "$(H_)/src/run.sh"
+  eq "$(ijq '.claudeNoToolsArgs | join(" ")')" "--tools  --no-session-persistence" "install records the headless flags"
+  check "install records the claude path" bash -c '[[ "$1" == *claude* ]]' _ "$(ijq .claudePath)"
+  eq "$(ijq '.scanRoots | length')" 2 "install takes the scan roots from C4_CLAUDE_DIR"
+  eq "$(grep -c 'session-lessons' "$META/.gitignore")" 3 "install adds 3 .gitignore lines"
+  check "the one-time archive covers sessions on disk" has_archive "$U1"
+  check "nothing ran yet: no daily cursor" test ! -e "$(H_)/state/daily.cursor"
+
+  # B. status, after a first manual run, with a given-up entry and an error.
+  cli_ut run --meta-dir "$META" --yes >/dev/null
+  printf 'lessons:%s\n' "$U4" >> "$(H_)/state/given-up.txt"
+  local t; t="$(mktemp)"; "${JQ[@]}" '.error = "claude exited 1: synthetic"' "$(H_)/state/last-run-daily.json" > "$t" && mv "$t" "$(H_)/state/last-run-daily.json"
+  out="$(cli_ut status --meta-dir "$META")"
+  check "status shows the schedule" grep -q '^Schedule: daily at 03:00, weekly on Sunday at 04:00\.$' <<<"$out"
+  check "status shows the next daily run" grep -q '^Next daily run: ' <<<"$out"
+  check "status shows the daily cursor as a date" grep -qE '^daily progress: up to [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}\.$' <<<"$out"
+  check "status shows the last run" grep -q '^Last daily run: ' <<<"$out"
+  check "status shows the last error" grep -q 'Error: claude exited 1: synthetic' <<<"$out"
+  check "status lists the given-up session" grep -q "lessons:$U4" <<<"$out"
+
+  # C. Re-install keeps edits and the first install time.
+  set_cfg2 '.maxSessionsPerRun = 7'
+  local first; first="$(ijq .installedAt)"
+  sleep 1
+  cli_ut install --meta-dir "$META" "${sched[@]}" --no-archive --yes >/dev/null
+  eq "$("${JQ[@]}" -r .maxSessionsPerRun "$(H_)/config.json")" 7 "re-install keeps an edited value"
+  eq "$(ijq .installedAt)" "$first" "re-install keeps the first installedAt"
+  eq "$(grep -c 'session-lessons' "$META/.gitignore")" 3 "re-install adds no duplicate .gitignore lines"
+
+  # D. Two meta dirs get two different scheduled entries.
+  local name_a; name_a="$(ijq .taskName)"
+  local keep_meta="$META"; META="$T/other meta"
+  cli_ut install --meta-dir "$META" "${sched[@]}" --no-archive --yes >/dev/null
+  check "two meta dirs get two different task names" test "$(ijq .taskName)" != "$name_a"
+  META="$keep_meta"
+
+  # E. A plain uninstall keeps the data and config.json.
+  mkdir -p "$META/.claude/scripts" "$META/daily-summaries"
+  echo foreign > "$META/.claude/scripts/agents-workspace-sync.ps1"; echo old > "$META/daily-summaries/a.md"
+  cli_ut uninstall --meta-dir "$META" --yes >/dev/null; rc=$?
+  eq "$rc" 0 "uninstall exits 0"
+  check "uninstall keeps .git" test -d "$META/.git"
+  check "uninstall keeps lessons" bash -c 'ls "$1"/lessons-learned/*/*/*.md >/dev/null' _ "$META"
+  check "uninstall keeps the archive" has_archive "$U1"
+  check "uninstall keeps config.json" test -f "$(H_)/config.json"
+  check "uninstall keeps the logs" bash -c 'ls "$1"/logs/*/*/*session-lessons-*.log >/dev/null' _ "$META"
+  check "uninstall removes src/ and state/" test ! -e "$(H_)/src" -a ! -e "$(H_)/state"
+  eq "$(grep -c 'session-lessons' "$META/.gitignore")" 0 "uninstall removes its .gitignore lines"
+
+  # F. -Purge removes exactly this tool's paths.
+  cli_ut install --meta-dir "$META" "${sched[@]}" --no-archive --yes >/dev/null
+  cli_ut uninstall --meta-dir "$META" --purge --yes >/dev/null
+  check "purge removes lessons-learned/" test ! -e "$META/lessons-learned"
+  check "purge removes transcripts/" test ! -e "$META/transcripts"
+  check "purge removes .claude/session-lessons/" test ! -e "$(H_)"
+  check "purge removes this tool's logs" bash -c '! ls "$1"/logs/*/*/*session-lessons-* >/dev/null 2>&1' _ "$META"
+  check "a foreign file in .claude/scripts/ survives" test -f "$META/.claude/scripts/agents-workspace-sync.ps1"
+  check "daily-summaries/ survives" test -f "$META/daily-summaries/a.md"
+  check "the meta repo's .git survives" test -d "$META/.git"
+
+  # G. Upgrading from the old tool.
+  cli_env "$T/g"
+  local S="$META/.claude/scripts" L="$META/lessons-learned/2026/10"
+  mkdir -p "$S" "$META/.claude/skills/session-digest-daily-lessons" "$META/.claude/scheduled-session-digests/x" \
+    "$META/daily-summaries" "$L" "$META/master-lessons"
+  for f in daily-digest-trigger.ps1 daily-digest-prepare.sh git-sync.sh VERSION weekly-lessons.md; do echo old > "$S/$f"; done
+  echo foreign > "$S/agents-workspace-sync.ps1"
+  printf '{"dailyLessons":{"scheduleTime":"03:00","minUserTurns":2,"minTranscriptChars":50},"weeklyLessons":{"scheduleTime":"02:00","scheduleDayOfWeek":"Sunday"}}\n' > "$S/scheduler-config.json"
+  echo "skill" > "$META/.claude/skills/session-digest-daily-lessons/SKILL.md"
+  echo $((NOW - 6 * 86400)) > "$META/.claude/daily-lessons-cursor"
+  echo $((NOW - 9 * 86400)) > "$META/.claude/weekly-lessons-cursor"
+  echo 1 > "$META/.claude/daily-summary-cursor"; echo old > "$META/daily-summaries/a.md"; echo '{}' > "$META/.claude/settings.json"
+  printf '# Lessons \xe2\x80\x94 x\n**Session**: %s\n\n## Old\n\n**Lesson:** Old.\n' "$U1" > "$L/2026-10-01_${U1}_old.md"
+  printf '# Master Lessons Learned\n\nLast updated: 2026-01-01\n\n## Tooling\n\n### Old\n**Lesson**: Old.\n' > "$META/master-lessons/MASTER_LESSONS_LEARNED.md"
+  git -C "$META" init -q; git -C "$META" add -A; git -C "$META" commit -qm old
+  local lessons_sha; lessons_sha="$(tree_sha "$META/lessons-learned")$(tree_sha "$META/master-lessons")"
+  out="$(cli_ut install --meta-dir "$META" "${sched[@]}" --yes)"
+  check "the change list names what stays" bash -c 'grep -q "daily-summaries/" <<<"$1" && grep -q ".claude/settings.json" <<<"$1"' _ "$out"
+  check "old script files removed" test ! -e "$S/daily-digest-trigger.ps1" -a ! -e "$S/git-sync.sh" -a ! -e "$S/scheduler-config.json"
+  check "a foreign file in .claude/scripts/ stays" test -f "$S/agents-workspace-sync.ps1"
+  check "old skills removed" test ! -e "$META/.claude/skills/session-digest-daily-lessons"
+  check "old staging folder removed" test ! -e "$META/.claude/scheduled-session-digests"
+  eq "$(tr -d '[:space:]' < "$(H_)/state/daily.cursor")" "$((NOW - 6 * 86400))" "the daily cursor is carried over"
+  eq "$(tr -d '[:space:]' < "$(H_)/state/weekly-lessons.cursor")" "$((NOW - 9 * 86400))" "the weekly cursor is carried over"
+  check "old cursors removed" test ! -e "$META/.claude/daily-lessons-cursor" -a ! -e "$META/.claude/weekly-lessons-cursor"
+  eq "$("${JQ[@]}" -r .schedule.weeklyAt "$(H_)/config.json")" "02:00" "the old weekly time is carried over"
+  eq "$("${JQ[@]}" -r .thresholds.minTranscriptChars "$(H_)/config.json")" 50 "the old thresholds are carried over"
+  check "daily-summary-cursor and settings.json stay" test -f "$META/.claude/daily-summary-cursor" -a -f "$META/.claude/settings.json"
+  eq "$(tree_sha "$META/lessons-learned")$(tree_sha "$META/master-lessons")" "$lessons_sha" "existing lessons and master byte-identical"
+  check "the one-time archive covers an already-processed session" has_archive "$U1"
+  fake_ctl true; clear_calls
+  cli_ut run --meta-dir "$META" --yes >/dev/null
+  check "the next run skips sessions that already have lessons" bash -c '! grep -q "^$1:" "$2"' _ "$U1" "$META/.fake-claude/calls.log"
+  check "the next run processes the others" grep -q "^$U6:" "$META/.fake-claude/calls.log"
+
+  # H. The due rule (run --scheduled through the CLI).
+  cli_env "$T/h"
+  cli_ut install --meta-dir "$META" "${sched[@]}" --no-archive --yes >/dev/null
+  set_cfg2 ".schedule.dailyAt = \"$(hm $((NOW + 3600)))\" | .schedule.weeklyDay = \"$(dayname $((NOW + 86400)))\" | .thresholds.minTranscriptChars = 50"
+  cli_ut run --meta-dir "$META" --scheduled >/dev/null
+  check "nothing runs before the first dailyAt after install" test ! -e "$(H_)/state/last-run-daily.json"
+  set_inst2 ".installedAt = $((NOW - 2 * 86400))"
+  set_cfg2 ".schedule.dailyAt = \"$(hm $((NOW - 3600)))\" | .maxSessionsPerRun = 2"
+  cli_ut run --meta-dir "$META" --dry-run >/dev/null; cli_ut run --meta-dir "$META" --archive-only >/dev/null
+  check "-DryRun and -ArchiveOnly write no last-run file" test ! -e "$(H_)/state/last-run-daily.json"
+  fake_ctl true; clear_calls
+  cli_ut run --meta-dir "$META" --scheduled >/dev/null
+  eq "$(lastrun .trigger)" scheduled "a due daily job runs (after a dry run)"
+  check "the weekly job is not due" test ! -e "$(H_)/state/last-run-weekly.json"
+  eq "$(lastrun .deferred)" 2 "the cap leaves a backlog"
+  clear_calls; cli_ut run --meta-dir "$META" --scheduled >/dev/null
+  eq "$(calls | wc -l | tr -d ' ')" 2 "the next tick drains the backlog"
+  clear_calls; cli_ut run --meta-dir "$META" --scheduled >/dev/null
+  eq "$(calls | wc -l | tr -d ' ')" 0 "a job whose run finished after its time is skipped"
+  set_inst2 ".installedAt = $((NOW - 2 * 86400))"; rm -f "$(H_)/state/last-run-daily.json"
+  cli_ut run --meta-dir "$META" --yes >/dev/null
+  clear_calls; cli_ut run --meta-dir "$META" --scheduled >/dev/null
+  eq "$(calls | wc -l | tr -d ' ')" 0 "a manual run counts as the day's run"
+  # An outage on a tick with work to do: recorded, and retried at the next tick.
+  rm -f "$META"/lessons-learned/*/*/*"$U6"*.md "$(H_)/state/last-run-daily.json"
+  echo $((NOW - 7 * 86400)) > "$(H_)/state/daily.cursor"
+  touch "$META/.fake-claude/exit1"
+  cli_ut run --meta-dir "$META" --scheduled >/dev/null 2>&1
+  check "an outage is recorded" bash -c '[[ "$(jq -r .error "$1")" != null ]]' _ "$(H_)/state/last-run-daily.json"
+  rm -f "$META/.fake-claude/exit1"
+  clear_calls; cli_ut run --meta-dir "$META" --scheduled >/dev/null
+  check "the tick after an outage retries" grep -q "^$U6:" "$META/.fake-claude/calls.log"
+  set_cfg2 ".schedule.weeklyDay = \"$(dayname $((NOW - 86400)))\" | .schedule.weeklyAt = \"00:01\""
+  cli_ut run --meta-dir "$META" --scheduled >/dev/null
+  check "a missed weekly day runs at the next tick" test -f "$(H_)/state/last-run-weekly.json"
+
+  # Real scheduling, only in CI on the native pairs: a local test run never
+  # registers anything. A dummy old-tool entry pointing at this meta repo must
+  # be removed by install, which registers the new entry; uninstall removes it.
+  if [[ "${CI:-}" == true && "$SHELL_UT" == pwsh && "${OS:-}" == Windows_NT ]]; then
+    cli_env "$T/s"; mkdir -p "$META"
+    local ps1="$T/sched.ps1"
+    cat > "$ps1" <<'EOF'
+param([string]$Mode, [string]$Meta, [string]$Name)
+$f = '\ClaudeAutomation\scheduled-session-digests\'
+if ($Mode -eq 'seed') {
+  $a = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-File `"$Meta\.claude\scripts\daily-digest-trigger.ps1`""
+  Register-ScheduledTask -TaskPath $f -TaskName 'SessionDigest-DailyLessons' -Action $a -Trigger (New-ScheduledTaskTrigger -Daily -At '03:00') | Out-Null
+} else { [bool](Get-ScheduledTask -TaskPath $f -TaskName $Name -ErrorAction SilentlyContinue) }
+EOF
+    pwsh -NoProfile -File "$(native "$ps1")" seed "$(native "$META")"
+    cli_ut install --meta-dir "$META" --no-archive --yes >/dev/null
+    local tn; tn="$(ijq .taskName | sed 's/.*\\//')"
+    eq "$(pwsh -NoProfile -File "$(native "$ps1")" check "" "$tn")" True "CI: install registers the hourly task"
+    eq "$(pwsh -NoProfile -File "$(native "$ps1")" check "" SessionDigest-DailyLessons)" False "CI: install removes the old task"
+    cli_ut uninstall --meta-dir "$META" --yes >/dev/null
+    eq "$(pwsh -NoProfile -File "$(native "$ps1")" check "" "$tn")" False "CI: uninstall removes the task"
+  elif [[ "${CI:-}" == true && "$SHELL_UT" == bash && "$(uname -s)" == Linux ]]; then
+    cli_env "$T/s"; mkdir -p "$META"
+    { crontab -l 2>/dev/null || true; echo "0 3 * * * bash '$META/.claude/scripts/daily-digest-trigger.sh' daily-lessons"; } | crontab -
+    cli_ut install --meta-dir "$META" --no-archive --yes >/dev/null
+    check "CI: install adds the hourly cron entry" bash -c 'crontab -l | grep -qF "# session-lessons:$1"' _ "$META"
+    check "CI: install removes the old cron line" bash -c '! crontab -l | grep -qF "daily-digest-trigger.sh"'
+    cli_ut uninstall --meta-dir "$META" --yes >/dev/null
+    check "CI: uninstall removes the cron entry" bash -c '! crontab -l 2>/dev/null | grep -qF "# session-lessons:$1"' _ "$META"
+  fi
+
+  # Every stdout line fits 80 columns (lines naming a path excepted: paths
+  # cannot be wrapped).
+  local wide; wide="$(grep -vF -e "$T" -e "$(native "$T")" -e "$MEMBER" "$CLI_OUT" | "${JQ[@]}" -Rr 'select(length > 80)' | head -3)"
+  eq "$wide" "" "every CLI line fits 80 columns"
+
+  rm -rf "$T"
+}
+
 suite_equivalence() {
   echo "suite equivalence (bash vs pwsh)"
   local T; T="$(mktemp -d)"
@@ -536,8 +764,9 @@ case "$SUITE" in
   archive) suite_archive ;;
   daily) suite_daily ;;
   weekly) suite_weekly ;;
+  cli) suite_cli ;;
   equivalence) suite_equivalence ;;
-  all) suite_archive; suite_daily; suite_weekly; [[ "$SHELL_UT" == bash ]] && suite_equivalence ;;
+  all) suite_archive; suite_daily; suite_weekly; suite_cli; [[ "$SHELL_UT" == bash ]] && suite_equivalence ;;
   *) echo "unknown suite: $SUITE" >&2; exit 2 ;;
 esac
 

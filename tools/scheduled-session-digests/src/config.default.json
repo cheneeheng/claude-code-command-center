@@ -1,0 +1,21 @@
+{
+  "schedule": { "dailyAt": "03:00", "weeklyDay": "Sunday", "weeklyAt": "04:00" },
+  "thresholds": { "minUserTurns": 2, "minTranscriptChars": 500 },
+  "firstRunDays": 7,
+  "maxSessionsPerRun": 20,
+  "maxAttempts": 3,
+  "settleMinutes": 60,
+  "weeklyBatchChars": 400000,
+  "models": {
+    "daily": { "model": "sonnet", "effort": "medium" },
+    "weekly": { "model": "opus", "effort": "medium" }
+  },
+  "extractions": {
+    "lessons": {
+      "enabled": true,
+      "prompt": "extract/lessons.md",
+      "outputDir": "lessons-learned",
+      "weekly": { "prompt": "merge/lessons.md", "master": "master-lessons/MASTER_LESSONS_LEARNED.md" }
+    }
+  }
+}

@@ -56,6 +56,50 @@ encode_project_dir() {
   printf '%s' "$p" | sed 's/[^A-Za-z0-9]/-/g'
 }
 
+# --- schedule and the due rule ------------------------------------------------
+# epoch_at <epoch> <HH:MM>: that local day at that time.
+epoch_at() { date -d "$(date -d "@$1" +%Y-%m-%d) $2" +%s; }
+
+# The latest scheduled time at or before <now>: today's dailyAt or yesterday's;
+# for weekly, the most recent weeklyDay at weeklyAt.
+last_scheduled() {  # <job> <now>
+  local at t d day
+  if [[ "$1" == daily ]]; then
+    at="$(cfg '.schedule.dailyAt')"; t="$(epoch_at "$2" "$at")"
+    (( t > $2 )) && t="$(epoch_at "$(( $2 - 86400 ))" "$at")"
+    echo "$t"; return
+  fi
+  at="$(cfg '.schedule.weeklyAt')"; day="$(cfg '.schedule.weeklyDay')"
+  for d in 0 1 2 3 4 5 6 7; do
+    t="$(epoch_at "$(( $2 - d * 86400 ))" "$at")"
+    if (( t <= $2 )) && [[ "$(LC_ALL=C date -d "@$t" +%A)" == "$day" ]]; then echo "$t"; return; fi
+  done
+  echo 0
+}
+
+# The next scheduled time after <now>.
+next_scheduled() {  # <job> <now>
+  local last days=1 at; last="$(last_scheduled "$1" "$2")"
+  at="$(cfg '.schedule.dailyAt')"
+  [[ "$1" == weekly ]] && { days=7; at="$(cfg '.schedule.weeklyAt')"; }
+  date -d "$(date -d "$(date -d "@$last" +%F) +$days day" +%F) $at" +%s
+}
+
+# A job is due when its latest scheduled time is later than both the install
+# time and its last finished run, or its last run deferred sessions or ended
+# with an error. -DryRun and -ArchiveOnly never write a last-run file.
+job_due() {  # <job>
+  local file="$SL_STATE/last-run-$1.json" base fin
+  base="$(inst_get '.installedAt // 0')"
+  if [[ -f "$file" ]]; then
+    [[ -n "$("${JQ[@]}" -r '.error // empty' "$file")" ]] && return 0
+    (( $("${JQ[@]}" -r '.deferred // 0' "$file") > 0 )) && return 0
+    fin="$("${JQ[@]}" -r '.finishedAt // 0' "$file")"
+    (( fin > base )) && base="$fin"
+  fi
+  (( $(last_scheduled "$1" "$(now_epoch)") > base ))
+}
+
 # --- lock ------------------------------------------------------------------
 # state/run.lock is {"pid":N,"startTime":E}, E = the process start time as UTC
 # Unix seconds, truncated. A lock is live when that PID exists and its start

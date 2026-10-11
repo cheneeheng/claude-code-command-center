@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-ALL=0; SINCE=""; ARCHIVE_ONLY=0; DRY=0; YES=0; SCHEDULED=0; JOB=daily
+ALL=0; SINCE=""; ARCHIVE_ONLY=0; DRY=0; YES=0; SCHEDULED=0; JOB=""
 while (( $# )); do
   case "$1" in
     --job) JOB="$2"; shift 2 ;;
@@ -26,6 +26,20 @@ while (( $# )); do
 done
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+
+# The scheduled entry calls --scheduled with no job: run each due job in turn,
+# daily first, each as its own run (and so its own lock). Not due: exit quietly.
+if (( SCHEDULED )); then
+  if [[ -z "$JOB" ]]; then
+    rc=0
+    for j in daily weekly; do
+      if job_due "$j"; then bash "$0" --scheduled --job "$j" || rc=1; fi
+    done
+    exit "$rc"
+  fi
+  job_due "$JOB" || exit 0
+fi
+JOB="${JOB:-daily}"
 [[ "$JOB" =~ ^(daily|weekly)$ ]] || { echo "run: --job is daily or weekly" >&2; exit 1; }
 
 acquire_lock

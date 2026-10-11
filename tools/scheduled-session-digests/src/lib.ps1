@@ -135,6 +135,47 @@ function Write-Utf8([string]$Path, [string]$Text) { [IO.File]::WriteAllText($Pat
 # directory, with every character that is not a letter or digit replaced by '-'.
 function ConvertTo-ProjectDirName([string]$Path) { $Path -replace '[^A-Za-z0-9]', '-' }
 
+# --- schedule and the due rule ------------------------------------------------
+# Mirrors lib.sh: last/next scheduled times in local time, and job_due.
+function ConvertTo-Epoch([DateTime]$Local) { [DateTimeOffset]::new($Local).ToUnixTimeSeconds() }
+function ConvertFrom-Epoch([long]$Epoch) { [DateTimeOffset]::FromUnixTimeSeconds($Epoch).ToLocalTime().DateTime }
+
+function Get-LastScheduled([string]$Job, [long]$Now) {
+    $local = ConvertFrom-Epoch $Now
+    if ($Job -eq 'daily') {
+        $at = [TimeSpan]::Parse($script:SlConfig.schedule.dailyAt)
+        $t = $local.Date + $at
+        if ($t -gt $local) { $t = $local.Date.AddDays(-1) + $at }
+        return ConvertTo-Epoch $t
+    }
+    $at = [TimeSpan]::Parse($script:SlConfig.schedule.weeklyAt)
+    for ($d = 0; $d -le 7; $d++) {
+        $t = $local.Date.AddDays(-$d) + $at
+        if ($t -le $local -and $t.DayOfWeek.ToString() -ceq $script:SlConfig.schedule.weeklyDay) { return ConvertTo-Epoch $t }
+    }
+    0
+}
+
+function Get-NextScheduled([string]$Job, [long]$Now) {
+    $last = ConvertFrom-Epoch (Get-LastScheduled $Job $Now)
+    if ($Job -eq 'daily') { ConvertTo-Epoch ($last.Date.AddDays(1) + [TimeSpan]::Parse($script:SlConfig.schedule.dailyAt)) }
+    else { ConvertTo-Epoch ($last.Date.AddDays(7) + [TimeSpan]::Parse($script:SlConfig.schedule.weeklyAt)) }
+}
+
+# Due: the latest scheduled time is later than both the install time and the
+# last finished run, or the last run deferred sessions or ended with an error.
+function Test-JobDue([string]$Job) {
+    $file = Join-Path $script:SlState "last-run-$Job.json"
+    $base = if ($null -ne $script:SlInstall.installedAt) { [long]$script:SlInstall.installedAt } else { 0 }
+    if (Test-Path -LiteralPath $file) {
+        $lr = Get-Content -Raw $file | ConvertFrom-Json
+        if ($lr.error) { return $true }
+        if ([int]$lr.deferred -gt 0) { return $true }
+        if ([long]$lr.finishedAt -gt $base) { $base = [long]$lr.finishedAt }
+    }
+    (Get-LastScheduled $Job (Get-NowEpoch)) -gt $base
+}
+
 # --- lock ------------------------------------------------------------------
 # state/run.lock is {"pid":N,"startTime":E}, E = the process start time as UTC
 # Unix seconds, truncated. Live = that PID exists and its start time matches
