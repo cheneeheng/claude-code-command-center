@@ -100,8 +100,11 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   rendered on the VSCode marketplace page. Independently released components keep their own `CHANGELOG.md` (Keep a Changelog
   format) tracking that component's tagged releases; the repo as a whole also keeps a root
   `CHANGELOG.md` once it cuts its first repo-wide release. Components not yet released
-  independently carry no `CHANGELOG.md` until their first release. No per-member planning docs and
-  no per-member decision logs: build planning is ephemeral, and agent decisions go in the active
+  independently carry no `CHANGELOG.md` until their first release. `docs/` is for users of a
+  member; what the people and agents building it read lives in the member's committed `product/`:
+  the living `product/ARCHITECTURE.md` (diagrams + Key Decisions log) and build plans in
+  `product/plans/<slug>.md`. A built plan is kept, never deleted, with its append-only
+  `## Record`. No per-member decision logs: agent decisions go in the active
   `.agents_workspace/DECISION_LOG.md` (historical per-member logs are frozen in
   `.agents_workspace/archive/decision-log.md`).
 - **Releases:** two independent axes with non-overlapping tag namespaces. A *component* release is

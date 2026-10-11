@@ -29,8 +29,7 @@ settings · `defaults` · `projects[]`); `load_registry` merges them per-knob
 
 ## Architecture
 
-Two thin frontends over one shared core. Read
-`../../.agents_workspace/architecture/apps/multi-repo-plan-runner/ARCHITECTURE.md` (the living
+Two thin frontends over one shared core. Read `product/ARCHITECTURE.md` (the living
 architecture doc) for the full diagrams + Key Decisions log before any structural change.
 
 - `core.py` — registry load, plan discovery/read, `safe_slug`, `manual_command`, `resolve_instruction`, the headless `run_implement` generator, and the server-side `RunManager` (batch orchestration). The only subprocess (`claude -p`) lives here.
@@ -46,7 +45,7 @@ and written **only** through `tracker`. Keep business logic out of the route han
 ## Invariants — do not break these
 
 These are load-bearing; several are documented as accepted decisions in the living
-architecture doc (`../../.agents_workspace/architecture/apps/multi-repo-plan-runner/ARCHITECTURE.md`).
+architecture doc (`product/ARCHITECTURE.md`).
 
 - **Plans are read-only to docket.** Never create, edit, or delete anything under `planning/`. All mutable state is the sidecar under `.agents_workspace/implementation/<slug>.json`. A plan's own `status:` frontmatter is ignored — lifecycle status comes exclusively from the sidecar; a missing sidecar means `ready`.
 - **Lifecycle status is a closed set** `ready | running | implemented` with a fixed transition table (`tracker.ALLOWED`, keyed by `(from, to) -> {triggers}`). Never bypass `tracker.set_status` to change status, and never add an edge without adding it to that table. The state machine is drawn in the archived architecture doc.
