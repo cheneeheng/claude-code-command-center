@@ -6,6 +6,8 @@ All notable changes to `statusline-hook` are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-11
+
 ### Added
 
 - `statusline-hook-setup.sh`: a bash setup script (needs `jq`) that installs or uninstalls either
