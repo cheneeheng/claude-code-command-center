@@ -49,10 +49,11 @@ local_date() { date -d "@$1" +%Y-%m-%d; }
 
 # Claude Code names a project folder after the absolute path of its working
 # directory, with every character that is not a letter or digit replaced by '-'.
-# The path is the native one, so Windows paths are converted first.
+# The path is the native one, so Windows paths are converted first, to their
+# long form (an 8.3 short name such as RUNNER~1 is expanded, as PowerShell does).
 encode_project_dir() {
   local p="$1"
-  command -v cygpath >/dev/null 2>&1 && p="$(cygpath -w "$p")"
+  command -v cygpath >/dev/null 2>&1 && p="$(cygpath -w -l "$p")"
   printf '%s' "$p" | sed 's/[^A-Za-z0-9]/-/g'
 }
 

@@ -21,7 +21,9 @@ bad() { FAIL=$((FAIL + 1)); echo "  FAIL: $*"; }
 check() { local msg="$1"; shift; if "$@"; then ok; else bad "$msg"; fi; }
 eq()  { [[ "$1" == "$2" ]] || { bad "$3 (expected [$2], got [$1])"; return; }; ok; }
 
-native() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
+# The long Windows form (-l): PowerShell resolves 8.3 short names such as
+# RUNNER~1 to their long form, so the tests must name paths the same way.
+native() { if command -v cygpath >/dev/null 2>&1; then cygpath -w -l "$1"; else printf '%s' "$1"; fi; }
 encode() { native "$1" | sed 's/[^A-Za-z0-9]/-/g'; }
 
 # new_env <dir>: sets META and FX for one throwaway environment.
