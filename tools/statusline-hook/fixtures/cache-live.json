@@ -1,0 +1,1 @@
+{"transcript_path":"fixtures/transcript-live.jsonl","model":{"id":"claude-opus-5-5","display_name":"Opus 5.5"},"effort":{"level":"high"},"context_window":{"used_percentage":42.7},"cost":{"total_duration_ms":4320000,"total_cost_usd":1.234}}

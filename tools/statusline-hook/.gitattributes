@@ -2,4 +2,5 @@
 # golden fixtures compare output byte for byte.
 *.sh   text eol=lf
 *.json text eol=lf
+*.jsonl text eol=lf
 *.out  text eol=lf

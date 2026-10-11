@@ -10,6 +10,8 @@ All notable changes to `statusline-hook` are documented here. The format follows
 
 - `statusline-hook-setup.sh`: a bash setup script (needs `jq`) that installs or uninstalls either
   variant, the twin of `statusline-hook-setup.ps1`.
+- Prompt cache expiry on row 1 (`⧗ 15:43 (59m)`, or `⧗ expired`): one hour after the
+  last main-session reply, read from the tail of the session transcript.
 
 ## [0.1.0] - 2026-10-10
 

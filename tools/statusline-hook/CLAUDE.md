@@ -4,10 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A public Claude Code statusline: up to three aligned rows (model, context gauge, runtime, cost;
-then 5-hour and 7-day rate-limit gauges with reset times). Two single-file ports:
+A public Claude Code statusline: up to three aligned rows (model, context gauge, runtime, prompt
+cache expiry, cost; then 5-hour and 7-day rate-limit gauges with reset times). Two single-file
+ports:
 
-- `statusline-hook.sh`: bash; renders everything in one `jq` program.
+- `statusline-hook.sh`: bash; one `jq` call pulls `transcript_path`, a second renders everything
+  from the payload plus the transcript's last 100 lines.
 - `statusline-hook.ps1`: Windows PowerShell 5.1 and PowerShell 7.
 
 `statusline-hook-setup.ps1` and `statusline-hook-setup.sh` (needs `jq`) each install either one

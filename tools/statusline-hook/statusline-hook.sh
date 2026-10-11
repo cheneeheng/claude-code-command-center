@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code statusline (bash port). Needs jq.
 #
-#   Opus 5.5 high   ctx ━━━━────── 42% · ◷ 1h 12m · $1.23
+#   Opus 5.5 high   ctx ━━━━────── 42% · ◷ 1h 12m · ⧗ 09:30 (36m) · $1.23
 #                   5h  ━━━━━━──── 63%  ↺ 16:00 (7h 6m)
 #                   7d  ━━━━━━━━── 85%  ↺ Thu 16:00 (5d 7h)
 #
@@ -11,9 +11,16 @@
 #
 # Setup: "statusLine": { "type": "command", "command": "bash ~/.claude/statusline-hook.sh" }
 
-# One jq program renders everything, so a turn costs one process and no `date` portability.
-# tr drops the \r that jq on Windows writes before each \n.
-jq -rj '
+# The prompt cache expiry needs the transcript: a first jq pulls its path, and the transcript
+# tail is piped to the render as raw lines. One more jq program renders everything, so there
+# is no `date` portability. tr drops the \r that jq on Windows writes before each \n.
+input="$(cat)"
+transcript="$(jq -r '.transcript_path? // empty' <<<"$input" 2>/dev/null)"
+transcript="${transcript%$'\r'}"
+# less-code: only the last 100 transcript lines are scanned. If the last main-session reply
+# is further back, the cache segment is left out.
+{ [ -n "$transcript" ] && tail -n 100 "$transcript" 2>/dev/null; } |
+jq -nRrj --argjson d "$input" '
   def c($n): "\u001b[\($n)m";
   def rep($s; $n): [range($n) | $s] | add // "";
   def level: if . < 50 then c(32) elif . < 80 then c(33) else c(31) end;
@@ -47,7 +54,20 @@ jq -rj '
     $indent + c(2) + $label + c(0) + "  " + ($w.used_percentage | gauge)
     + ($w.resets_at | reset($day; $now));
 
-  objects
+  # The main session caches its prompt for one hour after its last API reply. Synthetic
+  # replies never reached the API, and sidechain replies belong to subagents.
+  def cache($now):
+    (.[0:19] + "Z" | fromdateiso8601 + 3600) as $end
+    | c(2) + "⧗" + c(0) + " "
+      + if $end > $now
+        then ($end | localtime | strftime("%H:%M")) + " (" + ($end - $now | left) + ")"
+        else "expired" end;
+
+  [inputs | fromjson? | objects
+    | select(.type == "assistant" and .isSidechain != true
+             and .message.model != "<synthetic>")
+    | .timestamp | strings] | last as $cached
+  | $d | objects
   # C4_STATUSLINE_NOW (epoch seconds) pins the clock for the golden tests only.
   | ($ENV.C4_STATUSLINE_NOW // now | tonumber) as $now
   | (.model.display_name // "") as $model
@@ -62,6 +82,7 @@ jq -rj '
         + "   " + c(2) + "ctx" + c(0) + " "
         + (.context_window.used_percentage | gauge)
         + $sep + c(2) + "◷" + c(0) + " " + (.cost.total_duration_ms | runtime)
+        + (($cached // empty | try ($sep + cache($now))) // "")
         + $sep + "$" + (.cost.total_cost_usd | cost),
       (.rate_limits.five_hour // empty | row("5h"; .; $indent; false; $now)),
       (.rate_limits.seven_day // empty | row("7d"; .; $indent; true; $now))
