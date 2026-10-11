@@ -16,6 +16,17 @@ New-Item -ItemType Directory -Force -Path $dir | Out-Null
 if (Test-Path (Join-Path $dir 'exit1')) { [Console]::Error.WriteLine('fake claude: simulated failure'); exit 1 }
 
 $utf8 = [Text.UTF8Encoding]::new($false)
+if (($prompt -split "`n")[0].TrimEnd("`r") -ceq '# Weekly lessons merge') {
+    $first = ([regex]::Match($stdin, '(?m)^## Source: (.*)$')).Groups[1].Value.TrimEnd("`r")
+    [IO.File]::AppendAllText((Join-Path $dir 'calls.log'), "weekly: $first`n", $utf8)
+    'Here is the merge.'
+    $bad = Join-Path $dir 'weekly-bad'
+    if ((Test-Path $bad) -and ((Get-Item $bad).Length -eq 0 -or @(Get-Content $bad) -ccontains $first)) { 'garbage'; exit 0 }
+    $custom = Join-Path $dir 'weekly-answer.md'
+    if (Test-Path $custom) { [IO.File]::ReadAllText($custom, $utf8).TrimEnd("`n"); exit 0 }
+    "## Tooling`n`n### Weekly lesson from $first`n**Source**: $first`n**Lesson**: A synthetic generic rule.`n**Apply when**: Always.`n**Tags**: #synthetic`n`n### Second weekly lesson from $first`n**Lesson**: Another synthetic rule."
+    exit 0
+}
 $uuid = ([regex]::Match($stdin, '(?m)^UUID: (.*)$')).Groups[1].Value.TrimEnd("`r")
 $date = ([regex]::Match($stdin, '(?m)^Date: (.*)$')).Groups[1].Value.TrimEnd("`r")
 $names = @([regex]::Matches($prompt, '(?m)^<<<extraction:(.*)>>>$') | ForEach-Object { $_.Groups[1].Value })

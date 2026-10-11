@@ -34,6 +34,11 @@ say() { printf '%s\n' "$*"; [[ -z "${SL_LOG:-}" ]] || printf '%s\n' "$*" >> "$SL
 # Rule 6: reserved filename characters and ASCII whitespace runs become '_'.
 safe_title() { printf '%s' "$1" | LC_ALL=C sed -E 's/[\\/:*?"<>|]/_/g; s/[[:space:]]+/_/g'; }
 
+# The categories src/prompts/merge/lessons.md offers. Keep the three in sync
+# (this list, the prompt, and $script:LessonsCategories in lib.ps1).
+LESSONS_CATEGORIES='["Architecture","Debugging","Performance","Security","Testing","Tooling","Workflow","API behaviour","Database","Other"]'
+LESSONS_STUB="_No lessons extracted from this session._"
+
 now_epoch() { date +%s; }
 
 # Unix seconds, truncated, of a file's mtime.

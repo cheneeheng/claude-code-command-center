@@ -31,6 +31,79 @@ function Write-Say([string]$Text) {
 # Rule 6: reserved filename characters and ASCII whitespace runs become '_'.
 function Get-SafeTitle([string]$Title) { ($Title -replace '[\\/:*?"<>|]', '_') -replace '[ \t\n\r\v\f]+', '_' }
 
+# The categories src/prompts/merge/lessons.md offers. Keep the three in sync
+# (this list, the prompt, and LESSONS_CATEGORIES in lib.sh).
+$script:LessonsCategories = 'Architecture', 'Debugging', 'Performance', 'Security', 'Testing',
+    'Tooling', 'Workflow', 'API behaviour', 'Database', 'Other'
+$script:LessonsStub = '_No lessons extracted from this session._'
+
+function Test-Starts([string]$S, [string]$Prefix) { $S.StartsWith($Prefix, [StringComparison]::Ordinal) }
+function Remove-TrailingBlank($L) { while ($L.Count -gt 0 -and $L[$L.Count - 1] -eq '') { $L.RemoveAt($L.Count - 1) } }
+function ConvertTo-Lines([string]$S) {
+    $l = [System.Collections.Generic.List[string]]::new()
+    foreach ($x in $S.Split("`n")) { $l.Add(($x -replace "`r$", '')) }
+    , $l
+}
+
+# Mirrors src/merge.jq exactly; see its header for the rules.
+function Merge-WeeklyAnswer([string]$Answer, [string]$Master, [string]$Date, [string[]]$Categories) {
+    $a = $Answer.Trim($script:Ws)
+    if ($a -match '^```[^\n]*\n' -and $a -match '\n```$') { $a = ($a -replace '^```[^\n]*\n', '' -replace '\n```$', '').Trim($script:Ws) }
+    $aLines = ConvertTo-Lines $a
+    if ($Master -eq '') {
+        $m = [System.Collections.Generic.List[string]]::new()
+        $m.AddRange([string[]]@('# Master Lessons Learned', '', 'Cross-project lessons harvested weekly from daily session notes.', "Last updated: $Date"))
+    } else { $m = ConvertTo-Lines $Master; Remove-TrailingBlank $m }
+    $oldTitles = @($m | Where-Object { Test-Starts $_ '### ' })
+    $masterCats = @($m | Where-Object { Test-Starts $_ '## ' } | ForEach-Object { $_.Substring(3) })
+    $none = @{ Status = 'none'; Added = 0; Merged = '' }; $invalid = @{ Status = 'invalid'; Added = 0; Merged = '' }
+
+    $start = -1
+    for ($i = 0; $i -lt $aLines.Count; $i++) { if (Test-Starts $aLines[$i] '## ') { $start = $i; break } }
+    if ($start -lt 0) { if ($aLines -ccontains '_No new lessons._') { return $none } else { return $invalid } }
+
+    $cat = $null; $lessons = [System.Collections.Generic.List[object]]::new()
+    for ($i = $start; $i -lt $aLines.Count; $i++) {
+        $line = $aLines[$i]
+        if (Test-Starts $line '### ') {
+            $ll = [System.Collections.Generic.List[string]]::new(); $ll.Add(($line -replace '[ \t]+$', ''))
+            $lessons.Add(@{ Cat = $cat; Lines = $ll })
+        } elseif (Test-Starts $line '## ') { $cat = $line.Substring(3).Trim($script:Ws) }
+        elseif ($lessons.Count -gt 0) { $lessons[$lessons.Count - 1].Lines.Add(($line -replace '[ \t]+$', '')) }
+    }
+    foreach ($l in $lessons) { Remove-TrailingBlank $l.Lines }
+    $allowed = @($Categories) + $masterCats
+    if ($lessons.Count -eq 0) { return $invalid }
+    foreach ($l in $lessons) {
+        if ($null -eq $l.Cat -or -not ($allowed -ccontains $l.Cat)) { return $invalid }
+        if (-not @($l.Lines | Where-Object { Test-Starts $_ '**Lesson**:' })) { return $invalid }
+    }
+
+    $out = [System.Collections.Generic.List[string]]::new($m)
+    $seen = [System.Collections.Generic.HashSet[string]]::new([string[]]$oldTitles, [StringComparer]::Ordinal)
+    $added = 0
+    foreach ($l in $lessons) {
+        if ($seen.Contains($l.Lines[0])) { continue }
+        $h = -1; for ($i = 0; $i -lt $out.Count; $i++) { if ($out[$i] -ceq "## $($l.Cat)") { $h = $i; break } }
+        if ($h -lt 0) {
+            Remove-TrailingBlank $out
+            $out.AddRange([string[]]@('', "## $($l.Cat)", '')); $out.AddRange([string[]]$l.Lines)
+        } else {
+            $e = $out.Count; for ($i = $h + 1; $i -lt $out.Count; $i++) { if (Test-Starts $out[$i] '## ') { $e = $i; break } }
+            $p = $e; while ($p - 1 -gt $h -and $out[$p - 1] -eq '') { $p-- }
+            $ins = [System.Collections.Generic.List[string]]::new(); $ins.Add(''); $ins.AddRange([string[]]$l.Lines)
+            if ($p -eq $e -and $e -lt $out.Count) { $ins.Add('') }
+            $out.InsertRange($p, $ins)
+        }
+        [void]$seen.Add($l.Lines[0]); $added++
+    }
+    if ($added -eq 0) { return $none }
+    for ($i = 0; $i -lt $out.Count; $i++) { if (Test-Starts $out[$i] 'Last updated: ') { $out[$i] = "Last updated: $Date"; break } }
+    if (-not (Test-Starts $out[0] '# Master Lessons Learned')) { return $invalid }
+    foreach ($t in $oldTitles) { if (-not $out.Contains($t)) { return $invalid } }
+    @{ Status = 'merged'; Added = $added; Merged = (($out -join "`n") + "`n") }
+}
+
 # Mirrors src/split.jq: one part per requested name, first occurrence wins.
 function Split-Answer([string]$Text, [string[]]$Names) {
     $parts = [ordered]@{}; $cur = $null

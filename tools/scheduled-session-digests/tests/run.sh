@@ -52,7 +52,8 @@ new_env() {
   "models": { "daily": { "model": "sonnet", "effort": "medium" },
               "weekly": { "model": "opus", "effort": "medium" } },
   "extractions": {
-    "lessons": { "enabled": true, "prompt": "extract/lessons.md", "outputDir": "lessons-learned" },
+    "lessons": { "enabled": true, "prompt": "extract/lessons.md", "outputDir": "lessons-learned",
+                 "weekly": { "prompt": "merge/lessons.md", "master": "master-lessons/MASTER_LESSONS_LEARNED.md" } },
     "echo": { "enabled": true, "prompt": "extract/echo.md", "outputDir": "echo-out" }
   }
 }
@@ -372,6 +373,118 @@ suite_daily() {
   rm -rf "$T"
 }
 
+MASTER_REL="master-lessons/MASTER_LESSONS_LEARNED.md"
+wcursor() { tr -d '[:space:]' < "$META/.claude/session-lessons/state/weekly-lessons.cursor"; }
+
+# weekly_env <dir>: an environment with lessons files and a master, no sessions to digest.
+# Files a, b, c (b and c share one mtime second), d, plus a stub, all inside 7 days.
+weekly_env() {
+  new_env "$1"
+  local L="$META/lessons-learned/2026/10" d
+  mkdir -p "$L" "$META/master-lessons"
+  for d in a b c d; do
+    printf '# Lessons \xe2\x80\x94 2026-10-0x\n**Session**: %s\n\n## Synthetic lesson %s\n\n**Lesson:** Rule %s.\n' "$d" "$d" "$d" > "$L/2026-10-01_$d.md"
+  done
+  printf '# Lessons \xe2\x80\x94 x\n**Session**: s\n\n_No lessons extracted from this session._\n' > "$L/2026-10-01_stub.md"
+  touch -d "@$((NOW - 4 * 86400))" "$L/2026-10-01_a.md"
+  touch -d "@$((NOW - 3 * 86400))" "$L/2026-10-01_b.md" "$L/2026-10-01_c.md"
+  touch -d "@$((NOW - 2 * 86400))" "$L/2026-10-01_d.md"
+  touch -d "@$((NOW - 1 * 86400))" "$L/2026-10-01_stub.md"
+  printf '%s\n' '# Master Lessons Learned' '' 'Cross-project lessons harvested weekly from daily session notes.' \
+    'Last updated: 2026-01-01' '' '## Tooling' '' '### Old tool lesson' '**Lesson**: OLD-BODY-MARKER.' '' \
+    '## Claude Code & Agent Development' '' '### Old agent lesson' '**Lesson**: Old agent rule.' \
+    > "$META/$MASTER_REL"
+  git -C "$META" add -A >/dev/null; git -C "$META" commit -qm seed
+}
+master_sha() { sha256sum "$META/$MASTER_REL" | cut -c1-16; }
+
+suite_weekly() {
+  echo "suite weekly ($SHELL_UT)"
+  local T before; T="$(mktemp -d)"
+  local L="lessons-learned/2026/10"
+
+  # The staged input: grouped titles, not the master's body; no stub.
+  weekly_env "$T/a"
+  printf 'exit 3\n' > "$META/.claude/session-lessons/src/finish-weekly.sh"
+  printf 'exit 3\n' > "$META/.claude/session-lessons/src/finish-weekly.ps1"
+  run_ut --job weekly --yes >/dev/null 2>&1
+  local in="$META/.claude/session-lessons/staging/weekly-lessons/in/batch-0.md"
+  check "weekly input has a run date" grep -q '^Run date: ' "$in"
+  check "weekly input lists titles under their sections" \
+    bash -c 'grep -qx "## Claude Code & Agent Development" "$1" && grep -qx "### Old agent lesson" "$1"' _ "$in"
+  check "weekly input leaves out the master's body" bash -c '! grep -q OLD-BODY-MARKER "$1"' _ "$in"
+  check "weekly input holds the new files" grep -qx '## Source: 2026-10-01_a.md' "$in"
+  check "weekly input skips the stub" bash -c '! grep -q "_stub.md" "$1"' _ "$in"
+  check "echo (no weekly entry) gets no weekly run" test ! -d "$META/.claude/session-lessons/staging/weekly-echo"
+
+  # A valid default answer: added under Tooling, old titles kept, date updated.
+  weekly_env "$T/b"
+  run_ut --job weekly --yes >/dev/null; local rc=$?
+  eq "$rc" 0 "weekly run exits 0"
+  eq "$(calls)" "weekly: 2026-10-01_a.md" "one batch, one call"
+  check "new lessons merged" grep -qx '### Weekly lesson from 2026-10-01_a.md' "$META/$MASTER_REL"
+  check "old titles kept" bash -c 'grep -qx "### Old tool lesson" "$1" && grep -qx "### Old agent lesson" "$1"' _ "$META/$MASTER_REL"
+  check "Last updated set to the run date" grep -qx "Last updated: $(date +%Y-%m-%d)" "$META/$MASTER_REL"
+  eq "$(awk '/^## /{s=$0} /^### Weekly lesson from/{print s}' "$META/$MASTER_REL")" "## Tooling" "added under its category"
+  eq "$(wcursor)" "$(mtime_of "$META/$L/2026-10-01_stub.md")" "weekly cursor passes the newest file, stub included"
+  eq "$("${JQ[@]}" -r .results.lessons.written "$META/.claude/session-lessons/state/last-run-weekly.json")" 2 "last run: 2 lessons added"
+
+  # A custom answer: an existing-only category, a new category, duplicates.
+  weekly_env "$T/c"
+  printf '%s\n' '## Claude Code & Agent Development' '### New agent lesson' '**Lesson**: x.' \
+    '### New agent lesson' '**Lesson**: in-answer duplicate.' '### Old tool lesson' '**Lesson**: existing duplicate.' \
+    '## Security' '### New security lesson' '**Lesson**: y.' > "$META/weekly-answer.tmp"
+  fake_ctl mv "$META/weekly-answer.tmp" "$META/.fake-claude/weekly-answer.md"
+  run_ut --job weekly --yes >/dev/null
+  check "a category that exists only in the master is accepted" grep -qx '### New agent lesson' "$META/$MASTER_REL"
+  eq "$(grep -cx '### New agent lesson' "$META/$MASTER_REL")" 1 "an in-answer duplicate is kept once"
+  eq "$(grep -cx '### Old tool lesson' "$META/$MASTER_REL")" 1 "an existing title is not added again"
+  check "a missing valid category is created" bash -c 'grep -qx "## Security" "$1" && grep -qx "### New security lesson" "$1"' _ "$META/$MASTER_REL"
+
+  # Nothing new: master untouched, cursor advanced.
+  weekly_env "$T/d"; before="$(master_sha)"
+  fake_ctl bash -c "printf '_No new lessons._\n' > '$META/.fake-claude/weekly-answer.md'"
+  run_ut --job weekly --yes >/dev/null
+  eq "$(master_sha)" "$before" "no new lessons leaves the master byte-identical"
+  eq "$(wcursor)" "$(mtime_of "$META/$L/2026-10-01_stub.md")" "no new lessons still advances the cursor"
+
+  # A malformed answer: master untouched, cursor not moved past the batch.
+  weekly_env "$T/e"; before="$(master_sha)"
+  fake_ctl touch "$META/.fake-claude/weekly-bad"
+  run_ut --job weekly --yes >/dev/null
+  eq "$(master_sha)" "$before" "a malformed answer leaves the master byte-identical"
+  local c; c="$(wcursor)"
+  check "a malformed answer leaves the cursor before the batch" test "$c" -lt "$(mtime_of "$META/$L/2026-10-01_a.md")"
+
+  # Batches: small limit, one batch per file except the same-second pair b+c.
+  # The second batch fails: the run stops there, d is not sent; the next run
+  # re-sends b+c, then d.
+  weekly_env "$T/f"; set_cfg '.weeklyBatchChars = 50'
+  fake_ctl bash -c "echo 2026-10-01_b.md > '$META/.fake-claude/weekly-bad'"
+  run_ut --job weekly --yes >/dev/null
+  eq "$(calls | tr '\n' '|')" "weekly: 2026-10-01_a.md|weekly: 2026-10-01_b.md|" "the run stops at the failed batch"
+  eq "$(wcursor)" "$(mtime_of "$META/$L/2026-10-01_a.md")" "cursor moves only over the done batch"
+  rm -f "$META/.fake-claude/weekly-bad"; clear_calls
+  run_ut --job weekly --yes >/dev/null
+  eq "$(calls | tr '\n' '|')" "weekly: 2026-10-01_b.md|weekly: 2026-10-01_d.md|" "the failed batch is re-sent, then the next"
+  check "the same-second pair was one batch" bash -c '! grep -q "Weekly lesson from 2026-10-01_c.md" "$1"' _ "$META/$MASTER_REL"
+
+  # claude failing in a weekly run is an error: non-zero exit, recorded.
+  weekly_env "$T/x"; fake_ctl touch "$META/.fake-claude/exit1"
+  run_ut --job weekly --yes >/dev/null 2>&1; rc=$?
+  check "a failed weekly run exits non-zero" test "$rc" -ne 0
+  check "weekly error recorded" bash -c '[[ "$(jq -r .error "$1")" == "claude exited 1"* ]]' _ "$META/.claude/session-lessons/state/last-run-weekly.json"
+
+  # Give-up: a batch that fails 3 times is given up and passed.
+  weekly_env "$T/g"; set_cfg '.weeklyBatchChars = 50'
+  fake_ctl bash -c "echo 2026-10-01_a.md > '$META/.fake-claude/weekly-bad'"
+  run_ut --job weekly --yes >/dev/null; run_ut --job weekly --yes >/dev/null; run_ut --job weekly --yes >/dev/null
+  check "the batch is given up after 3 invalid answers" grep -qx "weekly-lessons:$L/2026-10-01_a.md" "$META/.claude/session-lessons/state/given-up.txt"
+  check "the run after the give-up went on to the next batch" grep -qx '### Weekly lesson from 2026-10-01_b.md' "$META/$MASTER_REL"
+
+  rm -rf "$T"
+}
+
 suite_equivalence() {
   echo "suite equivalence (bash vs pwsh)"
   local T; T="$(mktemp -d)"
@@ -401,14 +514,30 @@ suite_equivalence() {
   local norm='del(.startedAt, .finishedAt) | .'
   eq "$("${JQ[@]}" -S "$norm" "$b/.claude/session-lessons/state/last-run-daily.json")" \
      "$("${JQ[@]}" -S "$norm" "$a/.claude/session-lessons/state/last-run-daily.json")" "daily: same last-run summary"
+
+  # Weekly: the same lessons files and master, small batches, a custom answer.
+  for s in bash pwsh; do
+    SHELL_UT="$s"; weekly_env "$T/w$s"; set_cfg '.weeklyBatchChars = 120'
+    run_ut --job weekly --yes >/dev/null
+  done
+  SHELL_UT="$saved"
+  a="$T/wbash/my meta_dir"; b="$T/wpwsh/my meta_dir"
+  if cmp -s "$a/$MASTER_REL" "$b/$MASTER_REL"; then ok; else bad "weekly: master files differ"; diff "$a/$MASTER_REL" "$b/$MASTER_REL" | head -10; fi
+  check "weekly: the master gained lessons" grep -q '^### Weekly lesson from' "$a/$MASTER_REL"
+  check "weekly: several batches were compared" test "$(wc -l < "$a/.fake-claude/calls.log")" -ge 2
+  eq "$(cat "$b/.fake-claude/calls.log")" "$(cat "$a/.fake-claude/calls.log")" "weekly: same batches in the same order"
+  eq "$(cat "$b/.claude/session-lessons/state/weekly-lessons.cursor")" "$(cat "$a/.claude/session-lessons/state/weekly-lessons.cursor")" "weekly: same cursor"
+  eq "$("${JQ[@]}" -S "$norm" "$b/.claude/session-lessons/state/last-run-weekly.json")" \
+     "$("${JQ[@]}" -S "$norm" "$a/.claude/session-lessons/state/last-run-weekly.json")" "weekly: same last-run summary"
   rm -rf "$T"
 }
 
 case "$SUITE" in
   archive) suite_archive ;;
   daily) suite_daily ;;
+  weekly) suite_weekly ;;
   equivalence) suite_equivalence ;;
-  all) suite_archive; suite_daily; [[ "$SHELL_UT" == bash ]] && suite_equivalence ;;
+  all) suite_archive; suite_daily; suite_weekly; [[ "$SHELL_UT" == bash ]] && suite_equivalence ;;
   *) echo "unknown suite: $SUITE" >&2; exit 2 ;;
 esac
 
