@@ -79,8 +79,8 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
   name). Files inside members keep their original names.
 - **Env vars:** every environment variable this repo defines and reads is prefixed `C4_`
   (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
-  Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir
-  for scheduled digests), `C4_STATUSLINE_NOW` (statusline-hook test-only clock override),
+  Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir;
+  scheduled-session-digests reads it only as its default meta dir), `C4_STATUSLINE_NOW` (statusline-hook test-only clock override),
   `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout),
   `C4_PLAN_PRICE_USD` (usage-dashboard monthly plan price for the Plan Value card),
   `C4_ROUNDTABLE_REGISTRY` (multi-repo-workspace registry path override),
@@ -95,12 +95,9 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
 - **Docs:** **one `README.md` per member** (apps/tools/libs/setup) plus the root README,
   which is the catalog. Deeper end-user docs live under a member's `docs/` (e.g.
   `multi-repo-plan-runner/docs/guide/`, `per-project-plugin-toggler/docs/user-guide-*.md`) and the
-  README links into them — do not split a member into multiple READMEs. Two sanctioned exceptions:
+  README links into them — do not split a member into multiple READMEs. One sanctioned exception:
   `per-project-plugin-toggler/vscode-extension/README.md`, which ships with the VSIX and is
-  rendered on the VSCode marketplace page; and `scheduled-session-digests`, whose four
-  independently installable digests (`daily-summary`, `daily-lessons`, `weekly-lessons`,
-  `git-sync`) each keep their own README under their sub-folder, linked from the member's top
-  README. Independently released components keep their own `CHANGELOG.md` (Keep a Changelog
+  rendered on the VSCode marketplace page. Independently released components keep their own `CHANGELOG.md` (Keep a Changelog
   format) tracking that component's tagged releases; the repo as a whole also keeps a root
   `CHANGELOG.md` once it cuts its first repo-wide release. Components not yet released
   independently carry no `CHANGELOG.md` until their first release. No per-member planning docs and

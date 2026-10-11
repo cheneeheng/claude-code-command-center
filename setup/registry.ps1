@@ -168,41 +168,36 @@ function Get-CommandCenterRegistry {
     $sdDir = Join-Path $tools 'scheduled-session-digests'
     $sessionDigests = [pscustomobject]@{
         Name           = 'scheduled-session-digests'
-        DisplayName    = 'Scheduled session digests'
+        DisplayName    = 'Scheduled session lessons'
         Category       = 'tools'
-        SetupScript    = Join-Path $sdDir 'setup.ps1'
+        SetupScript    = Join-Path $sdDir 'lessons.ps1'
         Version        = Read-MemberVersion $sdDir
-        RequiredConfig = @()   # defaults to skill-based digests under ~/claude-meta
+        RequiredConfig = @()   # metaDir defaults to $env:C4_CLAUDE_META_DIR, then ~/claude-meta
         Install        = {
             param($SetupScript, $Config)
-            $meta  = if ($Config -and $Config.metaDir) { $Config.metaDir }
-                     else { Join-Path $env:USERPROFILE 'claude-meta' }
-            $picks = if ($Config -and $Config.picks) { @($Config.picks) }
-                     else { @('ds-skill', 'dl-skill', 'wl-skill') }
-            & $SetupScript -NonInteractive -Action install -MetaDir $meta -Picks $picks | Out-Null
-            @{ metaDir = $meta; picks = $picks }
+            $meta = if ($Config -and $Config.metaDir) { $Config.metaDir }
+                    elseif ($env:C4_CLAUDE_META_DIR) { $env:C4_CLAUDE_META_DIR }
+                    else { Join-Path $HOME 'claude-meta' }
+            & $SetupScript install -MetaDir $meta -Yes | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "lessons.ps1 install exited $LASTEXITCODE" }
+            @{ metaDir = $meta }
         }
         Uninstall      = {
+            # Old entries also carry `picks`; only metaDir is read, so they still replay.
             param($SetupScript, $Entry)
-            $meta = if ($Entry -and $Entry.metaDir) { $Entry.metaDir } else { $env:C4_CLAUDE_META_DIR }
-            if ($meta) { & $SetupScript -NonInteractive -Action uninstall -MetaDir $meta | Out-Null }
-            else       { & $SetupScript -NonInteractive -Action uninstall | Out-Null }
+            $meta = if ($Entry -and $Entry.metaDir) { $Entry.metaDir }
+                    elseif ($env:C4_CLAUDE_META_DIR) { $env:C4_CLAUDE_META_DIR }
+                    else { Join-Path $HOME 'claude-meta' }
+            & $SetupScript uninstall -MetaDir $meta -Yes | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "lessons.ps1 uninstall exited $LASTEXITCODE" }
         }
         Detect         = {
             param($Entry)
-            foreach ($task in 'SessionDigest-DailySummary', 'SessionDigest-DailyLessons', 'SessionDigest-WeeklyLessons') {
-                if (Get-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue) { return $true }
-            }
-            $meta = $env:C4_CLAUDE_META_DIR
-            if (-not $meta -and $Entry) { $meta = $Entry.metaDir }
-            if ($meta) {
-                $scripts = Join-Path $meta '.claude\scripts'
-                if (Test-Path $scripts) {
-                    if (Get-ChildItem $scripts -Filter '*-prepare.ps1' -ErrorAction SilentlyContinue) { return $true }
-                    if (Get-ChildItem $scripts -Filter '*-trigger.ps1' -ErrorAction SilentlyContinue) { return $true }
-                }
-            }
-            $false
+            $meta = if ($Entry -and $Entry.metaDir) { $Entry.metaDir }
+                    elseif ($env:C4_CLAUDE_META_DIR) { $env:C4_CLAUDE_META_DIR }
+                    else { Join-Path $HOME 'claude-meta' }
+            if (Test-Path (Join-Path $meta '.claude/session-lessons/state/install.json')) { return $true }
+            [bool](Get-ScheduledTask -TaskPath '\ClaudeAutomation\scheduled-session-digests\' -TaskName 'SessionLessons-*' -ErrorAction SilentlyContinue)
         }
     }
 

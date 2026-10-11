@@ -253,6 +253,7 @@ cmd_status() {
 
 # ------------------------------------------------------------------------------
 cmd_uninstall() {
+  [[ -f "$H/state/install.json" ]] || { echo "Nothing installed in $META."; exit 0; }
   use_installed
   refuse_if_running
   local items=() l

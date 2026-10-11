@@ -263,6 +263,7 @@ function Invoke-Status {
 
 # ------------------------------------------------------------------------------
 function Invoke-Uninstall {
+    if (-not (Test-Path -LiteralPath (Join-Path $h 'state/install.json'))) { Write-Output "Nothing installed in $meta."; exit 0 }
     Use-Installed
     Assert-NotRunning
     $rec = $SlInstall.installed
@@ -314,3 +315,6 @@ switch ($Command) {
     'uninstall' { Invoke-Uninstall }
     default { Write-Output 'Usage: pwsh lessons.ps1 install|run|status|uninstall [options]'; Write-Output 'See README.md for the options.'; exit 1 }
 }
+# Explicit: callers such as setup/registry.ps1 read $LASTEXITCODE, which a
+# script that ends without `exit` leaves at whatever it was before.
+exit 0
