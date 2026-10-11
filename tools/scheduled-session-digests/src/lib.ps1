@@ -1,21 +1,56 @@
-#Requires -Version 7.2
+#Requires -Version 7.4
 # lib.ps1: helpers shared by the PowerShell pipeline scripts. Dot-sourced.
 #
-# Cross-reference: src/lib.sh and src/clean.jq are the Bash twins. Keep both
-# behaviourally identical (paths, encoding, lock format, cutoff rules, and the
-# transcript cleanup rules in Convert-Transcript).
+# Cross-reference: src/lib.sh, src/clean.jq, and src/split.jq are the Bash
+# twins. Keep both behaviourally identical (paths, encoding, lock format, cutoff
+# rules, the cleanup rules in Convert-Transcript, the split in Split-Answer).
+# 7.4 is the minimum because older versions drop empty-string arguments
+# (`--tools ""`) when calling a native program.
 
 $ErrorActionPreference = 'Stop'
 $script:Utf8 = [System.Text.UTF8Encoding]::new($false)
+$script:SlLog = $null
 
-function Initialize-SessionLessons([string]$MetaDir) {
+# The meta repo is the one this installed copy lives in: <meta>/.claude/session-lessons/src.
+function Initialize-SessionLessons {
     $script:SlSrc = $PSScriptRoot
-    $script:SlMeta = if ($MetaDir) { [IO.Path]::GetFullPath($MetaDir) }
-                     else { [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..')) }
+    $script:SlMeta = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
     $script:SlHome = Join-Path $script:SlMeta '.claude/session-lessons'
     $script:SlState = Join-Path $script:SlHome 'state'
+    $script:SlStaging = Join-Path $script:SlHome 'staging'
     $script:SlConfig = Get-Content -Raw (Join-Path $script:SlHome 'config.json') | ConvertFrom-Json
     $script:SlInstall = Get-Content -Raw (Join-Path $script:SlState 'install.json') | ConvertFrom-Json
+}
+
+# Prints a line and, when a run log is open, appends it there too.
+function Write-Say([string]$Text) {
+    [Console]::Out.Write($Text + "`n")
+    if ($script:SlLog) { [IO.File]::AppendAllText($script:SlLog, $Text + "`n", $script:Utf8) }
+}
+
+# Rule 6: reserved filename characters and ASCII whitespace runs become '_'.
+function Get-SafeTitle([string]$Title) { ($Title -replace '[\\/:*?"<>|]', '_') -replace '[ \t\n\r\v\f]+', '_' }
+
+# Mirrors src/split.jq: one part per requested name, first occurrence wins.
+function Split-Answer([string]$Text, [string[]]$Names) {
+    $parts = [ordered]@{}; $cur = $null
+    foreach ($raw in $Text.Split("`n")) {
+        $line = $raw -replace "`r$", ''
+        if ($line -cmatch '^<<<extraction:([A-Za-z0-9_-]+)>>>$') {
+            $m = $Matches[1]
+            $cur = if ($Names -ccontains $m -and -not $parts.Contains($m)) { $m } else { '' }
+            if ($cur) { $parts[$cur] = [System.Collections.Generic.List[string]]::new() }
+        } elseif ($cur) { $parts[$cur].Add($line) }
+    }
+    $out = @{}
+    foreach ($k in $parts.Keys) {
+        $s = ($parts[$k] -join "`n").Trim($script:Ws)
+        if ($s -match '^```[^\n]*\n' -and $s -match '\n```$') {
+            $s = ($s -replace '^```[^\n]*\n', '' -replace '\n```$', '').Trim($script:Ws)
+        }
+        $out[$k] = $s + "`n"
+    }
+    $out
 }
 
 function Get-NowEpoch { [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() }

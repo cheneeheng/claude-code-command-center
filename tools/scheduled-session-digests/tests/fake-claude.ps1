@@ -1,0 +1,35 @@
+# Fake `claude` for the tests. Never calls a model.
+#
+# Reads the prompt (last argument) and the staged input (pipeline), then prints
+# a preamble and one canned part per requested extraction. Controlled by files
+# in its working directory, the meta repo, under .fake-claude/:
+#   exit1      present: print an error and exit 1
+#   fail.txt   lines "<extraction>:<uuid>": print a truncated part instead
+#   calls.log  appended: "<uuid>: <requested extractions>" per call
+#
+# Cross-reference: tests/fake-claude.sh behaves the same.
+
+$prompt = $args[-1]
+$stdin = @($input) -join "`n"
+$dir = Join-Path (Get-Location) '.fake-claude'
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+if (Test-Path (Join-Path $dir 'exit1')) { [Console]::Error.WriteLine('fake claude: simulated failure'); exit 1 }
+
+$utf8 = [Text.UTF8Encoding]::new($false)
+$uuid = ([regex]::Match($stdin, '(?m)^UUID: (.*)$')).Groups[1].Value.TrimEnd("`r")
+$date = ([regex]::Match($stdin, '(?m)^Date: (.*)$')).Groups[1].Value.TrimEnd("`r")
+$names = @([regex]::Matches($prompt, '(?m)^<<<extraction:(.*)>>>$') | ForEach-Object { $_.Groups[1].Value })
+[IO.File]::AppendAllText((Join-Path $dir 'calls.log'), "${uuid}: $($names -join ' ')`n", $utf8)
+$fail = @(); $failFile = Join-Path $dir 'fail.txt'
+if (Test-Path $failFile) { $fail = @(Get-Content $failFile) }
+
+$d = [char]0x2014
+'Here are the parts you asked for.'
+foreach ($n in $names) {
+    "<<<extraction:$n>>>"
+    if ($fail -ccontains "${n}:$uuid") { 'truncated'; continue }
+    if ($n -eq 'lessons') {
+        "# Lessons $d $date`n**Session**: $uuid`n**Title**: Synthetic`n**Project**: synthetic`n`n## $date $d Synthetic lesson`n`n**What happened:** A synthetic mistake.`n`n**Lesson:** A synthetic rule."
+    } else { "$n part for $uuid" }
+}
+exit 0

@@ -15,7 +15,7 @@ jq --binary -n 1 >/dev/null 2>&1 && JQ=(jq --binary)
 
 # The meta repo is three levels above src/: <meta>/.claude/session-lessons/src.
 SL_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SL_META="${SL_META:-$(cd "$SL_SRC/../../.." && pwd)}"
+SL_META="$(cd "$SL_SRC/../../.." && pwd)"
 SL_HOME="$SL_META/.claude/session-lessons"
 SL_STATE="$SL_HOME/state"
 SL_CONFIG="$SL_HOME/config.json"
@@ -23,6 +23,16 @@ SL_INSTALL="$SL_STATE/install.json"
 
 cfg()      { "${JQ[@]}" -r "$1" "$SL_CONFIG"; }
 inst_get() { "${JQ[@]}" -r "$1" "$SL_INSTALL"; }
+
+SL_STAGING="$SL_HOME/staging"
+
+# Prints a line and, when a run log is open (SL_LOG, set from a script's --log
+# argument, never exported), appends it there too.
+SL_LOG=""
+say() { printf '%s\n' "$*"; [[ -z "${SL_LOG:-}" ]] || printf '%s\n' "$*" >> "$SL_LOG"; }
+
+# Rule 6: reserved filename characters and ASCII whitespace runs become '_'.
+safe_title() { printf '%s' "$1" | LC_ALL=C sed -E 's/[\\/:*?"<>|]/_/g; s/[[:space:]]+/_/g'; }
 
 now_epoch() { date +%s; }
 
