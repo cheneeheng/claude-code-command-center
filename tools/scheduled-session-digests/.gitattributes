@@ -1,0 +1,9 @@
+# Keep LF on every checkout (Windows autocrlf included): bash rejects a CRLF script, and the
+# tests compare archives and fixtures byte for byte across both shells.
+*.sh    text eol=lf
+*.ps1   text eol=lf
+*.jq    text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf
+*.md    text eol=lf
+*.tsv   text eol=lf

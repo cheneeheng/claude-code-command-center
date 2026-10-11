@@ -1,0 +1,88 @@
+# lib.sh: helpers shared by the Bash pipeline scripts. Sourced, never run.
+#
+# Cross-reference: src/lib.ps1 is the PowerShell twin. Keep both behaviourally
+# identical (paths, encoding, lock format, cutoff rules).
+
+if (( BASH_VERSINFO[0] < 4 )); then
+  echo "session-lessons: Bash 4 or newer is required." >&2; exit 1
+fi
+command -v jq >/dev/null 2>&1 || { echo "session-lessons: jq is required." >&2; exit 1; }
+
+# Native jq on Windows turns \n into \r\n unless --binary is given; Linux jq has
+# no such flag. All output must be LF.
+JQ=(jq)
+jq --binary -n 1 >/dev/null 2>&1 && JQ=(jq --binary)
+
+# The meta repo is three levels above src/: <meta>/.claude/session-lessons/src.
+SL_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SL_META="${SL_META:-$(cd "$SL_SRC/../../.." && pwd)}"
+SL_HOME="$SL_META/.claude/session-lessons"
+SL_STATE="$SL_HOME/state"
+SL_CONFIG="$SL_HOME/config.json"
+SL_INSTALL="$SL_STATE/install.json"
+
+cfg()      { "${JQ[@]}" -r "$1" "$SL_CONFIG"; }
+inst_get() { "${JQ[@]}" -r "$1" "$SL_INSTALL"; }
+
+now_epoch() { date +%s; }
+
+# Unix seconds, truncated, of a file's mtime.
+mtime_epoch() { stat -c %Y "$1"; }
+
+# Local yyyy-MM-dd of a Unix epoch.
+local_date() { date -d "@$1" +%Y-%m-%d; }
+
+# Claude Code names a project folder after the absolute path of its working
+# directory, with every character that is not a letter or digit replaced by '-'.
+# The path is the native one, so Windows paths are converted first.
+encode_project_dir() {
+  local p="$1"
+  command -v cygpath >/dev/null 2>&1 && p="$(cygpath -w "$p")"
+  printf '%s' "$p" | sed 's/[^A-Za-z0-9]/-/g'
+}
+
+# --- lock ------------------------------------------------------------------
+# state/run.lock is {"pid":N,"startTime":E}, E = the process start time as UTC
+# Unix seconds, truncated. A lock is live when that PID exists and its start
+# time matches within 1 second; anything else is stale and replaced.
+
+proc_start_epoch() {
+  local pid="$1" ticks btime hz
+  [[ -r "/proc/$pid/stat" ]] || return 1
+  # Field 22 counts from the end of the parenthesised command name, which may
+  # itself contain spaces.
+  ticks="$(sed 's/^.*) //' "/proc/$pid/stat" | awk '{print $20}')"
+  btime="$(awk '/^btime/ {print $2}' /proc/stat)"
+  hz="$(getconf CLK_TCK)"
+  echo $(( btime + ticks / hz ))
+}
+
+lock_is_live() {
+  local lock="$1" pid start actual
+  pid="$("${JQ[@]}" -r '.pid // empty' "$lock" 2>/dev/null)" || return 1
+  start="$("${JQ[@]}" -r '.startTime // empty' "$lock" 2>/dev/null)" || return 1
+  [[ -n "$pid" && -n "$start" ]] || return 1
+  actual="$(proc_start_epoch "$pid")" || return 1
+  (( actual - start <= 1 && start - actual <= 1 ))
+}
+
+# Takes the lock or exits 0 when another run holds it.
+acquire_lock() {
+  local lock="$SL_STATE/run.lock" tmp
+  mkdir -p "$SL_STATE"
+  tmp="$(mktemp "$SL_STATE/.lock.XXXXXX")"
+  printf '{"pid":%s,"startTime":%s}\n' "$$" "$(proc_start_epoch $$)" > "$tmp"
+  if ! ln "$tmp" "$lock" 2>/dev/null; then
+    if lock_is_live "$lock"; then
+      rm -f "$tmp"
+      echo "Another run is in progress (pid $("${JQ[@]}" -r .pid "$lock"))."
+      exit 0
+    fi
+    rm -f "$lock"
+    if ! ln "$tmp" "$lock" 2>/dev/null; then
+      rm -f "$tmp"; echo "Another run is in progress."; exit 0
+    fi
+  fi
+  rm -f "$tmp"
+  trap 'rm -f "$SL_STATE/run.lock"' EXIT
+}

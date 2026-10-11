@@ -1,0 +1,2 @@
+{"type":"user","cwd":"/home/dev/proj-alpha","message":{"role":"user","content":"First synthetic request for session 2222."}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Synthetic reply."}]}}

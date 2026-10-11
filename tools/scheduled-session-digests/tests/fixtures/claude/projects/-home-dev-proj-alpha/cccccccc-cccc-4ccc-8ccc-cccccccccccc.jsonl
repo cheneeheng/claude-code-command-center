@@ -1,0 +1,6 @@
+{"type":"user","cwd":"/home/dev/proj-alpha","message":{"role":"user","content":"The only synthetic request typed in this session."}}
+{"type":"user","message":{"role":"user","content":"<system-reminder>Synthetic injected reminder.</system-reminder>"}}
+{"type":"user","message":{"role":"user","content":"<task-notification><status>completed</status></task-notification>"}}
+{"type":"user","message":{"role":"user","content":"[Request interrupted by user]"}}
+{"type":"user","isMeta":true,"message":{"role":"user","content":"Synthetic skill body that is long enough to pass the length threshold."}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Synthetic reply long enough to pass the length threshold on its own."}]}}
