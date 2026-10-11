@@ -3,21 +3,26 @@
 A clean, rate-limit-first statusline for Claude Code. Each turn it prints up to three aligned rows:
 
 ```
-Opus 5.5 high   ctx ━━━━────── 42% · ◷ 1h 12m · $1.23
+Opus 5.5 high   ctx ━━━━────── 42% · ◷ 1h 12m · ⧗ 15:43 (59m) · $1.23
                 5h  ━━━━━━──── 63%  ↺ 17:00 (2h 14m)
                 7d  ━━━━━━━━── 85%  ↺ Thu 17:00 (5d 7h)
 ```
 
 - **Row 1:** model and reasoning effort (shown when the model supports effort), context-window
-  gauge, session runtime (`◷`), session cost.
+  gauge, session runtime (`◷`), prompt cache expiry (`⧗`), session cost.
+- **Cache:** the local time the main session's prompt cache expires and, in brackets, how long
+  until it does, or `expired`. It assumes a one-hour cache, counted from the last main-session
+  reply in the transcript (subagent and synthetic replies are ignored). The statusline only
+  redraws on activity, so the countdown is live only with a `refreshInterval` set; the expiry
+  time is right either way. The segment is left out until the session's first reply.
 - **Rows 2–3:** your 5-hour and 7-day rate-limit usage, with the local time each window resets
   and, in brackets, how long until it does.
   Claude Code sends these only to Pro/Max subscribers, after the session's first response; a row
   is left out while its window is absent.
 
 Colour carries meaning, not decoration: every gauge turns green below 50%, yellow below 80%, and red
-from 80%. Labels, separators, and reset times are dimmed. Each row stays under about 55 characters,
-so it fits a split pane. Plain Unicode only, so no Nerd Font is needed.
+from 80%. Labels, separators, and reset times are dimmed. Rows 2–3 stay under about 55 characters
+and row 1 under about 75, so it fits a split pane. Plain Unicode only, so no Nerd Font is needed.
 
 Two equivalent single-file scripts. Pick the one for your shell:
 

@@ -1,0 +1,7 @@
+{"type":"user","timestamp":"2025-02-01T08:29:50.000Z","isSidechain":false,"message":{"role":"user","content":"hi"}}
+{"type":"assistant","timestamp":"2025-02-01T08:30:00.123Z","isSidechain":false,"message":{"model":"claude-opus-5-5","content":[]}}
+{"type":"assistant","timestamp":"2025-02-01T08:45:00.000Z","isSidechain":true,"message":{"model":"claude-opus-5-5","content":[]}}
+{"type":"assistant","timestamp":"2025-02-01T08:50:00.000Z","isSidechain":false,"message":{"model":"<synthetic>","content":[]}}
+{"type":"system","timestamp":"2025-02-01T08:50:01.000Z","isSidechain":false}
+{"type":"last-prompt"}
+{not json

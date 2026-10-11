@@ -1,6 +1,6 @@
 # Claude Code statusline (PowerShell port). Runs on Windows PowerShell 5.1 and PowerShell 7.
 #
-#   Opus 5.5 high   ctx [context gauge] 42% . [clock] 1h 12m . $1.23
+#   Opus 5.5 high   ctx [context gauge] 42% . [clock] 1h 12m . [hourglass] 09:30 (36m) . $1.23
 #                   5h  [5-hour gauge]  63%  reset 16:00 (7h 6m)
 #                   7d  [7-day gauge]   85%  reset Thu 16:00 (5d 7h)
 #
@@ -22,6 +22,7 @@ $LIGHT = [string][char]0x2500  # empty bar segment
 $SEP   = " $DIM$([char]0x00B7)$RESET "
 $CYCLE = [char]0x21BA          # reset arrow
 $CLOCK = [char]0x25F7          # runtime marker
+$GLASS = [char]0x29D7          # cache expiry marker
 $DAYS  = 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
 
 function Get-Level([long]$p) {
@@ -51,6 +52,34 @@ function Get-Reset($resetsAt, [bool]$withDay) {
     $day = if ($withDay) { $DAYS[[int]$t.DayOfWeek] + ' ' } else { '' }
     $time = $t.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture)
     "  $DIM$CYCLE $day$time ($(Get-Left ($at - $NOW)))$RESET"
+}
+
+# The main session caches its prompt for one hour after its last API reply. Synthetic
+# replies never reached the API, and sidechain replies belong to subagents.
+# less-code: only the last 100 transcript lines are scanned. If the last main-session reply
+# is further back, the cache segment is left out.
+function Get-Cache($path) {
+    if (-not $path) { return '' }
+    $at = $null
+    try {
+        foreach ($line in (Get-Content -LiteralPath $path -Tail 100 -Encoding UTF8 -ErrorAction Stop)) {
+            if ($line -notmatch '"type":"assistant"') { continue }
+            try { $e = $line | ConvertFrom-Json } catch { continue }
+            if ($e.type -eq 'assistant' -and $e.isSidechain -ne $true -and
+                $e.message.model -ne '<synthetic>' -and $null -ne $e.timestamp) { $at = $e.timestamp }
+        }
+        if ($null -eq $at) { return '' }
+        # PowerShell 7 parses ISO timestamps into a UTC DateTime; 5.1 leaves a string.
+        $t = if ($at -is [datetime]) { [DateTimeOffset]$at }
+             else { [DateTimeOffset]::Parse([string]$at, [Globalization.CultureInfo]::InvariantCulture) }
+        $end = $t.ToUnixTimeSeconds() + 3600
+    } catch { return '' }
+    $state = if ($end -gt $NOW) {
+        $time = [DateTimeOffset]::FromUnixTimeSeconds($end).ToLocalTime().ToString(
+            'HH:mm', [Globalization.CultureInfo]::InvariantCulture)
+        "$time ($(Get-Left ($end - $NOW)))"
+    } else { 'expired' }
+    "$SEP$DIM$GLASS$RESET $state"
 }
 
 function Get-Runtime($ms) {
@@ -90,7 +119,7 @@ try {
         "$label   ${DIM}ctx$RESET " +
         (Get-Gauge $data.context_window.used_percentage) +
         $SEP + "$DIM$CLOCK$RESET " + (Get-Runtime $data.cost.total_duration_ms) +
-        $SEP + '$' + (Get-Cost $data.cost.total_cost_usd)
+        (Get-Cache $data.transcript_path) + $SEP + '$' + (Get-Cost $data.cost.total_cost_usd)
     )
     foreach ($w in @(@('5h', $data.rate_limits.five_hour, $false),
                      @('7d', $data.rate_limits.seven_day, $true))) {
