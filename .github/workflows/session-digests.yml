@@ -1,0 +1,68 @@
+name: CI · scheduled-session-digests
+
+# No path filter: this job is meant to be a required check, and a path-filtered required
+# check never reports on PRs that skip it.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: tools/scheduled-session-digests
+
+env:
+  GIT_AUTHOR_NAME: ci
+  GIT_AUTHOR_EMAIL: ci@example.invalid
+  GIT_COMMITTER_NAME: ci
+  GIT_COMMITTER_EMAIL: ci@example.invalid
+
+jobs:
+  linux:
+    name: session-digests (ubuntu, bash + pwsh pipeline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # The runner image ships bash, jq, and pwsh. CI=true makes the cli suite register a
+      # real cron entry (lessons.sh is the native pair on Linux).
+      - name: All suites (bash, real cron)
+        run: bash tests/run.sh bash
+      - name: Pipeline suites (pwsh)
+        run: |
+          bash tests/run.sh pwsh archive
+          bash tests/run.sh pwsh daily
+          bash tests/run.sh pwsh weekly
+
+  windows:
+    name: session-digests (windows, pwsh + registry)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      # CI=true makes the cli suite register a real scheduled task (lessons.ps1 is the
+      # native pair on Windows).
+      - name: All suites (pwsh, real task)
+        run: bash tests/run.sh pwsh
+      - name: setup/ registry replay (install, then uninstall, via command-center.ps1)
+        shell: pwsh
+        working-directory: .
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tmp = Join-Path $env:RUNNER_TEMP 'replay'
+          $bin = Join-Path $tmp 'bin'
+          New-Item -ItemType Directory -Force -Path $bin | Out-Null
+          Copy-Item tools/scheduled-session-digests/tests/fake-claude.ps1 (Join-Path $bin 'claude.ps1')
+          $env:PATH = "$bin;$env:PATH"
+          $env:C4_CLAUDE_META_DIR = Join-Path $tmp 'claude-meta'
+          $env:C4_CLAUDE_DIR = Join-Path $tmp 'claude'
+          ./setup/command-center.ps1 install -Member scheduled-session-digests
+          $m = Get-Content -Raw (Join-Path $env:USERPROFILE '.claude-command-center/manifest.json') | ConvertFrom-Json
+          if ($m.members.'scheduled-session-digests'.metaDir -ne $env:C4_CLAUDE_META_DIR) { throw 'manifest did not record metaDir' }
+          if (-not (Get-ScheduledTask -TaskPath '\ClaudeAutomation\scheduled-session-digests\' -TaskName 'SessionLessons-*')) { throw 'task not registered' }
+          ./setup/command-center.ps1 uninstall -Member scheduled-session-digests
+          if (Get-ScheduledTask -TaskPath '\ClaudeAutomation\scheduled-session-digests\' -TaskName 'SessionLessons-*' -ErrorAction SilentlyContinue) { throw 'task still registered' }
+          Write-Output 'registry replay: ok'

@@ -1,0 +1,2 @@
+{"type":"user","isSidechain":true,"cwd":"/home/dev/proj-alpha","message":{"role":"user","content":"Synthetic agent prompt one."}}
+{"type":"user","isSidechain":true,"message":{"role":"user","content":"Synthetic agent prompt two."}}

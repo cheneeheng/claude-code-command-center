@@ -13,7 +13,7 @@ member's own setup script and records the outcome in a per-machine **manifest**.
 | `session-name-date-prefixer` | Adds a `claude` wrapper to your user PATH |
 | `statusline-hook` | Copies the hook into `~/.claude/` and wires `statusLine` in `settings.json` |
 | `file-sync` | Registers Task Scheduler jobs to keep folder pairs in sync (needs config) |
-| `scheduled-session-digests` | Registers digest schedulers (skills and/or scheduled tasks) |
+| `scheduled-session-digests` | Installs the session-lessons pipeline into the meta repo and registers its hourly task |
 
 Apps, `usage-report`, and libs are **not** managed here — they are run on demand, not installed.
 
@@ -49,7 +49,7 @@ cp ./setup/command-center.config.example.jsonc ~/.claude-command-center/config.j
 
 Override the path with `-Config <path>`. Under `-All`, only members with an entry here are
 installed; a listed member that omits optional keys uses its defaults (e.g. `statusline-hook`
-→ `ps1`, digests → skill-based under `~/claude-meta`). To install an unlisted member with its
+→ `ps1`, session lessons → `~/claude-meta`). To install an unlisted member with its
 defaults, target it directly with `install -Member <name>`.
 
 ## Manifest

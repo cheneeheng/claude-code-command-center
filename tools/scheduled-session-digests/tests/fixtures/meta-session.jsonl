@@ -1,0 +1,3 @@
+{"type":"user","cwd":"/meta","message":{"role":"user","content":"First synthetic request for session 7777."}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Synthetic reply."}]}}
+{"type":"user","message":{"role":"user","content":"Second synthetic request."}}

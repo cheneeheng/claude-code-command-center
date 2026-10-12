@@ -4,65 +4,71 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Unattended Claude Code automations that run on a schedule and write output to a shared local git
-repo (`claude-meta`), optionally pushed to a remote. Four independently installable schedulers:
-`daily-summary`, `daily-lessons`, `weekly-lessons`, and `git-sync` (called by the other three).
-Both Windows (PowerShell + Task Scheduler) and Linux (Bash + cron) are supported.
+A background pipeline that turns Claude Code sessions into lessons learned, using headless
+`claude --print` with fixed prompts. It installs into a meta repo (`claude-meta`); a daily job
+writes one lessons file per session, a weekly job merges generic lessons into a master file,
+and every session's cleaned transcript is archived. PowerShell 7.4+ on Windows, Bash 4+ with
+`jq` on Linux. README.md covers usage.
 
-## Running
+## Layout
 
-See the top README.md and each sub-folder's README for full usage. Install/uninstall is interactive
-via `setup.ps1` (Windows) / `setup.sh` (Linux); it prompts for the `claude-meta` dir and lets you
-pick, per scheduler, a cron mechanism and/or a skill mechanism.
-
-## Architecture
-
-- Each scheduler lives in its own folder (`daily-summary/`, `daily-lessons/`, `weekly-lessons/`,
-  `git-sync/`) with its own README, prompt, and installer. The two daily schedulers share one
-  parameterized prepare/trigger implementation in `lib/` (`daily-digest-prepare` /
-  `daily-digest-trigger`, invoked with the scheduler name).
-- Two run mechanisms per scheduler (1-3): **cron** (Task Scheduler / cron calls `claude --print`,
-  consuming programmatic credit) and **skill** (on-demand `/session-digest-<name>` from inside a
-  Claude Code session in the meta repo, using the interactive session). The skill mechanism exists
-  for when programmatic usage is limited.
-- Both mechanisms consume the same **prepare** script: it stages per-job inputs plus
-  `manifest.json` under `$C4_CLAUDE_META_DIR/.claude/scheduled-session-digests/<scheduler>/`
-  (gitignored, reset per run, deleted by the consumer when done). The cron trigger loops the
-  manifest through `claude --print` (paths substituted into the prompt template's
-  `{{INPUT_FILE}}`/`{{OUTPUT_FILE}}` placeholders); the skill fans it out to subagents.
-- Each scheduler tracks progress in `.claude/<scheduler>-cursor` (Unix-epoch mtime of the newest
-  source file fully handled). Consumers advance it only over verified outputs, so a crash retries
-  exactly the unprocessed work.
-- `skills/` holds the installable skills; they are copied to `$C4_CLAUDE_META_DIR/.claude/skills/`.
-- `git-sync` stages, date-stamped commits, merges the current branch back into the default
-  branch if they differ (interactive skill runs can start on a guard-forced feature branch),
-  and pushes `claude-meta` after each run. Run logs under `logs/` are gitignored (local-only)
-  because they keep being written after the push.
+- `lessons.ps1` / `lessons.sh`: the CLI (`install`, `run`, `status`, `uninstall`), run from the
+  clone. `install` copies `src/` into `<meta>/.claude/session-lessons/src/`.
+- `src/`: the installed pipeline. The scripts find the meta repo from their own location, never
+  from an environment variable.
+  - `run`: the only consumer: lock, cutoff, prepare, one claude call per session (daily) or
+    batch (weekly), finish. `-Scheduled` applies the due rule.
+  - `prepare` / `prepare-weekly`: scanning, filtering, cleanup, archiving, staging.
+  - `finish` / `finish-weekly`: split, validate, move into place, attempts, cursors, the
+    last-run summary.
+  - `git-sync`: commit and push.
+  - `lib.ps1` / `lib.sh`: shared helpers (lock, due rule).
+  - `clean.jq`, `split.jq`, `merge.jq`: the Bash cleanup, answer split, and weekly merge.
+  - `prompts/`: `daily-frame.md`, `extract/<extraction>.md`, `merge/<extraction>.md`.
+  - `config.default.json`: the defaults `install` writes.
+- `tests/run.sh <bash|pwsh> [suite]`: suites `archive`, `daily`, `weekly`, `cli`,
+  `equivalence`. A fake `claude` (`tests/fake-claude.{sh,ps1}`) answers.
 
 ## Invariants — do not break these
 
-- **Each of the four schedulers keeps its own README under its sub-folder.** This is a sanctioned
-  exception to the one-README-per-member rule (see the root CLAUDE.md). Do not collapse them into
-  the top README.
-- **`git-sync` is the only writer of git history in `claude-meta`** and is invoked by the other
-  schedulers — do not duplicate commit/push logic into the digest scripts.
-- **The prepare scripts are the single owner of scan/filter/stage logic.** Triggers and skills
-  consume the manifest; never duplicate the discovery logic back into a consumer.
-- **All transient files live under `.claude/scheduled-session-digests/<scheduler>/`** in the meta
-  repo (gitignored) and are deleted by the consumer — no temp files in the scripts dir, `/tmp`, or
-  anywhere else. Cursor files are state, not temp: they stay at `.claude/<scheduler>-cursor`,
-  outside the staging dir.
-- **Cursors advance only over verified outputs** (oldest-first, stopping at the first failure) so
-  crashed or failed jobs are retried. Do not advance a cursor past work that produced no output.
-- **Honour `$C4_CLAUDE_META_DIR`** for the meta-repo location.
-- **Keep the Windows (PowerShell/Task Scheduler) and Linux (Bash/cron) paths behaviourally
-  equivalent.** That includes epoch handling: whole seconds, truncated, on both platforms.
-- The daily skills act as coordinators (prepare stages per-chat inputs → one subagent per chat →
-  cursor → `git-sync`); the weekly skill harvests collected lessons in a single pass. Preserve that
-  fan-out shape.
+- **The PowerShell and Bash implementations behave the same, byte for byte.** Every rule exists
+  in both (`clean.jq` ↔ `Convert-Transcript`, `split.jq` ↔ `Split-Answer`, `merge.jq` ↔
+  `Merge-WeeklyAnswer`, each script ↔ its twin), each file names its twin in a
+  `Cross-reference:` comment, and the `equivalence` suite diffs their outputs. A behaviour
+  change is the same edit in both plus a passing `equivalence` run.
+- **One claude call per session carries every extraction it still needs.** The prompt is
+  `daily-frame.md` plus each needed `extract/<name>.md`; the answer is split on whole-line
+  `<<<extraction:NAME>>>` markers (text before the first ignored, unrequested names ignored,
+  first occurrence wins, a fence around a part dropped). Each part is validated on its own and
+  a valid part is kept even when another fails.
+- **Claude writes nothing and uses no tools.** It runs with `--tools "" --no-session-persistence`
+  and answers on stdout; the scripts write every file. Only validated output is moved into
+  place, so a killed run never leaves a partial file.
+- **The cleanup rules are versioned.** Any change to what `clean.jq` / `Convert-Transcript`
+  keeps or drops bumps `Cleanup: v1` in the archive header. `[USER]` holds only what the user
+  typed; injected text (hook output, reminders, command output, compaction summaries) never
+  reaches it.
+- **Cursors never skip work.** A cursor moves to the smaller of the run's `cursorEpoch` and the
+  oldest undone session minus 1 second; only runs whose cutoff is at or before the stored
+  cursor move it; `-DryRun` and `-ArchiveOnly` never write a cursor or a last-run file. A
+  `claude` failure stops the run and counts no attempt.
+- **One run per meta repo at a time** (`state/run.lock`, PID plus start time; replaced only
+  when that process is gone).
+- **`git-sync` is the only writer of git history** in the meta repo.
+- **Uninstall never deletes the meta repo or its `.git`.** `-Purge` deletes only this tool's
+  paths. Install removes only previous-version items that point at the meta repo being
+  installed.
+- **Test fixtures are synthetic.** This repo is public: fixtures copy the structure of real
+  transcripts with made-up text, never real lines. A local test run never registers a real
+  scheduled task; that runs only with `CI=true`.
+- **No new environment variables.** Plumbing between the scripts goes through arguments. The
+  only variables read are `C4_CLAUDE_META_DIR` (default meta dir) and `C4_CLAUDE_DIR` (scan
+  roots, read at install).
+- Scheduled entry: Windows task `\ClaudeAutomation\scheduled-session-digests\SessionLessons-<8 hex of the meta path's SHA-256>`;
+  Linux crontab line ending `# session-lessons:<meta>`.
 
 ## Conventions
 
-- PowerShell + Bash; `claude` and `git` on PATH required (Linux also needs `jq`). The `VERSION`
-  file tracks this component's release.
+- Version lives in `VERSION`; release tag `ssd-vX.Y.Z` (see `docs/releasing.md`), changes in
+  `CHANGELOG.md`.
 - New decisions go in the repo-root `.agents_workspace/DECISION_LOG.md`.

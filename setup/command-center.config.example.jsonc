@@ -38,12 +38,11 @@
     ]
   },
 
-  // scheduled-session-digests: optional. metaDir defaults to ~/claude-meta and
-  // picks defaults to skill-based daily-summary, daily-lessons, weekly-lessons.
-  // pick tokens: <ds|dl|wl>-<skill|cron|both>.
+  // scheduled-session-digests: optional. metaDir defaults to $env:C4_CLAUDE_META_DIR,
+  // then ~/claude-meta. Schedule times and the rest live in the member's own
+  // config.json (see tools/scheduled-session-digests/README.md).
   "scheduled-session-digests": {
-    "metaDir": "C:/Users/you/claude-meta",
-    "picks": ["ds-skill", "dl-skill", "wl-skill"]
+    "metaDir": "C:/Users/you/claude-meta"
   }
 
   // session-name-date-prefixer needs no config.
