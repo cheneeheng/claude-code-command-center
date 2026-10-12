@@ -1,6 +1,6 @@
 ---
 title: Rebuild scheduled-session-digests as a headless background extraction pipeline, shipping lessons (PowerShell 7 + Bash)
-status: building
+status: built
 created: 2026-10-11
 ---
 
@@ -280,7 +280,10 @@ shared across machines never carries one machine's paths or uninstall record (R2
     or the lessons history (T3).
   - `installedAt` is written by the first install and kept by every re-install.
   - `claudePath` and `scanRoots` are resolved at install time, because cron's environment has
-    neither the user's PATH nor their variables (R17).
+    neither the user's PATH nor their variables (R17). On Windows, `claudePath` is the first
+    native `claude.exe` on PATH, and only without one the first `claude` command. (Added in
+    Phase 6: the live run found a `claude.ps1` wrapper earlier on the owner's PATH that drops
+    piped input, so every call ran on an empty transcript.)
   - The test harness writes this file and `config.json` directly, so phases 1 to 3 need no
     `install` (S27).
 - Daily manifest:
@@ -301,7 +304,7 @@ shared across machines never carries one machine's paths or uninstall record (R2
 - `last-run-<job>.json`:
   `{ job, startedAt, finishedAt, trigger: "manual"|"scheduled", processed, results: { "<extraction>": { written, none } }, failed, givenUp, deferred, committed, pushed, error }`.
   `error` is null or one line, for example `claude not found at <path>` or
-  `claude exited 1: <first stderr line>`.
+  `claude exited 1: <first stderr line>`, or `git commit failed: <first git line>`.
 - `attempts.json`: `{ "<extraction>:<uuid>": <failed attempts> }`, and for weekly batches
   `{ "weekly-<extraction>:<first file>": <failed attempts> }`, where `<first file>` is the batch's
   first file as a meta-relative path. `given-up.txt` holds one key of the same form per line. A
@@ -636,6 +639,11 @@ shared across machines never carries one machine's paths or uninstall record (R2
 
 - stages all changes and makes one commit `lessons(<job>): <yyyy-mm-dd HH:mm>`;
 - pushes only when a remote exists.
+- A failed `git add` or `git commit` becomes the run's `error`
+  (`git commit failed: <first git line>`) when it has no `claude` error, and the run exits
+  non-zero. The due rule then retries at the next tick, and that run commits the earlier
+  outputs too. A failed push stays a warning, because the commit is safe and the next run
+  pushes it. (Added in Phase 6, by the owner's decision.)
 
 `finish` records `committed` and `pushed` in the last-run summary. Today's merge-back of a feature
 branch existed because Claude, during interactive skill runs, could be forced onto a branch by a
@@ -908,8 +916,9 @@ user has checked out, so the merge-back is dropped.
     `lib/`, `skills/`, `setup.ps1`, `setup.sh`. `VERSION` goes to `0.2.0`.
 - **Check:**
   - `bash tests/run.sh bash && bash tests/run.sh pwsh` exits 0.
-  - `git grep -nE 'daily-digest|session-digest-|SessionDigest-|claude-scheduler.env|"picks"' -- tools/scheduled-session-digests setup README.md CLAUDE.md ':!tools/scheduled-session-digests/tests/fixtures'`
-    finds matches only in the legacy-cleanup code (S26).
+  - `git grep -nE 'daily-digest|session-digest-|SessionDigest-|claude-scheduler.env|"picks"' -- tools/scheduled-session-digests setup README.md CLAUDE.md ':!tools/scheduled-session-digests/tests/fixtures' ':!tools/scheduled-session-digests/product'`
+    finds matches only in the legacy-cleanup code (S26). `product/` is excluded: the plan and
+    the superseded Key Decisions there name the old files as records.
   - The new workflow, including the Windows registry replay step, passes on the PR.
 - **Status:** done. PR #62, CI run 38150232431 green on both jobs:
   - windows-latest: `bash tests/run.sh pwsh` "passed 194, failed 0", including the CI-only real
@@ -959,7 +968,31 @@ user has checked out, so the merge-back is dropped.
   lessons file and its archived transcript exist in the throwaway meta dir, and a second
   `run -DryRun` does not list the first run's own session. This is manual because the live run
   needs the user's Claude account and spends credit, so it runs only with the user's go-ahead.
-- **Status:** todo
+- **Status:** done. The audit part ran on 2026-10-11: `run-002/UX_AUDIT.md` reports gate 4/5,
+  all five personas reached the goal on paper, no Blocker, and findings G1-G7 recorded (G2, no
+  undo named at install and nothing on a killed run, fails criterion 4). It was a paper walk over
+  real captured screens, with a stand-in `claude`.
+
+  The live run ran on 2026-10-12, bounded by the owner to `-Since` rather than 7 days:
+  - The first run (17 sessions, `-Since 2026-10-11`) answered every call, and all 17 failed
+    validation. `install` had recorded the owner's PATH wrapper `claude.ps1`, which never passes
+    piped input on, so `claude` saw an empty transcript ("no stdin data received"). Fixed:
+    `install` now prefers `claude.exe` (see Data model), with a `cli` test that is red without
+    the fix. `bash tests/run.sh pwsh` gives "passed 192, failed 0", `bash tests/run.sh bash`
+    "passed 206, failed 0".
+  - The re-run in a fresh meta dir (4 sessions, `-Since 2026-10-12`) took 34 s: 3 lessons files
+    and 1 "nothing found", 0 failed. The user's global hooks did not disturb it.
+  - A second `run -DryRun` lists 0 sessions to process. The headless calls left no transcript
+    under `~/.claude/projects` (only an empty `memory/` folder), so no run digests its own.
+  - The archive holds `[QUESTION]` with `label: description` options and the `[ANSWER]`, and no
+    archived file contains injected-text tags.
+  - With an invalid daily model, the run stopped after one call, `status` showed
+    `Error: claude exited 1: ...`, and no attempt was counted.
+  - Not a product defect: git-sync failed with "Filename too long" in the throwaway dir, whose
+    path made a lessons file 270 characters long (the Windows limit is 260; under
+    `~/claude-meta` it is 135). The run exited 0 with `committed: false` and no `error`, so the
+    failed commit showed only in the log. By the owner's decision, a failed commit is now the
+    run's `error` (see git-sync), with `daily` and `weekly` tests that fail without it.
 
 ## Open
 
@@ -969,10 +1002,10 @@ user has checked out, so the merge-back is dropped.
 - **Tunable defaults.** Assumption: 7 days, 20 sessions, 3 attempts, 60 minutes, and 400,000 code
   points per weekly batch, all in `config.json`.
 - **User hooks in headless runs.** `--tools ""` and `--no-session-persistence` are settled
-  (Phase 2). The user's SessionStart hooks still load in a headless run. Assumption: they do not
-  disturb a tool-free run whose answer is validated. Phase 6 checks it live. If they do, the
-  fallback is `--setting-sources project,local`, which skips the user's own settings and plugins
-  without touching their login.
+  (Phase 2). The user's SessionStart hooks still load in a headless run. Phase 6 found that they
+  do not disturb it: all 4 live answers validated. If they ever do, the fallback is
+  `--setting-sources project,local`, which skips the user's own settings and plugins without
+  touching their login.
 - **Archive size.** Not measured. The cleaned transcripts drop tool output, so they are far smaller
   than the 889 MB of raw transcripts on the owner's machine. Phase 4's change list shows the
   session count before the one-time archive. If the repo grows uncomfortably, the archive can move
@@ -991,3 +1024,28 @@ user has checked out, so the merge-back is dropped.
 - 2026-10-11 Built Phase 4: 533e2dd, "passed 206, failed 0" (bash, all suites)
 - 2026-10-11 Built Phase 5: b4dc9ce, CI run 38150232431 "passed 209, failed 0" (ubuntu bash)
 - 2026-10-11 PR: #62 https://github.com/cheneeheng/claude-code-command-center/pull/62
+- 2026-10-12 Built Phase 6: live run 4 sessions, "3 written, 1 with nothing found", 0 failed;
+  claude.exe fix, "passed 192, failed 0" (pwsh) and "passed 206, failed 0" (bash)
+- 2026-10-12 Failed commit is a run error: "passed 214, failed 0" (bash, with equivalence) and
+  "passed 200, failed 0" (pwsh)
+- 2026-10-12 Design changed: was "`claudePath` and `scanRoots` are resolved at install time,
+  because cron's environment has neither the user's PATH nor their variables (R17).", now adds
+  "On Windows, `claudePath` is the first native `claude.exe` on PATH, and only without one the
+  first `claude` command.", because the Phase 6 live run found a `claude.ps1` wrapper on the
+  owner's PATH that drops piped input
+- 2026-10-12 Design changed: was "pushes only when a remote exists." with `error` "null or one
+  line, for example `claude not found at <path>` or `claude exited 1: <first stderr line>`",
+  now "A failed `git add` or `git commit` becomes the run's `error` (`git commit failed: <first
+  git line>`) when it has no `claude` error, and the run exits non-zero", because the owner
+  decided a failed commit must show in `status` and be retried at the next tick
+- 2026-10-12 Checked: 26 Built, 2 Deviation, 1 Failing, 1 Cannot verify; Deviation: the lock
+  message reads "Another run is in progress (pid N)." (capitalised, with a period); Deviation:
+  the Phase 6 live run was bounded by `-Since`, not 7 days (owner's call, recorded in its
+  Status); Failing: the Phase 5 `git grep` now also matches `product/ARCHITECTURE.md` (its
+  superseded Key Decisions) and this plan, both moved into the member by 0aba360 after Phase 5;
+  Cannot verify: the Phase 5 CI check on the current code, which needs a push
+- 2026-10-12 Design changed: was "`git grep ... ':!tools/scheduled-session-digests/tests/fixtures'`
+  finds matches only in the legacy-cleanup code (S26).", now the same grep also excluding
+  `':!tools/scheduled-session-digests/product'`, because 0aba360 moved the plan and
+  ARCHITECTURE.md into the member after Phase 5, and their mentions of the old files are records
+  (owner's decision)

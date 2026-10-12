@@ -235,6 +235,12 @@ crash_finish() {
   printf 'exit 1\n' > "$META/.claude/session-lessons/src/finish.sh"
   printf 'exit 1\n' > "$META/.claude/session-lessons/src/finish.ps1"
 }
+# A pre-commit hook that fails every commit in the meta repo.
+reject_commits() {
+  mkdir -p "$META/.git/hooks"
+  printf '#!/bin/sh\necho "hook says no" >&2\nexit 1\n' > "$META/.git/hooks/pre-commit"
+  chmod +x "$META/.git/hooks/pre-commit"
+}
 set_inst() { local t; t="$(mktemp)"; "${JQ[@]}" "$1" "$META/.claude/session-lessons/state/install.json" > "$t" && mv "$t" "$META/.claude/session-lessons/state/install.json"; }
 
 suite_daily() {
@@ -372,6 +378,32 @@ suite_daily() {
   check "missing claude exits non-zero" test "$rc" -ne 0
   check "missing claude recorded" bash -c '[[ "$1" == "claude not found at "* ]]' _ "$(lastrun .error)"
 
+  # L. A failed commit is an error, so status shows it and the next tick retries.
+  new_env "$T/l"; spread_mtimes; reject_commits
+  run_ut --yes >/dev/null 2>&1; rc=$?
+  check "failed commit exits non-zero" test "$rc" -ne 0
+  eq "$(lastrun .committed)" false "last run: not committed"
+  eq "$(lastrun .error)" "git commit failed: hook says no" "failed commit recorded"
+  rm -f "$META/.git/hooks/pre-commit"; clear_calls
+  run_ut --yes >/dev/null; rc=$?
+  eq "$rc" 0 "the next run exits 0"
+  eq "$(lastrun .committed)" true "the next run commits the earlier outputs"
+  eq "$(calls | wc -l | tr -d ' ')" 0 "the next run asks claude for nothing again"
+  # A failed git add (the live run's "Filename too long") is an error the same way.
+  new_env "$T/l2"; spread_mtimes; touch "$META/.git/index.lock"
+  run_ut --yes >/dev/null 2>&1; rc=$?
+  check "failed git add exits non-zero" test "$rc" -ne 0
+  check "failed git add recorded" bash -c '[[ "$1" == "git commit failed: fatal: Unable to create"* ]]' _ "$(lastrun .error)"
+  # A claude error is the earlier cause, so it wins over a failed commit.
+  new_env "$T/l3"; spread_mtimes; reject_commits; fake_ctl touch "$META/.fake-claude/exit1"
+  run_ut --yes >/dev/null 2>&1
+  check "a claude error wins over a failed commit" bash -c '[[ "$1" == "claude exited 1"* ]]' _ "$(lastrun .error)"
+  # A failed push is only a warning: the commit is safe and the next run pushes it.
+  new_env "$T/l4"; spread_mtimes; git -C "$META" remote add origin "$T/l4/no-such-remote.git"
+  run_ut --yes >/dev/null 2>&1; rc=$?
+  eq "$rc" 0 "a failed push still exits 0"
+  eq "$(lastrun .committed) $(lastrun .pushed) $(lastrun .error)" "true false null" "a failed push: committed, not pushed, no error"
+
   rm -rf "$T"
 }
 
@@ -477,6 +509,12 @@ suite_weekly() {
   check "a failed weekly run exits non-zero" test "$rc" -ne 0
   check "weekly error recorded" bash -c '[[ "$(jq -r .error "$1")" == "claude exited 1"* ]]' _ "$META/.claude/session-lessons/state/last-run-weekly.json"
 
+  # A failed commit in a weekly run is an error too.
+  weekly_env "$T/y"; reject_commits
+  run_ut --job weekly --yes >/dev/null 2>&1; rc=$?
+  check "a weekly run whose commit fails exits non-zero" test "$rc" -ne 0
+  eq "$(jq -r .error "$META/.claude/session-lessons/state/last-run-weekly.json")" "git commit failed: hook says no" "weekly commit failure recorded"
+
   # Give-up: a batch that fails 3 times is given up and passed.
   weekly_env "$T/g"; set_cfg '.weeklyBatchChars = 50'
   fake_ctl bash -c "echo 2026-10-01_a.md > '$META/.fake-claude/weekly-bad'"
@@ -504,7 +542,9 @@ cli_env() {
   spread_mtimes
   cp "$HERE/fake-claude.sh" "$base/bin/claude"; chmod +x "$base/bin/claude"
   cp "$HERE/fake-claude.ps1" "$base/bin/claude.ps1"
-  CLI_PATH="$base/bin:$PATH"
+  # Folders with a real claude.exe are left out: install prefers it to the fake.
+  local d; CLI_PATH="$base/bin"
+  while IFS= read -r d; do [[ -e "$d/claude.exe" ]] || CLI_PATH+=":$d"; done < <(tr ':' '\n' <<<"$PATH")
   if [[ "$SHELL_UT" == pwsh ]]; then CLI_ROOTS="$(native "$FX/claude");$(native "$FX/claude_devcontainer")"
   else CLI_ROOTS="$FX/claude:$FX/claude_devcontainer"; fi
 }
@@ -554,6 +594,11 @@ suite_cli() {
   eq "$(grep -c 'session-lessons' "$META/.gitignore")" 3 "install adds 3 .gitignore lines"
   check "the one-time archive covers sessions on disk" has_archive "$U1"
   check "nothing ran yet: no daily cursor" test ! -e "$(H_)/state/daily.cursor"
+  if [[ "$SHELL_UT" == pwsh && "$(uname -s)" == MINGW* ]]; then
+    # npm installs ship a claude.ps1 shim that does forward piped input.
+    check "install falls back to the first claude command without a claude.exe" \
+      bash -c '[[ "$1" == *\\bin\\claude.ps1 ]]' _ "$(ijq .claudePath)"
+  fi
 
   # B. status, after a first manual run, with a given-up entry and an error.
   cli_ut run --meta-dir "$META" --yes >/dev/null
@@ -713,6 +758,15 @@ EOF
   # cannot be wrapped).
   local wide; wide="$(grep -vF -e "$T" -e "$(native "$T")" -e "$MEMBER" "$CLI_OUT" | "${JQ[@]}" -Rr 'select(length > 80)' | head -3)"
   eq "$wide" "" "every CLI line fits 80 columns"
+
+  # Windows: a native claude.exe wins over a claude.ps1 wrapper earlier on PATH,
+  # which may not forward the transcript piped to it. The exe never runs.
+  if [[ "$SHELL_UT" == pwsh && "$(uname -s)" == MINGW* ]]; then
+    cli_env "$T/exe"; mkdir -p "$T/exe/exe"; cp "$(type -P true)" "$T/exe/exe/claude.exe"
+    CLI_PATH="$T/exe/bin:$T/exe/exe:${CLI_PATH#*:}"
+    cli_ut install --meta-dir "$META" --no-schedule --no-archive --yes >/dev/null
+    check "install prefers claude.exe to a claude.ps1 wrapper" bash -c '[[ "$1" == *\\exe\\claude.exe ]]' _ "$(ijq .claudePath)"
+  fi
 
   rm -rf "$T"
 }

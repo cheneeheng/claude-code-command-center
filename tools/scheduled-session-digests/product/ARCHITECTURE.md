@@ -1,130 +1,116 @@
 # scheduled-session-digests — Architecture
 
-Unattended Claude Code automations that run on a schedule and write output into a shared local git
-repo (`claude-meta`), optionally pushed to a remote. Four independently installable schedulers —
-`daily-summary`, `daily-lessons`, `weekly-lessons`, and `git-sync` (called by the other three).
-Each of the first three runs via **either or both** of two mechanisms: an unattended **cron**
-trigger (`claude --print`) or an on-demand **skill** that runs in an interactive session. Both
-mechanisms consume the same **prepare** script, which is the single owner of the scan/stage logic.
+## Overview
 
-## System context
-
-Schedulers read Claude Code's transcripts, produce markdown digests under `claude-meta`, and let
-`git-sync` version them.
+Every Claude Code session you finish becomes a lessons-learned file, and every week the new lessons
+merge into one master file, in a local git repo you own, without you doing anything after install.
 
 ```mermaid
 flowchart LR
-    sched["Task Scheduler / cron"] -->|fire trigger| digests((scheduled-session-digests))
-    you([You]) -->|"/session-digest-<name> in meta repo"| digests
-    transcripts["~/.claude/projects/**/*.jsonl<br/>(+ .claude_devcontainer)"] --> digests
-    env["$C4_CLAUDE_META_DIR"] -. locates .-> meta
-    digests -->|write .md digests| meta["claude-meta<br/>(local git repo)"]
-    digests -->|git-sync| meta
-    meta -->|push if remote set| remote["git remote (optional)"]
+    sessions([Your sessions]) --> clean[Cleaned transcript] --> claude[Headless Claude] --> lessons[Lessons files] --> master[Master lessons]
 ```
 
 ## Components
 
-The two daily schedulers share one parameterized prepare/trigger pair (`lib/`); weekly-lessons has
-its own pair with the same shape. Triggers are thin consumers of the prepare scripts, so the cron
-and skill mechanisms cannot drift apart. `git-sync` is the sole writer of git history.
+The CLI installs a copy of `src/` into the meta repo. An hourly scheduled entry runs it, and it
+finds the meta repo from its own location.
 
 ```mermaid
-flowchart TD
-    setup["setup.ps1 / setup.sh<br/>interactive install: pick scheduler × mechanism<br/>writes scheduler-config.json · registers tasks/cron"]
-
-    subgraph shared["lib/ (shared by daily-summary and daily-lessons)"]
-        prep["daily-digest-prepare &lt;scheduler&gt;<br/>scan · filter · stage inputs + manifest.json"]
-        trig["daily-digest-trigger &lt;scheduler&gt;<br/>prepare → claude --print per job → cursor → git-sync"]
+flowchart LR
+    you([You]) -->|install / run / status / uninstall| cli[lessons.ps1 · lessons.sh]
+    tasks([Task Scheduler / cron]) -->|hourly: run -Scheduled| run
+    subgraph meta [claude-meta · local git repo]
+        cli -->|copies src, writes config + state/install.json| run[run · lock, due rule, preview]
+        run -->|daily| prep[prepare · scan, clean, archive, stage]
+        run -->|weekly| prepw[prepare-weekly · titles + new files, in batches]
+        prep -->|manifest + staged inputs| run
+        prepw -->|manifest + batch inputs| run
+        run -->|answer per session or batch| fin[finish · finish-weekly · split, validate, move, cursors]
+        fin -->|one commit per run| sync[git-sync]
     end
-    skill["skills/session-digest-<name><br/>coordinator: prepare → 1 subagent per job → cursor → git-sync"]
-    prompt["<scheduler>.md prompt template<br/>({{INPUT_FILE}}/{{OUTPUT_FILE}} placeholders)"]
-    weekly["weekly-lessons<br/>prepare + trigger, same shape<br/>single-pass harvest of lessons files"]
-    gitsync["git-sync<br/>add -A · timestamped commit · push if remote"]
-
-    setup --> shared
-    setup --> weekly
-    trig --> prep
-    skill --> prep
-    trig -->|substitute paths| prompt
-    trig --> gitsync
-    skill --> gitsync
-    weekly --> gitsync
+    transcripts(["~/.claude/projects/**/*.jsonl"]) -->|read only| prep
+    run -->|"stdin: transcript, tools off, not saved as a session"| claude(["claude --print"])
+    claude -->|stdout answer| run
+    sync -->|push when a remote exists| remote([git remote, optional])
 ```
 
-## Key flow — daily digest, both mechanisms
+## Key flow — one daily run
 
-One scan/stage implementation; the mechanisms diverge only in who calls Claude — the cron trigger
-loops `claude --print` over the manifest, the skill fans the same manifest out to subagents.
+One `claude` call per session asks for every extraction the session still needs. Only validated
+parts are moved into place.
 
 ```mermaid
 sequenceDiagram
-    participant Sc as Scheduler / Session
-    participant T as trigger | skill
-    participant P as daily-digest-prepare
-    participant J as JSONL transcripts
-    participant CL as Claude (print | subagents)
+    participant R as run
+    participant P as prepare
+    participant C as claude --print
+    participant F as finish
     participant G as git-sync
     participant M as claude-meta
 
-    Sc->>T: fire
-    T->>P: run prepare <scheduler>
-    P->>P: cutoff = cursor file (.claude/<scheduler>-cursor)
-    P->>J: find *.jsonl with mtime > cutoff (skip meta dir)
-    loop per chat
-        P->>P: extract title/cwd + post-cutoff transcript
-        P->>P: skip if already digested or below thresholds (turns/chars)
-        P->>M: stage <uuid>.md in .claude/scheduled-session-digests/<scheduler>/
+    R->>M: take state/run.lock (pid + start time)
+    R->>P: cutoff = cursor, or now - firstRunDays
+    P->>P: scan, skip subagent/sidechain/meta-repo sessions, settle 60 min
+    P->>M: archive cleaned transcript (Cleanup: v1)
+    P->>M: stage input + manifest (needed extractions, cap when scheduled)
+    loop per staged session
+        R->>C: frame + needed sections as the prompt, transcript on stdin
+        C-->>R: one marked part per extraction, on stdout
+        Note over R: non-zero exit: record error, stop, count nothing
     end
-    P->>M: write manifest.json (jobs oldest-first, cursorEpoch)
-    loop per manifest job
-        T->>CL: claude --print (cron) | subagent (skill)
-        CL->>M: write daily-*/<YYYY>/<MM>/<date>_<uuid>[_title].md
-    end
-    T->>M: advance cursor over verified outputs only
-    T->>G: git-sync <scheduler>
-    G->>M: add -A, commit "<label>: <ts>", push if remote
-    T->>M: delete staging dir
+    R->>F: finish
+    F->>M: split, validate each part, move valid parts into place
+    F->>M: attempts, given-up, cursor = min(cursorEpoch, oldest undone - 1)
+    F->>G: commit (a failed add/commit is the run's error)
+    F->>M: last-run-daily.json
 ```
 
 ## Data model
 
-The transient staging area (gitignored, reset per run, deleted by the consumer) and the durable
-digest tree. The cursor files live outside the staging dir — they are state, not temp.
+What the tool keeps in the meta repo. `config.json` is committed and shared. `state/` is per
+machine and gitignored.
 
 ```mermaid
 erDiagram
-    SCHEDULER ||--o{ DIGEST_FILE : "produces"
-    SCHEDULER ||--|| SCHED_CONFIG : "reads thresholds"
-    SCHEDULER ||--|| CURSOR : "advances after verified outputs"
-    PREPARE ||--|| MANIFEST : "writes"
-    MANIFEST ||--o{ JOB : "one per chat, oldest-first"
-    JOB ||--|| DIGEST_FILE : "claude/subagent writes"
+    CONFIG ||--o{ EXTRACTION : "enables"
+    EXTRACTION ||--o{ OUTPUT_FILE : "one per session, in outputDir"
+    EXTRACTION ||--o| MASTER_FILE : "weekly merge"
+    SESSION ||--|| ARCHIVE_FILE : "cleaned transcript"
+    SESSION ||--o{ OUTPUT_FILE : "one per extraction"
+    STATE ||--|| INSTALL : "install.json"
+    STATE ||--o{ CURSOR : "daily, weekly-<extraction>"
+    STATE ||--o{ LAST_RUN : "daily, weekly"
 
-    SCHED_CONFIG {
-        int minUserTurns "default 2"
-        int minTranscriptChars "default 500"
-        string triggerTime
+    CONFIG {
+        string dailyAt "03:00"
+        int maxSessionsPerRun "20, scheduled runs only"
+        int maxAttempts "3, then given up"
+        int settleMinutes "60"
+        int weeklyBatchChars "400000"
+    }
+    EXTRACTION {
+        string name "lessons is the one shipped"
+        string prompt "extract/<name>.md"
+        string outputDir "lessons-learned"
+    }
+    INSTALL {
+        string claudePath "first claude.exe, else first claude"
+        string claudeNoToolsArgs "tools off, no session saved"
+        string taskName "SessionLessons-<8 hex>"
+        string installed "what install changed, for uninstall"
     }
     CURSOR {
-        string path ".claude/<scheduler>-cursor"
-        long epoch "mtime of newest fully-handled source file"
+        long epoch "whole Unix seconds; cutoff is strict"
     }
-    MANIFEST {
-        string path ".claude/scheduled-session-digests/<scheduler>/manifest.json"
-        long cursorEpoch "written to cursor after a fully successful run"
+    LAST_RUN {
+        int processed
+        int failed
+        bool committed
+        string error "claude exited N, claude not found, git commit failed"
     }
-    JOB {
-        string uuid
-        string date
-        string title
-        string project
-        long mtime "source chat mtime (epoch)"
-        string input "staged <uuid>.md"
-        string output "target digest path"
-    }
-    DIGEST_FILE {
-        string path "daily-*/YYYY/MM/<date>_<uuid>[_title].md"
+    ARCHIVE_FILE {
+        string path "transcripts/yyyy/MM/<date>_<uuid>.md"
+        string cleanup "Cleanup: v1"
     }
 ```
 
@@ -132,8 +118,9 @@ erDiagram
 
 ### 2026-07-02 — Two run mechanisms per scheduler: unattended cron and interactive skill
 
-**Status:** Accepted (amended 2026-07-16: the mechanisms now share the prepare script instead of
-duplicating discovery logic)
+**Status:** Superseded by 2026-10-11 — One headless background pipeline with one CLI
+(amended 2026-07-16: the mechanisms now shared the prepare script instead of duplicating
+discovery logic)
 **Context:** Fully unattended digests need programmatic `claude --print`, which consumes
 programmatic credit that may be rate-limited. Users sometimes want the same digest run from an
 interactive session instead, using that session's capacity.
@@ -145,7 +132,8 @@ is a single-pass harvest — preserve that shape.
 
 ### 2026-07-02 — `git-sync` is the sole writer of `claude-meta` history
 
-**Status:** Accepted
+**Status:** Accepted (amended 2026-10-12: a failed add or commit is now the run's error, see
+2026-10-12 — A failed commit is a run error)
 **Context:** Three schedulers all need to commit their output to `claude-meta`. Duplicating
 add/commit/push into each would fragment the git logic and risk inconsistent commit messages or
 partial commits.
@@ -159,7 +147,7 @@ interrupted run never lands a half-finished commit.
 
 ### 2026-07-02 — Four independently installable schedulers, each with its own README
 
-**Status:** Accepted
+**Status:** Superseded by 2026-10-11 — One headless background pipeline with one CLI
 **Context:** The monorepo rule is one README per member, but these four schedulers install, run, and
 release independently and each has non-trivial config/output worth documenting on its own.
 **Decision:** Keep each scheduler in its own folder (`daily-summary/`, `daily-lessons/`,
@@ -172,7 +160,8 @@ to maintain and a two-platform sync obligation for every behaviour change.
 
 ### 2026-07-16 — Triggers consume the prepare scripts; one shared daily implementation
 
-**Status:** Accepted (supersedes the prepare/trigger duplication noted in the 2026-07-02 decision)
+**Status:** Superseded by 2026-10-11 — One headless background pipeline with one CLI (the single
+owner of scan and stage survives as `src/prepare`)
 **Context:** The cron triggers and skill prepare scripts each carried an independent copy of the
 scan/extract logic per scheduler per language (~1200 duplicated lines), with divergent temp-file
 locations (`.claude/scripts/` inputs, `/tmp` mktemps, `docs/claude_logs/` staging vs
@@ -191,7 +180,8 @@ one gitignored staging root and are cleaned up by the consumer even on crash (tr
 
 ### 2026-07-16 — Cursor files replace output-mtime cutoffs
 
-**Status:** Accepted (supersedes the 2026-07-02 "cutoff = mtime of newest digest" decision)
+**Status:** Superseded by 2026-10-11 — The cursor never skips undone work (cursor files kept,
+moved to `state/`, with a new advancing rule)
 **Context:** Deriving the cutoff from output-file mtimes is fragile: a crash mid-run advances the
 cutoff past unprocessed chats, and touched/moved digests corrupt it.
 **Decision:** Each scheduler keeps `.claude/<scheduler>-cursor` — the Unix-epoch mtime (whole
@@ -202,3 +192,104 @@ UUID-already-digested check remains as a safety net. Skip-short thresholds
 (`minUserTurns`/`minTranscriptChars` from `scheduler-config.json`) are unchanged.
 **Consequences:** A crashed or failed job is retried exactly; completed work is never redone. First
 run after upgrade rescans history once (the UUID check makes it a cheap re-filter).
+
+### 2026-10-11 — One headless background pipeline with one CLI
+
+**Status:** Accepted
+**Context:** The first-run audit found the four-scheduler install hard to use: interactive
+questions, two mechanisms, an environment variable needing a new terminal, and no status. The
+product decision of 2026-10-11 made the product headless, for individual users, lessons only.
+**Decision:** One CLI (`lessons.ps1` on Windows, `lessons.sh` on Linux) with `install`, `run`,
+`status`, `uninstall`. One hourly scheduled entry per meta repo runs whichever of the daily and
+weekly jobs is due, so missed runs catch up. The installed scripts find the meta repo from their
+own location. The interactive skills and daily-summary are removed, and one README replaces four.
+**Consequences:** Nothing to do after install. The first scheduled run waits for the first
+`dailyAt`, so a dry run comes before any unattended spend.
+
+### 2026-10-11 — One claude call per session carries every extraction
+
+**Status:** Accepted
+**Context:** A second extraction (decisions) is planned. A call per extraction would pay for the
+same transcript twice.
+**Decision:** An extraction is a config entry plus a prompt section. The prompt is `daily-frame.md`
+plus each still-needed section. The answer is split on whole-line `<<<extraction:NAME>>>` markers,
+and each part is validated on its own. A valid part is kept even when another fails, so a retry
+asks only for what is missing.
+**Consequences:** A new extraction can be backfilled with `run -All` without paying for lessons
+again. All extractions in one call share one model.
+
+### 2026-10-11 — Claude writes nothing and uses no tools
+
+**Status:** Accepted
+**Context:** The old prompts had Claude write its own output file, so a killed run could leave a
+partial file, and the meta repo's settings allow `git` and `mkdir`.
+**Decision:** Every call runs with `--tools "" --no-session-persistence` and answers on stdout.
+The scripts write the answer to staging, validate it, and move it into place. `--bare` is not
+used, because it reads only `ANTHROPIC_API_KEY`, never the user's login.
+**Consequences:** A killed run never leaves a partial output or a damaged master file. Headless
+runs are never saved as sessions, so the tool never digests its own runs.
+
+### 2026-10-11 — The cursor never skips undone work
+
+**Status:** Accepted
+**Context:** A cap per scheduled run, `claude` outages, and invalid answers can each leave some
+sessions undone inside a scanned range.
+**Decision:** After a run, the cursor becomes the smaller of `cursorEpoch` and the oldest undone
+session's mtime minus 1 second. Only runs whose cutoff is at or before the stored cursor move it.
+A non-zero `claude` exit stops the run and counts no attempt. An invalid answer counts one, and
+after `maxAttempts` the session is given up for that extraction.
+**Consequences:** An outage never gives up sessions, and unattended spend per run is bounded by
+the cap.
+
+### 2026-10-11 — Cleaned transcripts are archived, with a versioned cleanup
+
+**Status:** Accepted
+**Context:** Claude Code deletes old raw transcripts, and the planned decisions extraction needs
+to reach past them.
+**Decision:** Each session's cleaned transcript is kept in `transcripts/yyyy/MM/`. `[USER]` holds
+only what the user typed, and AskUserQuestion questions, options, and answers are kept. The
+header line `Cleanup: v1` names the rule set, and any rule change bumps it.
+**Consequences:** Later extractions can tell old copies apart. Raw JSONL is not archived (889 MB
+on the owner's machine).
+
+### 2026-10-11 — The weekly merge sends titles, not the master file
+
+**Status:** Accepted
+**Context:** The owner's master file is 442 KB with 716 lessons, too large to send or return
+every week.
+**Decision:** Each weekly batch holds the existing `### ` titles grouped by section plus at most
+`weeklyBatchChars` of new lessons files. Claude returns only new lessons, and the script merges
+them, skipping titles that already exist.
+**Consequences:** The weekly cost grows with new lessons, not with the master file.
+
+### 2026-10-11 — PowerShell and Bash twins, proven equivalent
+
+**Status:** Accepted
+**Context:** Windows and Linux users, and no single runtime both have without an install
+(PowerShell 7 on Windows, Bash 4 with `jq` on Linux).
+**Decision:** Every rule exists in both shells, each file names its twin in a `Cross-reference:`
+comment, and the `equivalence` suite diffs their outputs on the same fixtures.
+**Consequences:** Every behaviour change is the same edit twice plus a passing `equivalence` run.
+
+### 2026-10-12 — Install prefers the native claude.exe
+
+**Status:** Accepted
+**Context:** The live run found `install` had recorded a `claude.ps1` wrapper earlier on the
+owner's PATH. PowerShell pipes input into a `.ps1` as `$input`, and that wrapper never passed it on,
+so every call ran on an empty transcript. A `.cmd` target was rejected: cmd cuts a multi-line
+argument at its first newline.
+**Decision:** On Windows, `claudePath` is the first `claude.exe` on PATH, else the first `claude`
+command (an npm `claude.ps1` shim does forward input). Bash is unchanged: a Linux shell wrapper
+inherits stdin.
+**Consequences:** A user wrapper's own flags do not apply to headless runs.
+
+### 2026-10-12 — A failed commit is a run error
+
+**Status:** Accepted
+**Context:** In the live run a commit failed ("Filename too long"), and the run still reported
+no error, so the failure showed only in the log.
+**Decision:** A failed `git add` or `git commit` becomes the run's `error` when there is no
+`claude` error, and the run exits non-zero. The due rule retries at the next tick. A failed push
+stays a warning, because the commit is safe and the next run pushes it.
+**Consequences:** `status` shows a failed commit. While a commit keeps failing, the job is due
+every hour, at no `claude` cost.

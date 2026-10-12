@@ -61,7 +61,10 @@ function Get-OurTask { Get-ScheduledTask -TaskPath $taskFolder -TaskName $taskNa
 
 # ------------------------------------------------------------------------------
 function Invoke-Install {
-    $claude = (Get-Command claude -ErrorAction SilentlyContinue).Source
+    # The native claude.exe first: a claude.ps1 wrapper earlier on PATH may not
+    # forward piped input, and run.ps1 sends the transcript on stdin.
+    $claude = (@(Get-Command claude.exe -CommandType Application -All -ErrorAction SilentlyContinue) +
+        @(Get-Command claude -ErrorAction SilentlyContinue) | Select-Object -First 1).Source
     if (-not $claude) { Stop-Cli 'claude is not on PATH. Install Claude Code first.' }
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Stop-Cli 'git is not on PATH.' }
     Use-Lib

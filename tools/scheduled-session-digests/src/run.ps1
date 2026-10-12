@@ -125,8 +125,9 @@ try {
                 }
             } finally { Pop-Location }
         }
+        # finish-weekly exits 1 when the run has an error: claude's, or a failed commit.
         & $finW -Close -Started $started -Trigger $trigger -ErrorText $errorText -Log $script:SlLog
-        if ($errorText) { $exitCode = 1 }
+        if ($LASTEXITCODE -ne 0) { $exitCode = 1 }
     } else {
 
     # --- daily -------------------------------------------------------------------
@@ -184,8 +185,9 @@ try {
         } finally { Pop-Location }
     }
 
+    # finish exits 1 when the run has an error: claude's, or a failed commit.
     & (Join-Path $PSScriptRoot 'finish.ps1') -Started $started -Trigger $trigger -ErrorText $errorText -Log $script:SlLog
-    if ($errorText) { $exitCode = 1 }
+    if ($LASTEXITCODE -ne 0) { $exitCode = 1 }
     }
 } finally {
     Exit-Lock

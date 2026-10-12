@@ -88,6 +88,7 @@ foreach ($p in $SlConfig.extractions.PSObject.Properties) {
 if ($ErrorText) { Write-Say "Error: $ErrorText" }
 
 $sync = & (Join-Path $PSScriptRoot 'git-sync.ps1') -Job daily -Log $script:SlLog
+if (-not $ErrorText -and $sync.Error) { $ErrorText = $sync.Error; Write-Say "Error: $ErrorText" }
 
 $lastRun = [ordered]@{
     job = 'daily'; startedAt = $Started; finishedAt = (Get-NowEpoch); trigger = $Trigger
@@ -99,3 +100,5 @@ Write-Utf8 (Join-Path $SlState 'last-run-daily.json') (($lastRun | ConvertTo-Jso
 
 Remove-Item -Recurse -Force -LiteralPath $dir
 if (-not (Get-ChildItem -LiteralPath $SlStaging -Force)) { Remove-Item -Force -LiteralPath $SlStaging }
+if ($ErrorText) { exit 1 }
+exit 0

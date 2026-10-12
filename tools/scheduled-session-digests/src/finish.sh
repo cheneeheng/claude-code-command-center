@@ -95,7 +95,8 @@ while IFS= read -r e; do
 done < <(cfg '.extractions | to_entries[] | select(.value.enabled) | .key')
 [[ -z "$ERROR" ]] || say "Error: $ERROR"
 
-read -r committed pushed < <(bash "$SL_SRC/git-sync.sh" daily "$SL_LOG")
+read -r committed pushed sync_error < <(bash "$SL_SRC/git-sync.sh" daily "$SL_LOG")
+if [[ -z "$ERROR" && -n "$sync_error" ]]; then ERROR="$sync_error"; say "Error: $ERROR"; fi
 
 "${JQ[@]}" -n --argjson started "$STARTED" --argjson finished "$(now_epoch)" --arg trigger "$TRIGGER" \
   --argjson processed "$processed" --argjson results "$results" --argjson failed "$failed" \
@@ -107,3 +108,4 @@ read -r committed pushed < <(bash "$SL_SRC/git-sync.sh" daily "$SL_LOG")
     error: (if $error == "" then null else $error end)}' > "$SL_STATE/last-run-daily.json"
 
 rm -rf "$DIR"; rmdir "$SL_STAGING" 2>/dev/null || true
+[[ -z "$ERROR" ]] || exit 1

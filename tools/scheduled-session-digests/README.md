@@ -64,7 +64,9 @@ keep that bounded:
   then asks before it starts.
 
 If `claude` fails (logged out, usage limit, network), the run stops at once and records the
-error. It doesn't count against any session. The next hourly check tries again.
+error. It doesn't count against any session. The next hourly check tries again. The same
+goes for a failed commit to the meta repo: `status` shows the error, and the next check
+commits what the failed run left uncommitted.
 
 ## Commands
 

@@ -118,8 +118,8 @@ if [[ "$JOB" == weekly ]]; then
       (( stop )) && break
     done
   fi
-  bash "$SL_SRC/finish-weekly.sh" --close --started "$STARTED" --trigger "$TRIGGER" --error "$ERROR" --log "$SL_LOG"
-  [[ -z "$ERROR" ]] || exit 1
+  # finish-weekly exits 1 when the run has an error: claude's, or a failed commit.
+  bash "$SL_SRC/finish-weekly.sh" --close --started "$STARTED" --trigger "$TRIGGER" --error "$ERROR" --log "$SL_LOG" || exit 1
   exit 0
 fi
 
@@ -189,5 +189,5 @@ else
   done < <("${JQ[@]}" -r '.jobs[] | [.uuid, .date, (.needed | join(","))] | @tsv' "$MANIFEST")
 fi
 
-bash "$SL_SRC/finish.sh" --started "$STARTED" --trigger "$TRIGGER" --error "$ERROR" --log "$SL_LOG"
-[[ -z "$ERROR" ]] || exit 1
+# finish exits 1 when the run has an error: claude's, or a failed commit.
+bash "$SL_SRC/finish.sh" --started "$STARTED" --trigger "$TRIGGER" --error "$ERROR" --log "$SL_LOG" || exit 1

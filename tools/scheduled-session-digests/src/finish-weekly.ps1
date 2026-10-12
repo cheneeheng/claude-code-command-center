@@ -83,6 +83,7 @@ foreach ($mf in @(Get-ChildItem -Path (Join-Path $SlStaging 'weekly-*/manifest.j
 if ($ErrorText) { Write-Say "Error: $ErrorText" }
 
 $sync = & (Join-Path $PSScriptRoot 'git-sync.ps1') -Job weekly -Log $script:SlLog
+if (-not $ErrorText -and $sync.Error) { $ErrorText = $sync.Error; Write-Say "Error: $ErrorText" }
 
 $lastRun = [ordered]@{
     job = 'weekly'; startedAt = $Started; finishedAt = (Get-NowEpoch); trigger = $Trigger
@@ -94,3 +95,5 @@ Write-Utf8 (Join-Path $SlState 'last-run-weekly.json') (($lastRun | ConvertTo-Js
 
 Get-ChildItem -Path (Join-Path $SlStaging 'weekly-*') -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 if ((Test-Path -LiteralPath $SlStaging) -and -not (Get-ChildItem -LiteralPath $SlStaging -Force)) { Remove-Item -Force -LiteralPath $SlStaging }
+if ($ErrorText) { exit 1 }
+exit 0

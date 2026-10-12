@@ -92,7 +92,8 @@ for m in "$SL_STAGING"/weekly-*/manifest.json; do
 done
 [[ -z "$ERROR" ]] || say "Error: $ERROR"
 
-read -r committed pushed < <(bash "$SL_SRC/git-sync.sh" weekly "$SL_LOG")
+read -r committed pushed sync_error < <(bash "$SL_SRC/git-sync.sh" weekly "$SL_LOG")
+if [[ -z "$ERROR" && -n "$sync_error" ]]; then ERROR="$sync_error"; say "Error: $ERROR"; fi
 
 "${JQ[@]}" -n --argjson started "$STARTED" --argjson finished "$(now_epoch)" --arg trigger "$TRIGGER" \
   --argjson processed "$processed" --argjson results "$results" --argjson failed "$failed" \
@@ -103,3 +104,4 @@ read -r committed pushed < <(bash "$SL_SRC/git-sync.sh" weekly "$SL_LOG")
     error: (if $error == "" then null else $error end)}' > "$SL_STATE/last-run-weekly.json"
 
 rm -rf "$SL_STAGING"/weekly-*; rmdir "$SL_STAGING" 2>/dev/null || true
+[[ -z "$ERROR" ]] || exit 1
