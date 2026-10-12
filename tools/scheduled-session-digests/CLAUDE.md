@@ -69,5 +69,6 @@ and every session's cleaned transcript is archived. PowerShell 7.4+ on Windows, 
 
 ## Conventions
 
-- `VERSION` tracks this component's version. It has no release tag or CHANGELOG yet.
+- Version lives in `VERSION`; release tag `ssd-vX.Y.Z` (see `docs/releasing.md`), changes in
+  `CHANGELOG.md`.
 - New decisions go in the repo-root `.agents_workspace/DECISION_LOG.md`.
