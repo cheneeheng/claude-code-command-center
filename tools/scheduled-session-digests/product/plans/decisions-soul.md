@@ -1,6 +1,6 @@
 ---
 title: Add a decisions extraction that keeps a bounded SOUL.md and a GitHub Issues question queue
-status: ready
+status: building
 created: 2026-10-13
 ---
 
@@ -150,8 +150,11 @@ the `none` form counts as valid and nothing-found. Files land where every extrac
   has no `<outputDir>/answered/issue-*.md` whose first line is `## <that title>`, or
   `(none)`), then `# New session files` (R5). It collects files from `<outputDir>` recursively
   as today, which takes in `answered/`, and skips `<outputDir>/questions/`.
-- **Current file at call time.** `run` prepends `# Current file` plus SOUL.md's current text to
-  each batch input just before the call, so batch k sees batch k-1's result. The text is cut at
+- **Current file at call time.** `prepare-weekly` writes a `# Current file` section holding a
+  `{{CURRENT_FILE}}` line right after `Run date`, and `run` replaces that line with SOUL.md's
+  current text just before each call (into `batch-<k>.md.call`), so batch k sees batch k-1's
+  result and the input still starts with `Run date`. `run` also fills `{{MAX_LINES}}` in the
+  merge prompt from `weekly.maxLines`. The text is cut at
   the first line equal to `## When to ask` (that line and everything after it dropped), so the
   model never sees the script's section (R2). No SOUL.md yet: `(none yet)`.
 - **Answer.** Two parts on the existing marker convention, split with the existing
@@ -213,8 +216,8 @@ each mode logs one line and does nothing.
   `## <issue title>`, then the issue body as **Situation**, only the owner's comments as
   **Reason**, and `**Reason source:** stated`. An issue closed with no owner comment is skipped
   and rechecked next week.
-- **`open`** runs inside `finish-weekly -Close`, before the fixed section and `git-sync`. It
-  refuses with a warning when `gh repo view --json visibility` is not `PRIVATE`. It reads every
+- **`open`** runs inside `finish-weekly -Close`, before the fixed section and `git-sync`. Like
+  `collect`, it first creates the label when missing (`gh label create --force`). It refuses with a warning when `gh repo view --json visibility` is not `PRIVATE`. It reads every
   `### ` block in `<outputDir>/questions/*.md`, skips titles already in
   `gh issue list --state all --label <label> --limit 1000 --json title` (R4), and creates the rest
   with the label. Idempotent, so a failed send retries next week at no `claude` cost.
@@ -229,9 +232,10 @@ each mode logs one line and does nothing.
 
 ### CLI
 
-- When `decisions` is enabled, `install` and `status` both print (R17):
-  `Add this line to ~/.claude/CLAUDE.md to load your decisions: @<meta>/SOUL.md`, with `<meta>`
-  written with forward slashes on every platform. Disabled: neither prints it.
+- When `decisions` is enabled, `install` and `status` both print (R17)
+  `Add this line to ~/.claude/CLAUDE.md to load your decisions:` and, on the next line,
+  `  @<meta>/SOUL.md`, with `<meta>` written with forward slashes on Windows. Disabled:
+  neither prints it.
 - `status` adds `decisions: SOUL.md <n> lines, <k> open question(s)` when enabled (open count
   from `gh`, or `unknown` when the queue is not active).
 - README: how to enable (`"enabled": true` under `extractions.decisions` in
@@ -275,7 +279,11 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
   `pwsh lessons.ps1 run -MetaDir <scratch> -Since <a date 1 to 2 days back> -DryRun`, runs the
   same command with `-Yes` when it shows 5 to 10 sessions, and accepts the
   `<scratch>/decisions/` records before Phase 2.
-- **Status:** todo
+- **Status:** todo. Automated part passed on 2026-10-13: `tests/run.sh bash daily` "passed 84,
+  failed 0", `pwsh daily` "passed 84, failed 0", `bash cli` "passed 65, failed 0", `pwsh cli`
+  "passed 67, failed 0", `bash equivalence` "passed 16, failed 0". The manual part (the owner
+  reviews real records) is not run: it spends real `claude` calls, and the owner chose to build
+  Phases 2 to 4 first.
 
 ### Phase 2: Weekly replace merge into SOUL.md
 
@@ -293,7 +301,10 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
   `questions` part keeps a valid SOUL.md; an invalid lessons batch still lets the decisions merge
   run; the final SOUL.md ends with the short fixed section; lessons `append` output is
   byte-identical to before; `equivalence` runs `cmp` on SOUL.md and the questions files.
-- **Status:** todo
+- **Status:** done, 2026-10-13: `bash tests/run.sh bash weekly` "passed 55, failed 0", `pwsh
+  weekly` "passed 55, failed 0", `bash equivalence` "passed 28, failed 0". "Lessons `append`
+  output byte-identical to before" is shown by the unchanged lessons weekly cases passing, not
+  by a separate golden file.
 
 ### Phase 3: GitHub Issues question queue
 
@@ -311,7 +322,12 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
   nothing, warns, and SOUL.md keeps the short fixed section; `PRIVATE` gives the issue bullet
   naming the fixture repo; a failing fake `gh` leaves `error` null and sets `questionsWarning`;
   `-DryRun` never calls `gh`; `install` with no `gh` on PATH succeeds with `ghPath: null`.
-- **Status:** todo
+- **Status:** done, 2026-10-13: `bash tests/run.sh bash questions` "passed 25, failed 0", `pwsh
+  questions` "passed 25, failed 0", `bash equivalence` "passed 28, failed 0". The
+  no-`gh` install case lives in the `cli` suite (Phase 4's run), where a PATH without `gh` can
+  be built; it asserts `ghPath: null` only when that PATH has no `gh` (Windows here), and a gh
+  path otherwise (Linux, where gh shares `/usr/bin` with bash). A case where gh is signed in as
+  someone else was added.
 
 ### Phase 4: CLI and docs
 
@@ -323,7 +339,12 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
   weekly run; disabled `status` prints neither. Manual: the owner enables `decisions` in their
   real meta repo, runs `pwsh lessons.ps1 run -Job weekly -Yes` once, adds the import line, and
   confirms a new session can quote SOUL.md's first priority without reading any file.
-- **Status:** todo
+- **Status:** todo. Automated part passed on 2026-10-14, in the full runs on the final tree:
+  `bash tests/run.sh bash` (every suite plus equivalence) "passed 296, failed 0" and `bash
+  tests/run.sh pwsh` "passed 270, failed 0". The manual part (the owner's real meta repo, a
+  real weekly run, and a new session quoting SOUL.md) is not run. Built: README section, Key
+  Decision in `product/ARCHITECTURE.md`, CHANGELOG `Unreleased`, and the `questions` suite in
+  CI's Linux pwsh step.
 
 ### Phase 5: One-off interview
 
@@ -351,3 +372,8 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
 
 - 2026-10-13 Planned: status ready
 - 2026-10-13 Reviewed: Revise first, 5 blocking (shallow config merge drops `lessons.none` on upgrade, echoed When-to-ask section fails validation, per-batch questions file overwritten, `gh issue list` 30-item default breaks dedupe, merge never sees questions already asked)
+- 2026-10-13 Built Phase 2: `bash tests/run.sh bash weekly` / `pwsh weekly`, "passed 55, failed 0" each; `bash equivalence` "passed 28, failed 0"
+- 2026-10-13 Built Phase 3: `bash tests/run.sh bash questions` / `pwsh questions`, "passed 25, failed 0" each
+- 2026-10-13 Design changed: was "`run` prepends `# Current file` plus SOUL.md's current text to each batch input just before the call", now "`prepare-weekly` writes a `{{CURRENT_FILE}}` slot after `Run date`, `run` fills it per call", because the merge prompt says the input starts with `Run date`
+- 2026-10-13 Design changed: was "`install` and `status` both print (R17): `Add this line to ~/.claude/CLAUDE.md to load your decisions: @<meta>/SOUL.md`", now "the text line, then `  @<meta>/SOUL.md` on its own line", because the CLI keeps every non-path line within 80 columns
+- 2026-10-14 Built Phases 1-4 automated checks, full runs on the final tree: `bash tests/run.sh bash` "passed 296, failed 0", `bash tests/run.sh pwsh` "passed 270, failed 0"; Phases 1 and 4 stay todo for their manual checks

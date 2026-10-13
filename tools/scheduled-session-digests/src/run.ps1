@@ -93,6 +93,13 @@ try {
             if ($DryRun -or -not (Confirm-Run)) { return }
         }
         Open-Log 'weekly'
+        # Answers to earlier questions, read before staging so this week's merge sees them.
+        $qwarn = ''
+        foreach ($e in $exts) {
+            if ($SlConfig.extractions.$e.weekly.questions.enabled -ne $true) { continue }
+            $w = & (Join-Path $PSScriptRoot 'questions.ps1') collect -Ext $e -Log $script:SlLog
+            if ($w) { $qwarn = if ($qwarn) { "$qwarn; $w" } else { $w } }
+        }
         foreach ($e in $exts) {
             if ($null -eq $sto[$e]) { Write-Utf8 (Join-Path $SlState "weekly-$e.cursor") "$($cut[$e])`n"; $sto[$e] = $cut[$e] }
             & $prepW -Ext $e -Cutoff $cut[$e] -Mode stage -WriteCursor:($cut[$e] -le $sto[$e]) -Log $script:SlLog
@@ -106,12 +113,24 @@ try {
                 :exts foreach ($e in $exts) {
                     $mp = Join-Path $SlStaging "weekly-$e/manifest.json"
                     $prompt = (Get-Content -Raw (Join-Path $PSScriptRoot "prompts/$($SlConfig.extractions.$e.weekly.prompt)")).TrimEnd("`n")
-                    $count = @((Get-Content -Raw $mp | ConvertFrom-Json -AsHashtable).batches).Count
+                    $prompt = $prompt.Replace('{{MAX_LINES}}', "$($SlConfig.extractions.$e.weekly.maxLines)")
+                    $m0 = Get-Content -Raw $mp | ConvertFrom-Json -AsHashtable
+                    $count = @($m0.batches).Count
+                    $masterPath = Join-Path $SlMeta $m0.master
                     for ($k = 0; $k -lt $count; $k++) {
                         $m = Get-Content -Raw $mp | ConvertFrom-Json -AsHashtable
                         $b = $m.batches[$k]
                         $out = Join-Path $SlMeta $b.pending
-                        $code = Invoke-Claude (Join-Path $SlMeta $b.input) $out $prompt $SlConfig.models.weekly.model $SlConfig.models.weekly.effort
+                        $in = Join-Path $SlMeta $b.input
+                        if ($m0.mode -eq 'replace') {
+                            # The master as it is now (an earlier batch may have rewritten it),
+                            # without the section the script owns, goes where {{CURRENT_FILE}} is.
+                            $cur = if (Test-Path -LiteralPath $masterPath) { (Get-SoulBody ([IO.File]::ReadAllText($masterPath, $script:Utf8))).TrimEnd("`n") } else { '' }
+                            if (-not $cur) { $cur = '(none yet)' }
+                            Write-Utf8 "$in.call" ([IO.File]::ReadAllText($in, $script:Utf8).Replace('{{CURRENT_FILE}}', $cur))
+                            $in = "$in.call"
+                        }
+                        $code = Invoke-Claude $in $out $prompt $SlConfig.models.weekly.model $SlConfig.models.weekly.effort
                         $b.exit = $code
                         Write-Utf8 $mp (($m | ConvertTo-Json -Depth 6) + "`n")
                         if ($code -ne 0) {
@@ -119,14 +138,17 @@ try {
                             $errorText = "claude exited ${code}: $(Get-FirstErrorLine $out)"
                             break exts
                         }
+                        # Exit 3: an invalid answer ends this extraction's batches, and the
+                        # next extraction still runs. Anything else non-zero stops the run.
                         & $finW -Ext $e -Batch $k -Log $script:SlLog
+                        if ($LASTEXITCODE -eq 3) { break }
                         if ($LASTEXITCODE -ne 0) { break exts }
                     }
                 }
             } finally { Pop-Location }
         }
         # finish-weekly exits 1 when the run has an error: claude's, or a failed commit.
-        & $finW -Close -Started $started -Trigger $trigger -ErrorText $errorText -Log $script:SlLog
+        & $finW -Close -Started $started -Trigger $trigger -ErrorText $errorText -QuestionsWarning $qwarn -Log $script:SlLog
         if ($LASTEXITCODE -ne 0) { $exitCode = 1 }
     } else {
 

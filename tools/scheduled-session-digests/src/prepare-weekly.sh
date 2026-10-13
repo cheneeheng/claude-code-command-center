@@ -26,6 +26,11 @@ done
 
 OUT="$(cfg ".extractions[\"$EXT\"].outputDir")"
 MASTER="$(cfg ".extractions[\"$EXT\"].weekly.master")"
+NONE="$(cfg ".extractions[\"$EXT\"].none // empty")"
+# append: the master gains new entries (lessons). replace: claude rewrites the
+# whole master (decisions' SOUL.md); run puts its current text where the
+# {{CURRENT_FILE}} line is, just before each call.
+WMODE="$(cfg ".extractions[\"$EXT\"].weekly.mode // \"append\"")"
 LIMIT="$(cfg '.weeklyBatchChars')"
 DIR="$SL_STAGING/weekly-$EXT"
 RUN_DATE="$(date +%Y-%m-%d)"
@@ -37,7 +42,7 @@ if [[ -f "$GIVEN_UP" ]]; then while IFS= read -r k; do [[ -n "$k" ]] && GONE["$k
 mapfile -t CANDS < <(
   [[ -d "$SL_META/$OUT" ]] || exit 0
   cd "$SL_META"
-  find "$OUT" -type f -name '*.md' -print0 | while IFS= read -r -d '' f; do
+  find "$OUT" -type f -name '*.md' -not -path "$OUT/questions/*" -print0 | while IFS= read -r -d '' f; do
     m="$(mtime_epoch "$f")"; (( m > CUTOFF )) && printf '%s %s\n' "$m" "$f"
   done | LC_ALL=C sort -k1,1n -k2,2
 )
@@ -46,15 +51,39 @@ newest="$CUTOFF"; FILES=()
 for c in "${CANDS[@]}"; do
   m="${c%% *}"; f="${c#* }"; newest="$m"
   [[ -n "${GONE[weekly-$EXT:$f]:-}" ]] && continue
-  [[ "$EXT" == lessons ]] && grep -qF "$LESSONS_STUB" "$SL_META/$f" && continue
+  [[ -n "$NONE" ]] && grep -qF "$NONE" "$SL_META/$f" && continue
   FILES+=("$m $f")
 done
 
-# The master's titles, grouped under their headings.
-titles="(none yet)"
-if [[ -f "$SL_META/$MASTER" ]]; then
-  t="$(grep -E '^(## |### )' "$SL_META/$MASTER" || true)"
-  [[ -n "$t" ]] && titles="$t"
+# What precedes the new files. append: the master's titles, grouped under their
+# headings. replace: the current-file slot, then every "### " question title in
+# <outputDir>/questions/*.md (by file name, first occurrence) that no
+# <outputDir>/answered/issue-*.md answers (its first line is "## <title>").
+open_questions() {
+  local qd="$SL_META/$OUT/questions" ad="$SL_META/$OUT/answered" f l out=()
+  local -A seen=()
+  if [[ -d "$ad" ]]; then
+    for f in "$ad"/issue-*.md; do [[ -f "$f" ]] && seen["### $(head -n 1 "$f" | sed 's/^## //')"]=1; done
+  fi
+  if [[ -d "$qd" ]]; then
+    while IFS= read -r f; do
+      while IFS= read -r l || [[ -n "$l" ]]; do
+        [[ "$l" == "### "* && -z "${seen[$l]:-}" ]] || continue
+        seen[$l]=1; out+=("$l")
+      done < "$f"
+    done < <(find "$qd" -maxdepth 1 -type f -name '*.md' | LC_ALL=C sort)
+  fi
+  if (( ${#out[@]} )); then printf '%s\n' "${out[@]}"; else echo "(none)"; fi
+}
+if [[ "$WMODE" == replace ]]; then
+  head_text="# Current file"$'\n\n'"{{CURRENT_FILE}}"$'\n\n'"# Open questions"$'\n\n'"$(open_questions)"
+else
+  titles="(none yet)"
+  if [[ -f "$SL_META/$MASTER" ]]; then
+    t="$(grep -E '^(## |### )' "$SL_META/$MASTER" || true)"
+    [[ -n "$t" ]] && titles="$t"
+  fi
+  head_text="# Existing titles"$'\n\n'"$titles"
 fi
 
 # One file's section of the input: "## Source: <file name>", a blank line, and
@@ -68,7 +97,7 @@ batches="[]"; cur=(); cur_chars=0; total_tokens=0
 flush() {
   (( ${#cur[@]} )) || return 0
   local k; k="$("${JQ[@]}" 'length' <<<"$batches")"
-  local body="Run date: $RUN_DATE"$'\n\n'"# Existing titles"$'\n\n'"$titles"$'\n\n'"# New session files"$'\n'
+  local body="Run date: $RUN_DATE"$'\n\n'"$head_text"$'\n\n'"# New session files"$'\n'
   local files=() last=0 e
   for e in "${cur[@]}"; do
     last="${e%% *}"; f="${e#* }"; files+=("$f")
@@ -108,7 +137,8 @@ if [[ "$MODE" == stage ]]; then
   "${JQ[@]}" -n --arg ext "$EXT" --argjson cutoff "$CUTOFF" --argjson newest "$newest" \
     --argjson write "$([[ "$WRITE_CURSOR" == 1 ]] && echo true || echo false)" \
     --arg since "$SINCE" --arg master "$MASTER" --arg date "$RUN_DATE" --argjson batches "$batches" \
+    --arg mode "$WMODE" \
     '{job: "weekly", extraction: $ext, cursorFile: ".claude/session-lessons/state/weekly-\($ext).cursor",
       cutoffEpoch: $cutoff, cursorEpoch: $newest, writeCursor: $write, since: $since,
-      master: $master, runDate: $date, batches: $batches}' > "$DIR/manifest.json"
+      master: $master, mode: $mode, runDate: $date, batches: $batches}' > "$DIR/manifest.json"
 fi

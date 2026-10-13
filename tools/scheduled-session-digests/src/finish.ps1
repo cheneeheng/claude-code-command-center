@@ -30,7 +30,8 @@ function Test-Part([string]$Ext, [string]$Uuid, [string]$Part) {
     if ($Ext -eq 'lessons') { return $Part.StartsWith("# Lessons $emDash ", 'Ordinal') -and $Part.Contains("**Session**: $Uuid") }
     $Part.Trim().Length -gt 0 -and $Part.Contains($Uuid)
 }
-function Test-None([string]$Ext, [string]$Part) { $Ext -eq 'lessons' -and $Part.Contains('_No lessons extracted from this session._') }
+# The "nothing found" form of a valid part is the extraction's config .none text.
+function Test-None([string]$Ext, [string]$Part) { $n = $SlConfig.extractions.$Ext.none; [bool]$n -and $Part.Contains($n) }
 
 $processed = 0; $failed = 0; $given = 0; $oldestUndone = $null
 $written = @{}; $none = @{}

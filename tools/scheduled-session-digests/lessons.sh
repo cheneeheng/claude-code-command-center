@@ -58,6 +58,13 @@ confirm() {
   read -r -p "Proceed? [y/N] " a; [[ "$a" =~ ^[Yy]$ ]] || { echo "Nothing changed."; exit 0; }
 }
 fmt_time() { date -d "@$1" '+%Y-%m-%d %H:%M'; }
+# The line that loads an enabled weekly "replace" master (decisions' SOUL.md)
+# into every session. Printed, never written: ~/.claude/CLAUDE.md is the user's.
+import_line() {
+  echo "Add this line to ~/.claude/CLAUDE.md to load your decisions:"
+  echo "  @$META/$1"
+}
+replace_masters() { cfg '.extractions | to_entries[] | select(.value.enabled and .value.weekly.mode == "replace") | "\(.key)\t\(.value.weekly.master)"'; }
 cron_marker() { echo "# session-lessons:$META"; }
 
 # ------------------------------------------------------------------------------
@@ -108,7 +115,7 @@ cmd_install() {
   [[ -n "${C4_CLAUDE_META_DIR:-}" ]] && keep+=("the C4_CLAUDE_META_DIR variable")
 
   changes+=("Install the scripts into .claude/session-lessons/src/.")
-  if [[ -f "$H/config.json" ]]; then changes+=("Keep config.json (add any missing extraction).")
+  if [[ -f "$H/config.json" ]]; then changes+=("Keep config.json (add any missing extraction or setting).")
   else changes+=("Create .claude/session-lessons/config.json."); fi
   local gi_new=() l
   for l in 'logs/*session-lessons-*' '.claude/session-lessons/state/' '.claude/session-lessons/staging/'; do
@@ -166,8 +173,10 @@ cmd_install() {
   local flags; flags="$(jq -nc --arg d "$DAILY_AT" --arg wd "$WEEKLY_DAY" --arg wa "$WEEKLY_AT" \
     '{schedule: ({dailyAt: $d, weeklyDay: $wd, weeklyAt: $wa} | with_entries(select(.value != "")))}')"
   if [[ -f "$H/config.json" ]]; then
+    # Recursive merge (jq *): new default keys reach existing extractions, the
+    # user's own values win.
     jq --argjson d "$defaults" --argjson f "$flags" \
-      '.extractions = ($d.extractions + (.extractions // {})) | .schedule = ((.schedule // {}) + $f.schedule)' \
+      '.extractions = ($d.extractions * (.extractions // {})) | .schedule = ((.schedule // {}) + $f.schedule)' \
       "$H/config.json" > "$H/config.json.tmp"
   else
     jq -n --argjson d "$defaults" --argjson c "$carry" --argjson f "$flags" \
@@ -180,6 +189,7 @@ cmd_install() {
   local added_cron=(); [[ -n "$cron_line" ]] && added_cron=("$cron_line")
   jq -n --argjson old "$old" --arg version "$(cat "$MEMBER/VERSION" 2>/dev/null || echo dev)" \
     --argjson now "$(date +%s)" --arg claude "$claude" --arg marker "$(cron_marker)" \
+    --arg gh "$(command -v gh || true)" \
     --argjson roots "$(printf '%s\n' "${roots[@]}" | jq -Rsc 'split("\n") | map(select(. != ""))')" \
     --argjson newMeta "$([[ $new_meta == 1 ]] && echo true || echo false)" \
     --argjson newGit "$([[ $new_git == 1 ]] && echo true || echo false)" \
@@ -188,6 +198,7 @@ cmd_install() {
     --argjson removed "$(printf '%s\n' "${removed[@]}" | jq -Rsc 'split("\n") | map(select(. != ""))')" \
     '{version: $version, installedAt: ($old.installedAt // $now), claudePath: $claude,
       claudeNoToolsArgs: ["--tools", "", "--no-session-persistence"], scanRoots: $roots,
+      ghPath: (if $gh == "" then null else $gh end),
       taskName: $marker,
       installed: {
         createdMetaDir: ($old.installed.createdMetaDir // $newMeta),
@@ -210,6 +221,8 @@ cmd_install() {
   else echo "First scheduled run: $(fmt_time "$(next_scheduled daily "$(date +%s)")")."; fi
   echo "For a first look, in the clone folder:"
   echo "  bash lessons.sh run --dry-run --meta-dir '$META'"
+  local e m
+  while IFS=$'\t' read -r e m; do import_line "$m"; done < <(replace_masters)
 }
 
 # ------------------------------------------------------------------------------
@@ -249,6 +262,12 @@ cmd_status() {
     echo "Given up ($(wc -l < "$g" | tr -d ' ')), retried after removing the line from state/given-up.txt:"
     while IFS= read -r l; do echo "  ${l:0:76}"; done < "$g"
   else echo "Given up: none."; fi
+  local e m n
+  while IFS=$'\t' read -r e m; do
+    n=0; [[ -f "$META/$m" ]] && n="$(wc -l < "$META/$m" | tr -d ' ')"
+    echo "$e: $(basename "$m") $n lines, $(bash "$H/src/questions.sh" count --ext "$e") open question(s)."
+    import_line "$m"
+  done < <(replace_masters)
 }
 
 # ------------------------------------------------------------------------------

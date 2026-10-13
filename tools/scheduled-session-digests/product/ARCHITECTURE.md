@@ -89,9 +89,11 @@ erDiagram
         int weeklyBatchChars "400000"
     }
     EXTRACTION {
-        string name "lessons is the one shipped"
+        string name "lessons (on), decisions (off)"
         string prompt "extract/<name>.md"
-        string outputDir "lessons-learned"
+        string outputDir "lessons-learned, decisions"
+        string none "the nothing-found text"
+        string weeklyMode "append (lessons) or replace (SOUL.md)"
     }
     INSTALL {
         string claudePath "first claude.exe, else first claude"
@@ -293,3 +295,26 @@ no error, so the failure showed only in the log.
 stays a warning, because the commit is safe and the next run pushes it.
 **Consequences:** `status` shows a failed commit. While a commit keeps failing, the job is due
 every hour, at no `claude` cost.
+
+### 2026-10-13 — Decisions feed a bounded SOUL.md and a GitHub Issues question queue
+
+**Status:** Accepted
+**Context:** The owner wanted agents to decide the way they would. A separate tool would have
+copied scan, cleanup, and archive logic it may not import. A decision skill depends on its
+description triggering, while `~/.claude/CLAUDE.md` is always loaded. Questions the records
+cannot settle needed an answer channel that is neither a terminal (closed unread) nor a GUI
+(to maintain). Plan: `product/plans/decisions-soul.md`.
+**Decision:** `decisions` is a second extraction on the same daily call. Its weekly merge is
+`replace` mode: claude rewrites `SOUL.md` from its current text (cut at `## When to ask`), the
+new records, answered questions, and the titles of open questions, within `weekly.maxLines`.
+The script, never claude, appends the fixed "When to ask" section at close; its issue bullet
+appears only when the queue is active on a private repo. Questions become GitHub issues on the
+meta repo's `origin` (private only, deduplicated by title, `--limit 1000`), and closed issues
+with a comment by the repo owner come back as `answered/issue-<n>.md` before staging. A `gh`
+failure is a `questionsWarning`, never the run's error. `install` prints the `@` import line
+and never edits `~/.claude/CLAUDE.md`.
+**Consequences:** Every session loads the user's decision rules at the cost of at most
+`maxLines` lines. A bad weekly merge reaches every session, but SOUL.md is a git diff in the
+meta repo that can be read and reverted. An agent's comment would count as the owner's answer
+(it runs `gh` as the same account); the fixed section tells agents never to comment on or
+close these issues.

@@ -35,7 +35,6 @@ function Get-SafeTitle([string]$Title) { ($Title -replace '[\\/:*?"<>|]', '_') -
 # (this list, the prompt, and LESSONS_CATEGORIES in lib.sh).
 $script:LessonsCategories = 'Architecture', 'Debugging', 'Performance', 'Security', 'Testing',
     'Tooling', 'Workflow', 'API behaviour', 'Database', 'Other'
-$script:LessonsStub = '_No lessons extracted from this session._'
 
 function Test-Starts([string]$S, [string]$Prefix) { $S.StartsWith($Prefix, [StringComparison]::Ordinal) }
 function Remove-TrailingBlank($L) { while ($L.Count -gt 0 -and $L[$L.Count - 1] -eq '') { $L.RemoveAt($L.Count - 1) } }
@@ -43,6 +42,24 @@ function ConvertTo-Lines([string]$S) {
     $l = [System.Collections.Generic.List[string]]::new()
     foreach ($x in $S.Split("`n")) { $l.Add(($x -replace "`r$", '')) }
     , $l
+}
+
+# --- SOUL.md (a weekly "replace" master); mirrors soul_body / ask_section in lib.sh.
+# The text up to its first "## When to ask" line, trailing blank lines dropped,
+# LF-terminated; '' when none.
+function Get-SoulBody([string]$Text) {
+    $l = [System.Collections.Generic.List[string]]::new()
+    foreach ($x in (ConvertTo-Lines $Text)) { if ($x -ceq '## When to ask') { break }; $l.Add($x) }
+    Remove-TrailingBlank $l
+    if ($l.Count) { ($l -join "`n") + "`n" } else { '' }
+}
+function Get-AskSection([string]$Repo, [string]$Label) {
+    $s = "## When to ask`n`n- No priority or rule above covers the decision, or it is irreversible: ask the user in the`n  session if they are present.`n"
+    if ($Repo) {
+        $s + "- When they are not: run ``gh issue create --repo $Repo --label $Label```n" +
+            "  with the situation, the options, and your recommendation, then continue on the most`n" +
+            "  conservative option and say so. Never comment on or close these issues.`n"
+    } else { $s + "- When they are not: continue on the most conservative option and say so.`n" }
 }
 
 # Mirrors src/merge.jq exactly; see its header for the rules.

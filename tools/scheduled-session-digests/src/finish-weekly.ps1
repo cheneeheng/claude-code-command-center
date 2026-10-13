@@ -4,9 +4,11 @@
 #   -Ext <name> -Batch <k>   merge batch k's answer into the master. Exits 0
 #                            when the batch is done (merged, nothing new, or
 #                            given up), 3 when it is not (run stops there).
-#   -Close -Started <epoch> -Trigger <t> -ErrorText <text>
+#   -Close -Started <epoch> -Trigger <t> -ErrorText <text> [-QuestionsWarning <text>]
 #                            advance each weekly cursor over its done batches,
-#                            write last-run-weekly.json, git-sync, clean up.
+#                            open new questions and end each replace master
+#                            with the fixed When-to-ask section, write
+#                            last-run-weekly.json, git-sync, clean up.
 #
 # Cross-reference: src/finish-weekly.sh is the Bash twin.
 
@@ -17,6 +19,7 @@ param(
     [long]$Started,
     [ValidateSet('manual', 'scheduled')][string]$Trigger = 'manual',
     [string]$ErrorText = '',
+    [string]$QuestionsWarning = '',
     [string]$Log
 )
 
@@ -35,16 +38,41 @@ if (-not $Close) {
     $masterPath = Join-Path $SlMeta $manifest.master
     $masterText = if (Test-Path -LiteralPath $masterPath) { [IO.File]::ReadAllText($masterPath, $script:Utf8) } else { '' }
     $answer = [IO.File]::ReadAllText((Join-Path $SlMeta $b.pending), $script:Utf8)
-    $r = Merge-WeeklyAnswer $answer $masterText $manifest.runDate $script:LessonsCategories
-    if ($r.Status -eq 'merged') {
-        New-Item -ItemType Directory -Force -Path (Split-Path $masterPath) | Out-Null
-        Write-Utf8 $masterPath $r.Merged
-    }
-    if ($r.Status -ne 'invalid') {
-        $b.done = $true; $b.added = $r.Added
-        Write-Utf8 $manifestPath (($manifest | ConvertTo-Json -Depth 6) + "`n")
-        Write-Say "Batch $($Batch + 1): $($r.Added) lesson(s) added."
-        exit 0
+    if ($manifest.mode -eq 'replace') {
+        # Replace: mirrors finish-weekly.sh (see the rules there).
+        $parts = Split-Answer $answer ([string[]]@('soul', 'questions'))
+        $body = Get-SoulBody $(if ($parts.Contains('soul')) { $parts['soul'] } else { '' })
+        $lines = ConvertTo-Lines $body
+        $first = $lines[0]
+        if ($body -and ($first -ceq '# SOUL' -or (Test-Starts $first '# SOUL ')) -and
+            $lines -ccontains '## Priorities' -and $lines -ccontains '## Rules' -and
+            ($lines.Count - 1) -le [int]$SlConfig.extractions.$Ext.weekly.maxLines) {
+            $added = if ($body -ceq (Get-SoulBody $masterText)) { 0 } else { 1 }
+            New-Item -ItemType Directory -Force -Path (Split-Path $masterPath) | Out-Null
+            Write-Utf8 $masterPath $body
+            $q = if ($parts.Contains('questions')) { $parts['questions'] } else { '' }
+            if ((ConvertTo-Lines $q) | Where-Object { Test-Starts $_ '### ' }) {
+                $qd = Join-Path $SlMeta "$($SlConfig.extractions.$Ext.outputDir)/questions"
+                New-Item -ItemType Directory -Force -Path $qd | Out-Null
+                Write-Utf8 (Join-Path $qd "$($manifest.runDate)_$($b.cursorEpoch).md") $q
+            }
+            $b.done = $true; $b.added = $added
+            Write-Utf8 $manifestPath (($manifest | ConvertTo-Json -Depth 6) + "`n")
+            Write-Say "Batch $($Batch + 1): $(Split-Path -Leaf $masterPath) $(if ($added) { 'updated' } else { 'unchanged' })."
+            exit 0
+        }
+    } else {
+        $r = Merge-WeeklyAnswer $answer $masterText $manifest.runDate $script:LessonsCategories
+        if ($r.Status -eq 'merged') {
+            New-Item -ItemType Directory -Force -Path (Split-Path $masterPath) | Out-Null
+            Write-Utf8 $masterPath $r.Merged
+        }
+        if ($r.Status -ne 'invalid') {
+            $b.done = $true; $b.added = $r.Added
+            Write-Utf8 $manifestPath (($manifest | ConvertTo-Json -Depth 6) + "`n")
+            Write-Say "Batch $($Batch + 1): $($r.Added) lesson(s) added."
+            exit 0
+        }
     }
     $attempts = if (Test-Path -LiteralPath $attemptsFile) { Get-Content -Raw $attemptsFile | ConvertFrom-Json -AsHashtable } else { [ordered]@{} }
     $key = "weekly-${Ext}:$($b.files[0])"
@@ -77,7 +105,24 @@ foreach ($mf in @(Get-ChildItem -Path (Join-Path $SlStaging 'weekly-*/manifest.j
         if ($null -ne $cur) { Write-Utf8 (Join-Path $SlState "weekly-$($m.extraction).cursor") "$cur`n" }
     }
     $processed += $p; $failed += $f; $given += $g
-    Write-Say "Weekly $($m.extraction): $w lesson(s) added, $p batch(es) answered, $f failed, $g given up."
+    if ($m.mode -eq 'replace') {
+        Write-Say "Weekly $($m.extraction): $w update(s), $p batch(es) answered, $f failed, $g given up."
+        # New questions go out, then the fixed When-to-ask section replaces whatever
+        # the master ends with: its issue bullet only when open found a private repo.
+        $qrepo = ''
+        if ($SlConfig.extractions.($m.extraction).weekly.questions.enabled -eq $true) {
+            $q = & (Join-Path $PSScriptRoot 'questions.ps1') open -Ext $m.extraction -Log $script:SlLog
+            $qrepo = $q.Repo
+            if ($q.Warning) { $QuestionsWarning = if ($QuestionsWarning) { "$QuestionsWarning; $($q.Warning)" } else { $q.Warning } }
+        }
+        $mp = Join-Path $SlMeta $m.master
+        if (Test-Path -LiteralPath $mp) {
+            $body = Get-SoulBody ([IO.File]::ReadAllText($mp, $script:Utf8))
+            Write-Utf8 $mp ($(if ($body) { "$body`n" } else { '' }) + (Get-AskSection $qrepo $SlConfig.extractions.($m.extraction).weekly.questions.label))
+        }
+    } else {
+        Write-Say "Weekly $($m.extraction): $w lesson(s) added, $p batch(es) answered, $f failed, $g given up."
+    }
     $results[$m.extraction] = [ordered]@{ written = $w; none = $nn }
 }
 if ($ErrorText) { Write-Say "Error: $ErrorText" }
@@ -90,6 +135,7 @@ $lastRun = [ordered]@{
     processed = $processed; results = $results; failed = $failed; givenUp = $given
     deferred = 0; committed = $sync.Committed; pushed = $sync.Pushed
     error = if ($ErrorText) { $ErrorText } else { $null }
+    questionsWarning = if ($QuestionsWarning) { $QuestionsWarning } else { $null }
 }
 Write-Utf8 (Join-Path $SlState 'last-run-weekly.json') (($lastRun | ConvertTo-Json -Depth 4) + "`n")
 
