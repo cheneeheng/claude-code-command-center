@@ -547,7 +547,15 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
 
   Then on real data, `uv run usage-insights export` twice in a row: the second run prints
   `files parsed 0` and takes under 1 s.
-- **Status:** todo
+- **Status:** done. `uv run ruff check . && uv run mypy src && uv run pytest`: ruff and mypy
+  clean, "8 passed". Real data (store in a temp `C4_USAGE_INSIGHTS_HOME`): first run "files
+  scanned 3319, files parsed 3319, messages 49721, events 64400"; second run "files parsed 0" in
+  0.15 s in-process (0.3-0.4 s for the whole command). Store total 5.34B tokens, matching
+  `load_usage`. Deferred to Phase 4, where the inventory reads them: the fixture's plugin with an
+  unused skill and its MCP server (they need the `claude-plugins` registry format). Added beyond
+  the named tests: `test_cli_export_prints_counts`. The schema backup runs before the write lock
+  (`store.backup_if_stale`), because `sqlite3` backup cannot read through the same connection's
+  open write transaction.
 
 ### Phase 4: Inventory, aggregation, and API
 
@@ -646,3 +654,4 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
 - 2026-10-14 Design changed: was "`ModelPrice(input, output, cache_write, cache_read)`", now "`ModelPrice(input, output, cache_write, cache_read, cache_write_1h)`" (and `MessageUsage` / `messages` gain `cache_write_1h`), because 87% of local cache-write tokens are 1-hour writes priced at 2x input
 - 2026-10-14 Built Phase 1: `cd libs/claude-usage && uv run pytest && uv run mypy src`, 37 passed, coverage 100%
 - 2026-10-14 Built Phase 2: `cd libs/claude-usage && uv run pytest && uv run mypy src`, 43 passed, coverage 100%
+- 2026-10-14 Built Phase 3: `cd apps/usage-insights && uv run ruff check . && uv run mypy src && uv run pytest`, 8 passed; real-data second export "files parsed 0" in 0.15 s
