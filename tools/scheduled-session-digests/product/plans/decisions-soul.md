@@ -392,3 +392,4 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
 - 2026-10-14 Design changed: was "`Reason source: stated | inferred`", now "`stated | inferred | none`, `none` exactly when the reason is `none given`, and the merge turns a rule resting only on `inferred` or `none` reasons into a question", because the Phase 1 manual run (12 real sessions, 55 decisions) marked 36 of 45 reasonless decisions `stated`, which would let a missing reason skip the question queue
 - 2026-10-14 Built Phase 1 manual check: 12 real sessions, then 3 rerun with the `none` source ("3 processed, 0 failed", 28 of 28 reasonless decisions `none`); owner accepted
 - 2026-10-14 Built Phase 4 manual check: real meta repo, weekly run wrote a 42-line SOUL.md and issues #1 to #5; a new session quoted SOUL.md's first priority through `@~/claude-meta/SOUL.md`
+- 2026-10-14 PR: #65 https://github.com/cheneeheng/claude-code-command-center/pull/65
