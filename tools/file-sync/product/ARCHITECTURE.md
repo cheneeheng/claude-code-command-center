@@ -3,7 +3,7 @@
 Keeps a single named file in sync between two folders chosen at install time, always copying the
 newer file over the older. One generic engine plus two thin specializations (CLAUDE.md raw copy;
 settings.json copy-with-key-preservation). Each install registers a Windows Task Scheduler job that
-runs on an interval via a hidden VBS launcher.
+runs the engine on an interval through `conhost.exe --headless`, so no window appears.
 
 ## System context
 
@@ -14,9 +14,7 @@ copies converged.
 flowchart LR
     you([You / Administrator]) -->|"install -FolderA -FolderB -IntervalMinutes"| setup["sync-setup.ps1<br/>(+ thin wrappers)"]
     setup -->|register| task["Task Scheduler<br/>\\ClaudeAutomation\\file-sync\\&lt;per-pair name&gt;"]
-    setup -->|write| vbs["file-sync-&lt;hash&gt;-hidden.vbs<br/>(gitignored; embeds local paths)"]
-    task -->|on interval / on wake| vbs
-    vbs -->|hidden launch| engine((sync-engine.ps1))
+    task -->|"on interval / on wake:<br/>conhost --headless pwsh"| engine((sync-engine.ps1))
     engine <-->|newer wins| fa["FolderA/&lt;file&gt;"]
     engine <-->|newer wins| fb["FolderB/&lt;file&gt;"]
     cc["setup/ orchestrator<br/>(requires 'instances' config)"] -. delegates .-> setup
@@ -32,13 +30,13 @@ flowchart TD
         md["claude-md-sync-setup.ps1<br/>fixes CLAUDE.md · raw"]
         js["settings-sync-setup.ps1<br/>fixes settings.json · json-merge<br/>default exclude statusLine.command"]
     end
-    setup["sync-setup.ps1<br/>install/uninstall · Task Scheduler + VBS<br/>-FileName -Strategy -ExcludePaths"]
+    setup["sync-setup.ps1<br/>install/uninstall · Task Scheduler<br/>-FileName -Strategy -ExcludePaths"]
     engine["sync-engine.ps1<br/>pick newer by LastWriteTime<br/>raw copy | json-merge (preserve keys)"]
     helpers["Get/Set/Remove-NestedValue<br/>(dot-notation key ops, json-merge only)"]
 
     md --> setup
     js --> setup
-    setup -->|generates launcher that calls| engine
+    setup -->|registers a task that calls| engine
     engine --> helpers
 ```
 
@@ -50,13 +48,11 @@ the newer JSON.
 ```mermaid
 sequenceDiagram
     participant T as Task Scheduler
-    participant V as hidden VBS
     participant E as sync-engine
     participant A as FileA
     participant B as FileB
 
-    T->>V: fire (interval / missed-run-on-wake)
-    V->>E: launch hidden with -FileA -FileB -Strategy -ExcludePaths
+    T->>E: fire (interval / missed-run-on-wake) via conhost --headless pwsh,<br/>with -FileA -FileB -Strategy -ExcludePaths
     E->>A: stat LastWriteTime
     E->>B: stat LastWriteTime
     alt equal timestamps
@@ -103,7 +99,7 @@ logic into a wrapper is a defect.
 
 ### 2026-07-02 — Per-(file, folder-pair) Task Scheduler jobs via a gitignored hidden VBS launcher
 
-**Status:** Accepted
+**Status:** Superseded by 2026-10-14 — conhost --headless launcher
 **Context:** Sync must run unattended on an interval, invisibly (no popping console), survive missed
 runs across sleep, and allow several independent syncs at once. The launcher embeds resolved local
 paths that must not be committed.
@@ -116,3 +112,22 @@ the same two folders used to install (symmetric naming).
 resilient to sleep. The generated launcher is machine-specific and never committed; uninstall requires
 the original folder arguments. This is the one member the `setup/` orchestrator can't install without
 config (folder pairs have no sensible default).
+
+### 2026-10-14 — conhost --headless launcher
+
+**Status:** Accepted
+**Context:** The generated VBS launcher depends on VBScript, which Microsoft has deprecated, and
+writes a machine-specific file next to the scripts. `pwsh -WindowStyle Hidden` is no substitute: the
+console window exists before PowerShell can hide it, so it flashes on every run. Windows PowerShell
+5.1 is no longer supported.
+**Decision:** The task's action is `conhost.exe --headless "<pwsh>" ... -File sync-engine.ps1` with
+the engine arguments, where `<pwsh>` and the script folder are resolved at install time. conhost
+gives pwsh a console that is never shown. No launcher file is generated. Install and uninstall delete
+a pair's old `file-sync-<hash>-hidden.vbs` when one exists. Per-(file, folder-pair) task naming and
+the symmetric uninstall from the 2026-07-02 entry are unchanged.
+**Consequences:** No VBScript dependency and no generated file. `--headless` is undocumented by
+Microsoft, so a Windows update could change it; Phase 1 of `plans/conhost-launcher.md` proved it on
+Windows 11 build 26300. conhost waits for pwsh, so a task run now spans the whole engine run
+(the VBS returned at once), which makes `-MultipleInstances IgnoreNew` and the 2-minute limit apply
+to the engine itself.
+Moving or deleting the clone breaks the task, as it did with the VBS, so reinstall after moving it.

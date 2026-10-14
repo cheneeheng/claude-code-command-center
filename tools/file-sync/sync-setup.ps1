@@ -68,25 +68,18 @@ function Install-SyncTask {
     $fileA = $id.FileA
     $fileB = $id.FileB
 
-    # ---- CREATE HIDDEN VBS LAUNCHER ----
-    # The two file paths, strategy and excludes are resolved at install time and embedded.
-    $vbsContent = @"
-Set shell = CreateObject("WScript.Shell")
-
-scriptDir = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
-scriptPath = scriptDir & "\sync-engine.ps1"
-fileA = "$fileA"
-fileB = "$fileB"
-
-cmd = "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File """ & scriptPath & """ -FileA """ & fileA & """ -FileB """ & fileB & """ -Strategy $Strategy -ExcludePaths """ & "$ExcludePaths" & """"
-shell.Run cmd, 0, False
-"@
-    Set-Content -Path $id.VbsPath -Value $vbsContent -Encoding ASCII
+    # Installs before the conhost launcher generated a VBS launcher; drop it.
+    if (Test-Path $id.VbsPath) { Remove-Item -Force $id.VbsPath }
 
     # ---- ACTION ----
+    # conhost --headless gives pwsh a console that is never shown, so no window flashes on
+    # each run (pwsh -WindowStyle Hidden still flashes: the console exists before pwsh can
+    # hide it).
+    $pwsh   = (Get-Command pwsh).Source
+    $engine = Join-Path $PSScriptRoot 'sync-engine.ps1'
     $action = New-ScheduledTaskAction `
-        -Execute "wscript.exe" `
-        -Argument "`"$($id.VbsPath)`""
+        -Execute "conhost.exe" `
+        -Argument "--headless `"$pwsh`" -NonInteractive -NoProfile -ExecutionPolicy Bypass -File `"$engine`" -FileA `"$fileA`" -FileB `"$fileB`" -Strategy $Strategy -ExcludePaths `"$ExcludePaths`""
 
     # ---- TRIGGER: every $IntervalMinutes minutes, every day, forever ----
     # Daily anchor re-arms each day (so it never "expires"); attach the repetition
@@ -126,14 +119,13 @@ function Uninstall-SyncTask {
         Unregister-ScheduledTask -TaskName $id.TaskName -TaskPath $taskFolder -Confirm:$false
         Write-Host "Task '$($id.TaskName)' unregistered."
     } else {
-        Write-Host "Task '$($id.TaskName)' not found — skipped."
+        Write-Host "Task '$($id.TaskName)' not found, skipped."
     }
 
+    # Left behind by installs from before the conhost launcher.
     if (Test-Path $id.VbsPath) {
         Remove-Item -Force $id.VbsPath
-        Write-Host "Removed hidden launcher $($id.VbsPath)"
-    } else {
-        Write-Host "Hidden launcher not found at $($id.VbsPath) — skipped."
+        Write-Host "Removed old VBS launcher $($id.VbsPath)"
     }
 }
 

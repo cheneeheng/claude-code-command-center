@@ -18,7 +18,7 @@ param(
     [string]$Strategy = 'raw',
 
     # Comma-separated dot-notation key paths to preserve in the destination (json-merge only).
-    # A single string (not string[]) so it round-trips cleanly through the VBS command line.
+    # A single string (not string[]) so it round-trips cleanly through the task's command line.
     [string]$ExcludePaths = ''
 )
 
