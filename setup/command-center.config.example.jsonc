@@ -32,7 +32,7 @@
         "folderA": "C:/Users/you/.claude",
         "folderB": "C:/Users/you/.claude_mirror",
         "strategy": "json-merge",
-        "excludePaths": "statusLine.command,hooks.PreToolUse[0].hooks[0].command",
+        "excludePaths": "statusLine.command",
         "intervalMinutes": 15
       }
     ]
