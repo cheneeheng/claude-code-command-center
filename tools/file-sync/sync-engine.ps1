@@ -64,16 +64,22 @@ function Get-NestedValue {
 function Set-NestedValue {
     param($obj, $steps, $value)
     $cur = $obj
+    # A key missing before the last index is not created: an array cannot be built from
+    # nothing, and an empty object in its place breaks the file's schema.
+    $lastIndex = -1
+    for ($i = 0; $i -lt $steps.Count; $i++) { if ($steps[$i].Type -eq 'Index') { $lastIndex = $i } }
     for ($i = 0; $i -lt $steps.Count - 1; $i++) {
         $step = $steps[$i]
         if ($step.Type -eq 'Prop') {
             if (-not $cur.PSObject.Properties[$step.Name]) {
+                if ($i -lt $lastIndex) { return }
                 $cur | Add-Member -NotePropertyName $step.Name -NotePropertyValue ([pscustomobject]@{}) -Force
             }
             $cur = $cur.($step.Name)
         } else {
-            # Arrays are not auto-vivified — the index must already exist.
-            if ($step.Index -ge $cur.Count) { return }
+            # Arrays are not auto-vivified — the index must already exist. -isnot [array]
+            # matters: PowerShell gives any single object Count 1 and $obj[0] -eq $obj.
+            if ($cur -isnot [array] -or $step.Index -ge $cur.Count) { return }
             $cur = $cur[$step.Index]
         }
     }

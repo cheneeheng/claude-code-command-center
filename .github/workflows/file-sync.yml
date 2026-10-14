@@ -1,0 +1,30 @@
+name: CI · file-sync
+
+# No path filter: this job is meant to be a required check, and a path-filtered required
+# check never reports on PRs that skip it.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh
+    working-directory: tools/file-sync
+
+jobs:
+  json-merge:
+    name: file-sync json-merge (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - name: json-merge tests
+        run: pwsh -NoProfile -File tests/json-merge.ps1

@@ -19,6 +19,8 @@ See README.md for full usage. Quick map:
 - `sync-setup.ps1` — generic install/uninstall (Task Scheduler).
 - `claude-md-sync-setup.ps1` / `settings-sync-setup.ps1` — thin wrappers that fix `-FileName` and
   `-Strategy` and pass folder/interval args through to `sync-setup.ps1`.
+- `tests/json-merge.ps1` — json-merge tests against the real engine on temp files
+  (`pwsh -NoProfile -File tests/json-merge.ps1`); CI runs it in `.github/workflows/file-sync.yml`.
 
 ## Invariants — do not break these
 
