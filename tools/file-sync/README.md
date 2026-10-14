@@ -24,7 +24,7 @@ The two `*-setup.ps1` wrappers are the specializations: each fixes the file name
 passes `-FolderA`/`-FolderB`/`-IntervalMinutes` through to `sync-setup.ps1`. Call `sync-setup.ps1`
 directly to sync any other file.
 
-## Quick start (Windows, as Administrator)
+## Quick start (Windows)
 
 ```powershell
 # Sync CLAUDE.md across two folders (default 15-min interval):

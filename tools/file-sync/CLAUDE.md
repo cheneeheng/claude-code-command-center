@@ -12,7 +12,7 @@ window appears.
 
 ## Running
 
-See README.md for full usage (run as Administrator). Quick map:
+See README.md for full usage. Quick map:
 
 - `sync-engine.ps1` — the generic newer-wins engine (`-FileA`/`-FileB`, `-Strategy raw|json-merge`,
   `-ExcludePaths`).
@@ -28,8 +28,7 @@ See README.md for full usage (run as Administrator). Quick map:
   `statusLine.command`). Keep merge behaviour key-preserving — do not clobber excluded paths.
 - **The task launches the engine through `conhost.exe --headless "<pwsh>"`**, never `pwsh`
   directly (its console window flashes even with `-WindowStyle Hidden`). No launcher file is
-  generated. Install and uninstall delete a pair's old `file-sync-<hash>-hidden.vbs` from earlier
-  installs.
+  generated.
 - **Tasks live under the `\ClaudeAutomation\file-sync\` Task Scheduler folder with per-pair names**
   so multiple syncs coexist. Uninstall takes the same two folders used to install — preserve that
   symmetry.
@@ -40,6 +39,6 @@ See README.md for full usage (run as Administrator). Quick map:
 
 - PowerShell 7 (`pwsh`) / Windows Task Scheduler tool; no Python, no pip dependencies. Windows
   PowerShell 5.1 is not supported.
-- Also installable via the repo-wide `setup/` orchestrator (it is the one member that requires
-  config — folder pairs).
+- Also installable via the repo-wide `setup/` orchestrator (it requires config there: folder
+  pairs).
 - New decisions go in the repo-root `.agents_workspace/DECISION_LOG.md`.

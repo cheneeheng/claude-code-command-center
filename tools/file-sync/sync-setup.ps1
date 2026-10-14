@@ -1,4 +1,4 @@
-# Generic install/uninstall for a file-sync task. Run as Administrator.
+# Generic install/uninstall for a file-sync task.
 #
 # Normally invoked through a thin wrapper that fixes -FileName/-Strategy
 # (claude-md-sync-setup.ps1, settings-sync-setup.ps1). Call directly to sync any file:
@@ -56,7 +56,6 @@ function Get-SyncIdentity {
         FileA    = $pair[0]
         FileB    = $pair[1]
         TaskName = "$slug-$short"
-        VbsPath  = Join-Path $PSScriptRoot "$toolName-$short-hidden.vbs"
     }
 }
 
@@ -67,9 +66,6 @@ function Install-SyncTask {
     }
     $fileA = $id.FileA
     $fileB = $id.FileB
-
-    # Installs before the conhost launcher generated a VBS launcher; drop it.
-    if (Test-Path $id.VbsPath) { Remove-Item -Force $id.VbsPath }
 
     # ---- ACTION ----
     # conhost --headless gives pwsh a console that is never shown, so no window flashes on
@@ -120,12 +116,6 @@ function Uninstall-SyncTask {
         Write-Host "Task '$($id.TaskName)' unregistered."
     } else {
         Write-Host "Task '$($id.TaskName)' not found, skipped."
-    }
-
-    # Left behind by installs from before the conhost launcher.
-    if (Test-Path $id.VbsPath) {
-        Remove-Item -Force $id.VbsPath
-        Write-Host "Removed old VBS launcher $($id.VbsPath)"
     }
 }
 

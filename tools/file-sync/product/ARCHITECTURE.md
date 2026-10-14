@@ -12,7 +12,7 @@ copies converged.
 
 ```mermaid
 flowchart LR
-    you([You / Administrator]) -->|"install -FolderA -FolderB -IntervalMinutes"| setup["sync-setup.ps1<br/>(+ thin wrappers)"]
+    you([You]) -->|"install -FolderA -FolderB -IntervalMinutes"| setup["sync-setup.ps1<br/>(+ thin wrappers)"]
     setup -->|register| task["Task Scheduler<br/>\\ClaudeAutomation\\file-sync\\&lt;per-pair name&gt;"]
     task -->|"on interval / on wake:<br/>conhost --headless pwsh"| engine((sync-engine.ps1))
     engine <-->|newer wins| fa["FolderA/&lt;file&gt;"]
