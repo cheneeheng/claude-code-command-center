@@ -1,6 +1,6 @@
 ---
 title: Rebuild usage-dashboard as a locally installed, visual-first Claude Code usage dashboard
-status: ready
+status: canceled
 created: 2026-10-11
 ---
 
@@ -477,3 +477,6 @@ and detects that task.
 ## Record
 
 - 2026-10-11 Planned: status ready
+- 2026-10-14 Canceled before any phase was built: a new member, `apps/usage-insights`, replaces
+  this app (plan: `apps/usage-insights/product/plans/usage-insights.md`). Its library sections
+  are reused there.
