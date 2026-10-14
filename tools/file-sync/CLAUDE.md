@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Keeps a single named file in sync between two folders chosen at install time, always copying from
 the newer file over the older. One generic engine plus two ready-made specializations (CLAUDE.md
 raw copy; settings.json copy-with-key-preservation). Each install registers a Windows Task
-Scheduler job that runs on an interval via a hidden VBS launcher.
+Scheduler job that runs the engine on an interval through `conhost.exe --headless`, so no
+window appears.
 
 ## Running
 
@@ -15,10 +16,9 @@ See README.md for full usage (run as Administrator). Quick map:
 
 - `sync-engine.ps1` — the generic newer-wins engine (`-FileA`/`-FileB`, `-Strategy raw|json-merge`,
   `-ExcludePaths`).
-- `sync-setup.ps1` — generic install/uninstall (Task Scheduler + hidden VBS).
+- `sync-setup.ps1` — generic install/uninstall (Task Scheduler).
 - `claude-md-sync-setup.ps1` / `settings-sync-setup.ps1` — thin wrappers that fix `-FileName` and
   `-Strategy` and pass folder/interval args through to `sync-setup.ps1`.
-- `hidden.vbs` — reference template only.
 
 ## Invariants — do not break these
 
@@ -26,9 +26,10 @@ See README.md for full usage (run as Administrator). Quick map:
   prompts, three-way merges, or reverse-direction copies into the engine.
 - **`json-merge` preserves machine-specific keys in the destination** (default exclude
   `statusLine.command`). Keep merge behaviour key-preserving — do not clobber excluded paths.
-- **Generated launchers are per-(file, folder-pair) and gitignored.** Install writes one
-  `file-sync-<hash>-hidden.vbs` embedding resolved local paths. Never commit a generated VBS and
-  never hand-edit `hidden.vbs` as if it were live config — it is a template.
+- **The task launches the engine through `conhost.exe --headless "<pwsh>"`**, never `pwsh`
+  directly (its console window flashes even with `-WindowStyle Hidden`). No launcher file is
+  generated. Install and uninstall delete a pair's old `file-sync-<hash>-hidden.vbs` from earlier
+  installs.
 - **Tasks live under the `\ClaudeAutomation\file-sync\` Task Scheduler folder with per-pair names**
   so multiple syncs coexist. Uninstall takes the same two folders used to install — preserve that
   symmetry.
@@ -37,7 +38,8 @@ See README.md for full usage (run as Administrator). Quick map:
 
 ## Conventions
 
-- PowerShell / Windows Task Scheduler tool; no Python, no pip dependencies.
+- PowerShell 7 (`pwsh`) / Windows Task Scheduler tool; no Python, no pip dependencies. Windows
+  PowerShell 5.1 is not supported.
 - Also installable via the repo-wide `setup/` orchestrator (it is the one member that requires
   config — folder pairs).
 - New decisions go in the repo-root `.agents_workspace/DECISION_LOG.md`.
