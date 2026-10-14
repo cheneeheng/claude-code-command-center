@@ -342,7 +342,14 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
   weekly run; disabled `status` prints neither. Manual: the owner enables `decisions` in their
   real meta repo, runs `pwsh lessons.ps1 run -Job weekly -Yes` once, adds the import line, and
   confirms a new session can quote SOUL.md's first priority without reading any file.
-- **Status:** todo. Automated part passed on 2026-10-14, in the full runs on the final tree:
+- **Status:** done, 2026-10-14. Manual part: on the owner's real meta repo, `install` from this
+  branch, `run -Since 2026-10-12 -Yes` ("18 processed, 0 failed"; decisions "16 written, 2 with
+  nothing found"), then `run -Job weekly -Yes` ("SOUL.md updated", 42 lines, 5 questions). The
+  first `open` failed on a token without issue write access (which led to gh's error in
+  `questionsWarning`); after the owner fixed the token, `questions.ps1 open` opened issues #1 to
+  #5 and `status` read "decisions: SOUL.md 42 lines, 5 open question(s)". The owner added
+  `@~/claude-meta/SOUL.md` to `~/.claude/CLAUDE.md`, and a new session quoted SOUL.md's first
+  priority. Automated part passed on 2026-10-14, in the full runs on the final tree:
   `bash tests/run.sh bash` (every suite plus equivalence) "passed 296, failed 0" and `bash
   tests/run.sh pwsh` "passed 270, failed 0". The manual part (the owner's real meta repo, a
   real weekly run, and a new session quoting SOUL.md) is not run. Built: README section, Key
@@ -366,7 +373,9 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
 - `@` import of an absolute path: assumed that Claude Code resolves a forward-slash absolute path
   (Windows drive letter included) in `~/.claude/CLAUDE.md`, and that it may ask once to approve an
   import outside the project. Phase 4's manual check settles it; if it fails, print the path as
-  `@~/...` when the meta repo is under the home folder.
+  `@~/...` when the meta repo is under the home folder. Settled 2026-10-14: the owner used the
+  `@~/claude-meta/SOUL.md` form and a new session loaded it; the absolute form `install` prints
+  is not separately tested.
 - `maxLines` 150: assumed from OpenClaw's guidance to keep always-loaded files short; tune after
   a few weeks of real SOUL.md output.
 - Domain list in the daily part: taken from `virtual-clone.md`; the merge may group differently.
@@ -382,3 +391,4 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
 - 2026-10-14 Built Phases 1-4 automated checks, full runs on the final tree: `bash tests/run.sh bash` "passed 296, failed 0", `bash tests/run.sh pwsh` "passed 270, failed 0"; Phases 1 and 4 stay todo for their manual checks
 - 2026-10-14 Design changed: was "`Reason source: stated | inferred`", now "`stated | inferred | none`, `none` exactly when the reason is `none given`, and the merge turns a rule resting only on `inferred` or `none` reasons into a question", because the Phase 1 manual run (12 real sessions, 55 decisions) marked 36 of 45 reasonless decisions `stated`, which would let a missing reason skip the question queue
 - 2026-10-14 Built Phase 1 manual check: 12 real sessions, then 3 rerun with the `none` source ("3 processed, 0 failed", 28 of 28 reasonless decisions `none`); owner accepted
+- 2026-10-14 Built Phase 4 manual check: real meta repo, weekly run wrote a 42-line SOUL.md and issues #1 to #5; a new session quoted SOUL.md's first priority through `@~/claude-meta/SOUL.md`
