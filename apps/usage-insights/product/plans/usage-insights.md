@@ -322,8 +322,9 @@ so its change values are `null`).
 **Skill and subagent health**, evaluated over all history in the store, first match wins:
 1. `never_used`: in the inventory, no uses ever.
 2. `troubled`: at least `TROUBLE_MIN_USES = 3` uses in the last 30 days, and at least
-   `TROUBLE_RATE = 0.4` of them are followed by an `interrupt` or `tool_error` event in the same
-   session within `TROUBLE_WINDOW_MIN = 15` minutes.
+   `TROUBLE_RATE = 0.2` of them are followed by an `interrupt` event in the same session within
+   `TROUBLE_WINDOW_MIN = 15` minutes. (Tuned in Phase 5 on local data: a tool error follows
+   39.8% of all tool calls within 15 min, so tool errors are noise; an interrupt follows 4.5%.)
 3. `declining`: uses in the last 30 days are below half of the 30 days before, and the earlier
    window has at least `DECLINE_MIN_USES = 4`.
 4. `unused_lately`: last use more than 30 days ago.
@@ -674,3 +675,7 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
 - 2026-10-14 Design changed: was "the basename of the latest `cwd`", now "the basename of the launch folder (the `cwd` that encodes to the project folder name)", because a session that moved into a subfolder renamed the project
 - 2026-10-14 Design changed: was "server name's non-alphanumerics mapped to `_`", now "both sides mapped, and used-but-unconfigured servers shown as `unknown`", because Claude Code keeps dashes in some MCP tool names and the user's used MCP servers are not in any local config
 - 2026-10-14 Built Phase 4: `cd apps/usage-insights && uv run ruff check . && uv run mypy src && uv run pytest`, 24 passed
+- 2026-10-14 Design changed: was "`TROUBLE_RATE = 0.4` ... `interrupt` or `tool_error`", now "0.2, `interrupt` only", because tool errors follow 39.8% of all tool calls (base rate); 13 flagged skills dropped to 4
+- 2026-10-14 Design changed: was "copied ... imported first", now "copied without its Google Fonts @import", because the local dashboard makes no network calls
+- 2026-10-14 Design changed: was "`StatTile` (label, actual, ...)", now "no label (the panel eyebrow names it) and a 0..high scale", and `HealthTable` gained status chips with counts that filter, because the manual review found a repeated label and 67 never-used rows hiding the troubled ones
+- 2026-10-14 Built Phase 5: `bun run typecheck && bun run test && bun run build`, 17 passed; serve check PASS; manual review at 1440 px and 390 px (iframe) done

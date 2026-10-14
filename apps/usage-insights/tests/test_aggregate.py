@@ -177,9 +177,9 @@ def test_skill_status_each_rule(db: Path) -> None:
     for i in range(4):
         b.event("skill", "declining", NOW - (35 + i) * day)
     b.event("skill", "lately", NOW - 45 * day)
-    for i in range(2):
-        b.event("skill", "healthy", NOW - (i + 1) * day)
-        b.event("tool_error", "Bash", NOW - (i + 1) * day + timedelta(minutes=30))
+    for i in range(3):  # tool errors right after every use: normal work, not trouble
+        b.event("skill", "healthy", NOW - (i + 1) * day, "s-h")
+        b.event("tool_error", "Bash", NOW - (i + 1) * day + timedelta(minutes=2), "s-h")
     names = ["healthy", "lately", "declining", "troubled", "never"]
     rows = _summary(db, "all", _skills(names))["skills"]
     assert [(r["name"], r["status"]) for r in rows] == [

@@ -25,11 +25,14 @@ PACE_STRIP_DAYS = 30
 TOP_SESSIONS = 100
 HEALTH_WINDOW_DAYS = 30
 TROUBLE_MIN_USES = 3
-TROUBLE_RATE = 0.4
+# Measured 2026-10-14 on local data: an interrupt follows 4.5% of all tool calls
+# within 15 min, so 0.2 is about 4x the baseline. Tool errors follow 39.8% of all
+# tool calls, which makes them noise here, so they do not count as trouble.
+TROUBLE_RATE = 0.2
 TROUBLE_WINDOW_MIN = 15
 DECLINE_MIN_USES = 4
 STATUS_ORDER = ("never_used", "troubled", "declining", "unused_lately", "healthy")
-TROUBLE_KINDS = ("interrupt", "tool_error")
+TROUBLE_KINDS = ("interrupt",)
 
 Json = dict[str, Any]
 
