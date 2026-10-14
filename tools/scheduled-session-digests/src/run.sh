@@ -128,7 +128,7 @@ if [[ "$JOB" == weekly ]]; then
         tmp="$(mktemp)"; "${JQ[@]}" --argjson k "$k" --argjson x "$code" '.batches[$k].exit = $x' "$M" > "$tmp" && mv "$tmp" "$M"
         if (( code != 0 )); then
           say "Batch $((k + 1)): claude exited $code, stopping."
-          ERROR="claude exited $code: $(grep -m 1 -v '^[[:space:]]*$' "$out.err" || true)"
+          ERROR="claude exited $code: $(cat "$out.err" "$out" | grep -m 1 -v '^[[:space:]]*$' || true)"
           stop=1; break
         fi
         # Exit 3: an invalid answer ends this extraction's batches, and the next
@@ -205,7 +205,8 @@ else
     "${JQ[@]}" --arg u "$uuid" --argjson x "$code" '(.jobs[] | select(.uuid == $u) | .exit) = $x' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
     if (( code != 0 )); then
       say "[$i/$total] $date ${uuid:0:8}: claude exited $code, stopping."
-      ERROR="claude exited $code: $(grep -m 1 -v '^[[:space:]]*$' "$err" || true)"
+      # claude prints an API error on stdout, so stdout backs up an empty stderr.
+      ERROR="claude exited $code: $(cat "$err" "$SL_STAGING/daily/out/$uuid.md" | grep -m 1 -v '^[[:space:]]*$' || true)"
       break
     fi
     say "[$i/$total] $date ${uuid:0:8}: answered"

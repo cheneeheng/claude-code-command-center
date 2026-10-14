@@ -5,6 +5,8 @@
 # preamble and one canned part per requested extraction. Controlled by files
 # in its working directory, the meta repo, under .fake-claude/:
 #   exit1      present: print an error and exit 1
+#   exit1-stdout  present: print an error on stdout, as claude does for an
+#              API error, and exit 1
 #   fail.txt   lines "<extraction>:<uuid>": print a truncated part instead
 #   none.txt   lines "<extraction>:<uuid>": print the "nothing found" form
 #   calls.log  appended: "<uuid>: <requested extractions>" per call, or
@@ -26,6 +28,7 @@ prompt="${!#}"
 input="$(cat)"
 dir="$PWD/.fake-claude"; mkdir -p "$dir"
 if [[ -e "$dir/exit1" ]]; then echo "fake claude: simulated failure" >&2; exit 1; fi
+if [[ -e "$dir/exit1-stdout" ]]; then printf '\nAPI Error: 529 Overloaded.\n'; exit 1; fi
 
 if [[ "$(head -n 1 <<<"$prompt")" == "# Weekly decisions merge" ]]; then
   first="$(sed -n 's/^## Source: //p' <<<"$input" | head -n 1)"

@@ -322,6 +322,11 @@ suite_daily() {
   run_ut --yes >/dev/null
   eq "$(calls | wc -l | tr -d ' ')" 4 "uncalled sessions are staged again"
 
+  # claude prints an API error on stdout, none on stderr: the error still names it.
+  new_env "$T/c-stdout"; fake_ctl touch "$META/.fake-claude/exit1-stdout"
+  run_ut --yes >/dev/null
+  eq "$(lastrun .error)" "claude exited 1: API Error: 529 Overloaded." "error falls back to claude's stdout"
+
   # D. Leftover answers from a killed run are never read.
   new_env "$T/d"; spread_mtimes
   mkdir -p "$META/.claude/session-lessons/staging/daily/out"
@@ -551,6 +556,10 @@ suite_weekly() {
   run_ut --job weekly --yes >/dev/null 2>&1; rc=$?
   check "a failed weekly run exits non-zero" test "$rc" -ne 0
   check "weekly error recorded" bash -c '[[ "$(jq -r .error "$1")" == "claude exited 1"* ]]' _ "$META/.claude/session-lessons/state/last-run-weekly.json"
+  weekly_env "$T/x2"; fake_ctl touch "$META/.fake-claude/exit1-stdout"
+  run_ut --job weekly --yes >/dev/null 2>&1
+  eq "$("${JQ[@]}" -r .error "$META/.claude/session-lessons/state/last-run-weekly.json")" \
+    "claude exited 1: API Error: 529 Overloaded." "weekly error falls back to claude's stdout"
 
   # A failed commit in a weekly run is an error too.
   weekly_env "$T/y"; reject_commits

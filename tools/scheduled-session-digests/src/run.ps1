@@ -72,8 +72,10 @@ function Invoke-Claude([string]$In, [string]$Out, [string]$Prompt, [string]$Mode
     }
     $code
 }
+# claude prints an API error on stdout, so stdout backs up an empty stderr.
 function Get-FirstErrorLine([string]$Out) {
-    if (Test-Path "$Out.err") { Get-Content -LiteralPath "$Out.err" | Where-Object { $_ -match '\S' } | Select-Object -First 1 }
+    @("$Out.err", $Out) | Where-Object { Test-Path -LiteralPath $_ } | ForEach-Object { Get-Content -LiteralPath $_ } |
+        Where-Object { $_ -match '\S' } | Select-Object -First 1
 }
 
 Enter-Lock

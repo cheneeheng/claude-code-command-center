@@ -4,6 +4,8 @@
 # a preamble and one canned part per requested extraction. Controlled by files
 # in its working directory, the meta repo, under .fake-claude/:
 #   exit1      present: print an error and exit 1
+#   exit1-stdout  present: print an error on stdout, as claude does for an
+#              API error, and exit 1
 #   fail.txt   lines "<extraction>:<uuid>": print a truncated part instead
 #   none.txt   lines "<extraction>:<uuid>": print the "nothing found" form
 #   calls.log  appended: "<uuid>: <requested extractions>" per call
@@ -16,6 +18,7 @@ $stdin = @($input) -join "`n"
 $dir = Join-Path (Get-Location) '.fake-claude'
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 if (Test-Path (Join-Path $dir 'exit1')) { [Console]::Error.WriteLine('fake claude: simulated failure'); exit 1 }
+if (Test-Path (Join-Path $dir 'exit1-stdout')) { ''; 'API Error: 529 Overloaded.'; exit 1 }
 
 $utf8 = [Text.UTF8Encoding]::new($false)
 if (($prompt -split "`n")[0].TrimEnd("`r") -ceq '# Weekly decisions merge') {
