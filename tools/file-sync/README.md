@@ -18,7 +18,7 @@ parallel to sync different files or folder pairs at once.
 | `sync-engine.ps1` | base | Generic newer-wins sync of one file. `-FileA`/`-FileB`, `-Strategy raw\|json-merge`, `-ExcludePaths` (comma-separated, json-merge only; dot-notation with optional `[n]` array indices, e.g. `hooks.PreToolUse[0].hooks[0].command`). |
 | `sync-setup.ps1` | base | Generic install/uninstall (Task Scheduler; the task runs the engine through `conhost.exe --headless` so no window appears). Adds `-FileName`, `-Strategy`, `-ExcludePaths` on top of `-FolderA`/`-FolderB`/`-IntervalMinutes`. |
 | `claude-md-sync-setup.ps1` | specialization | Thin wrapper fixing `-FileName CLAUDE.md -Strategy raw`. |
-| `settings-sync-setup.ps1` | specialization | Thin wrapper fixing `-FileName settings.json -Strategy json-merge` (default exclude `statusLine.command,hooks.PreToolUse[0].hooks[0].command`). |
+| `settings-sync-setup.ps1` | specialization | Thin wrapper fixing `-FileName settings.json -Strategy json-merge` (default exclude `statusLine.command`). |
 
 The two `*-setup.ps1` wrappers are the specializations: each fixes the file name and strategy and
 passes `-FolderA`/`-FolderB`/`-IntervalMinutes` through to `sync-setup.ps1`. Call `sync-setup.ps1`
