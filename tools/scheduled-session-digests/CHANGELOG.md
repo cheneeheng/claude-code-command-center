@@ -29,6 +29,11 @@ installs from a clone at that tag.
 - In the weekly job, an invalid answer ends only that extraction's batches; the next
   extraction still runs.
 
+### Fixed
+
+- A failed `claude` call now records its cause when `claude` prints the error on stdout (an
+  API error such as `529 Overloaded`), instead of `claude exited 1: ` with nothing after it.
+
 ## [0.2.0] - 2026-10-13
 
 First tagged release: a from-scratch rebuild as a headless background pipeline that ships
