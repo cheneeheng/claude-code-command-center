@@ -518,7 +518,10 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
     `<command-name>` tag inside `tool_result` output yield no event)
 
   Then `tools/usage-report`'s and `apps/usage-dashboard`'s smoke and mypy pass again, unedited.
-- **Status:** todo
+- **Status:** done. `cd libs/claude-usage && uv run pytest && uv run mypy src`: "43 passed",
+  coverage 100%, mypy clean. `usage-report` smoke `PASS` + mypy clean, `usage-dashboard` smoke
+  `PASS`, both unedited. Real data: 2,034 skill, 1,084 agent, 1,164 command, 154 interrupt, and
+  1,667 tool_error events (per file, before global dedup), and 1,996 of 2,008 sessions titled.
 
 ### Phase 3: App package, store, and exporter
 
@@ -642,3 +645,4 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
 - 2026-10-14 Reviewed: Revise first, 3 blocking (interrupt/command matching too broad, claude-fable dropped from fallback, export lock timeout unhandled)
 - 2026-10-14 Design changed: was "`ModelPrice(input, output, cache_write, cache_read)`", now "`ModelPrice(input, output, cache_write, cache_read, cache_write_1h)`" (and `MessageUsage` / `messages` gain `cache_write_1h`), because 87% of local cache-write tokens are 1-hour writes priced at 2x input
 - 2026-10-14 Built Phase 1: `cd libs/claude-usage && uv run pytest && uv run mypy src`, 37 passed, coverage 100%
+- 2026-10-14 Built Phase 2: `cd libs/claude-usage && uv run pytest && uv run mypy src`, 43 passed, coverage 100%

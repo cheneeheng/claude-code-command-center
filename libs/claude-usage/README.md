@@ -22,8 +22,8 @@ for s in load_sessions():          # newest first; honours $C4_CLAUDE_DIR
 | `load_sessions(dirs=None)` | Parse all transcripts into a list of `Session` (newest first). |
 | `load_usage(dirs=None)` | Single parse pass returning `(sessions, Activity)` — the sessions above plus per-message rollups. |
 | `parse_file(path)` | Parse one transcript into a `FileParse`: its `MessageUsage` replies and `UsageEvent` uses, deduped within the file. `load_usage` merges these globally. |
-| `Session` | Dataclass: tokens (input/output/cache), `total_tokens`, estimated `cost_usd`, `models`, `project`, timestamps. |
-| `MessageUsage` / `UsageEvent` / `FileParse` | One deduped reply, one counted use (a tool call), and one parsed file. |
+| `Session` | Dataclass: tokens (input/output/cache), `total_tokens`, estimated `cost_usd`, `models`, `project`, timestamps, readable `title`, last `cwd`. |
+| `MessageUsage` / `UsageEvent` / `FileParse` | One deduped reply, one counted use, and one parsed file. A `UsageEvent.kind` is `tool`, `skill`, `agent`, `command` (typed slash command), `interrupt`, or `tool_error`. |
 | `Activity` | Dataclass: `daily` (364 `DayBucket`s, local time), `hour_dow` (7×24 token matrix, Mon..Sun), `tools` (tool_use counts by name). |
 | `DayBucket` | Dataclass: one local day's `date`, `tokens`, estimated `cost`, distinct `sessions`, `per_family` tokens. |
 | `claude_dirs()` | Resolve the Claude config dirs (honours pathsep-separated `$C4_CLAUDE_DIR`). |

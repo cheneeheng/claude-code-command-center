@@ -21,6 +21,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
@@ -55,6 +56,10 @@ class Session:
         message_count: Number of assistant messages counted.
         first_ts: ISO-8601 timestamp of the earliest record, or ``None``.
         last_ts: ISO-8601 timestamp of the latest record, or ``None``.
+        title: The parent transcript's ``custom-title``, else its first plain
+            prompt (one line, 80 characters), else ``session_id``.
+        cwd: The last working directory the parent transcript recorded, or
+            ``None``.
     """
 
     session_id: str
@@ -70,6 +75,8 @@ class Session:
     message_count: int
     first_ts: str | None
     last_ts: str | None
+    title: str = ""
+    cwd: str | None = None
 
 
 @dataclass
@@ -155,8 +162,13 @@ class UsageEvent:
     """One countable use, e.g. a tool call.
 
     Attributes:
-        kind: ``tool``.
-        name: What was used, e.g. the tool name.
+        kind: ``tool`` (any tool call), ``skill`` (``Skill`` call), ``agent``
+            (``Agent``/``Task`` call), ``command`` (a typed slash command),
+            ``interrupt`` (the user interrupted), or ``tool_error`` (a tool
+            result flagged ``is_error``).
+        name: The tool, skill, subagent type, or command (no leading slash).
+            Empty for ``interrupt``, and for a ``tool_error`` whose call is in
+            another file.
         ts: Aware UTC timestamp, or ``None``.
         session_id: The session that first recorded it.
         key: ``<kind>:<id>``, unique per event across all files.
@@ -181,6 +193,9 @@ class FileParse:
         last_ts: Latest record timestamp (aware UTC), or ``None``.
         messages: Assistant replies, deduped within the file (last line wins).
         events: Uses, deduped within the file (first seen wins).
+        title: The last ``custom-title``, else the first plain prompt's first line
+            (80 characters). ``None`` when there is neither, or for a folded file.
+        cwd: The last ``cwd`` recorded. ``None`` for a folded file.
     """
 
     path: str
@@ -190,6 +205,8 @@ class FileParse:
     last_ts: datetime | None
     messages: list[MessageUsage]
     events: list[UsageEvent]
+    title: str | None
+    cwd: str | None
 
 
 def claude_dirs() -> list[Path]:
@@ -252,8 +269,8 @@ def _utc(ts_raw: object) -> datetime | None:
     return dt.astimezone(timezone.utc)
 
 
-def _locate(fpath: str) -> tuple[str, str]:
-    """Return ``(project, session_id)`` for a transcript path.
+def _locate(fpath: str) -> tuple[str, str, bool]:
+    """Return ``(project, session_id, is_parent)`` for a transcript path.
 
     ``projects/<project>/<stem>.jsonl`` is a parent transcript, session ``stem``.
     Anything deeper, ``projects/<project>/<session-uuid>/.../*.jsonl``, is a
@@ -262,12 +279,10 @@ def _locate(fpath: str) -> tuple[str, str]:
     p = Path(fpath)
     parts = p.parts[:-1]
     anchors = [i for i, part in enumerate(parts) if part == "projects"]
-    if not anchors:
-        return p.parent.name, p.stem[:8]
-    rel = parts[anchors[-1] + 1 :]
+    rel = parts[anchors[-1] + 1 :] if anchors else ()
     if len(rel) <= 1:
-        return p.parent.name, p.stem[:8]
-    return rel[0], rel[1][:8]
+        return p.parent.name, p.stem[:8], True
+    return rel[0], rel[1][:8], False
 
 
 def _message_key(rec: dict[str, Any], msg: dict[str, Any]) -> str | None:
@@ -298,24 +313,57 @@ def parse_file(fpath: str) -> FileParse:
     Returns:
         The file's :class:`FileParse`. Unreadable files give an empty parse.
     """
-    project, session_id = _locate(fpath)
+    project, session_id, is_parent = _locate(fpath)
     messages: dict[str, MessageUsage] = {}
     events: dict[str, UsageEvent] = {}
+    tool_names: dict[str, str] = {}
     first_ts: datetime | None = None
     last_ts: datetime | None = None
+    custom_title: str | None = None
+    prompt_title: str | None = None
+    cwd: str | None = None
+
+    def add(kind: str, name: str, ts: datetime | None, ident: str) -> None:
+        key = f"{kind}:{ident}"
+        events.setdefault(key, UsageEvent(kind, name, ts, session_id, key))
 
     for i, rec in enumerate(_read_records(fpath)):
         ts = _utc(rec.get("timestamp"))
         if ts is not None:
             first_ts = ts if first_ts is None else min(first_ts, ts)
             last_ts = ts if last_ts is None else max(last_ts, ts)
+        if isinstance(rec.get("cwd"), str):
+            cwd = rec["cwd"]
+        if rec.get("type") == "custom-title" and isinstance(rec.get("customTitle"), str):
+            custom_title = rec["customTitle"]
+
+        msg = rec.get("message")
+        if not isinstance(msg, dict):
+            msg = {}
+        content = msg.get("content")
+
+        if rec.get("type") == "user":
+            rid = rec.get("uuid") or f"{fpath}#{i}"
+            texts = _texts(content)
+            if isinstance(content, str) and content.startswith("<command-"):
+                cmd = _COMMAND.search(content)
+                if cmd:
+                    add("command", cmd.group(1).strip(), ts, rid)
+            if any(t.startswith(_INTERRUPT) for t in texts):
+                add("interrupt", "", ts, rid)
+            results = _tool_results(content)
+            for j, res in enumerate(results):
+                if res.get("is_error") is True:
+                    tid = res.get("tool_use_id")
+                    ident = tid if isinstance(tid, str) and tid else f"{fpath}#{i}.{j}"
+                    add("tool_error", tool_names.get(ident, ""), ts, ident)
+            if prompt_title is None and not results and not rec.get("isMeta"):
+                prompt_title = _title_from(texts)
+            continue
 
         # Token usage only lives on assistant messages.
         if rec.get("type") != "assistant":
             continue
-        msg = rec.get("message")
-        if not isinstance(msg, dict):
-            msg = {}
         key = _message_key(rec, msg) or f"{fpath}#{i}"
         usage = msg.get("usage")
         if not isinstance(usage, dict):
@@ -334,7 +382,6 @@ def parse_file(fpath: str) -> FileParse:
             cache_write_1h=write_1h,
         )
 
-        content = msg.get("content")
         if not isinstance(content, list):
             continue
         for j, block in enumerate(content):
@@ -344,8 +391,17 @@ def parse_file(fpath: str) -> FileParse:
             if not isinstance(name, str) or not name:
                 continue
             bid = block.get("id")
-            ekey = f"tool:{bid}" if isinstance(bid, str) and bid else f"tool:{fpath}#{i}.{j}"
-            events.setdefault(ekey, UsageEvent("tool", name, ts, session_id, ekey))
+            ident = bid if isinstance(bid, str) and bid else f"{fpath}#{i}.{j}"
+            tool_names[ident] = name
+            add("tool", name, ts, ident)
+            inp = block.get("input")
+            if not isinstance(inp, dict):
+                inp = {}
+            if name == "Skill" and isinstance(inp.get("skill"), str):
+                add("skill", inp["skill"], ts, ident)
+            elif name in ("Agent", "Task"):
+                agent = inp.get("subagent_type")
+                add("agent", agent if isinstance(agent, str) and agent else "general-purpose", ts, ident)
 
     return FileParse(
         path=fpath,
@@ -355,7 +411,47 @@ def parse_file(fpath: str) -> FileParse:
         last_ts=last_ts,
         messages=list(messages.values()),
         events=list(events.values()),
+        title=(custom_title or prompt_title) if is_parent else None,
+        cwd=cwd if is_parent else None,
     )
+
+
+_COMMAND = re.compile(r"<command-name>/?([^<]+)</command-name>")
+_INTERRUPT = "[Request interrupted by user"
+_TITLE_LEN = 80
+
+
+def _texts(content: object) -> list[str]:
+    """Top-level text of a user message: the string itself, or its ``text`` blocks."""
+    if isinstance(content, str):
+        return [content]
+    if not isinstance(content, list):
+        return []
+    return [
+        b["text"]
+        for b in content
+        if isinstance(b, dict) and b.get("type") == "text" and isinstance(b.get("text"), str)
+    ]
+
+
+def _tool_results(content: object) -> list[dict[str, Any]]:
+    """The ``tool_result`` blocks of a user message."""
+    if not isinstance(content, list):
+        return []
+    return [b for b in content if isinstance(b, dict) and b.get("type") == "tool_result"]
+
+
+def _title_from(texts: list[str]) -> str | None:
+    """First line of the first plain prompt, cut to 80 characters, or ``None``.
+
+    Tag-wrapped records (``<command-name>``, ``<local-command-stdout>``, ...) and
+    interrupt markers are not prompts.
+    """
+    for text in texts:
+        line = text.strip().split("\n", 1)[0].strip()
+        if line and not line.startswith(("<", _INTERRUPT)):
+            return line[:_TITLE_LEN]
+    return None
 
 
 def _normalize_model(msg: dict[str, Any]) -> str:
@@ -443,6 +539,8 @@ def _session(
     project: str,
     span: tuple[datetime | None, datetime | None],
     messages: list[MessageUsage],
+    title: str | None,
+    cwd: str | None,
 ) -> Session | None:
     """Roll one session's deduped replies into a :class:`Session`, or ``None`` if
     they carry no token usage."""
@@ -472,6 +570,8 @@ def _session(
         message_count=len(messages),
         first_ts=first_ts.isoformat() if first_ts else None,
         last_ts=last_ts.isoformat() if last_ts else None,
+        title=title or session_id,
+        cwd=cwd,
     )
 
 
@@ -492,9 +592,15 @@ def _merge(parses: list[FileParse]) -> tuple[list[Session], Activity]:
     messages: dict[str, MessageUsage] = {}
     events: dict[str, UsageEvent] = {}
     projects: dict[str, str] = {}
+    titles: dict[str, str] = {}
+    cwds: dict[str, str] = {}
     spans: dict[str, tuple[datetime | None, datetime | None]] = {}
     for fp in parses:
         projects.setdefault(fp.session_id, fp.project)
+        if fp.title is not None:
+            titles[fp.session_id] = fp.title
+        if fp.cwd is not None:
+            cwds[fp.session_id] = fp.cwd
         lo, hi = spans.get(fp.session_id, (None, None))
         if fp.first_ts is not None:
             lo = fp.first_ts if lo is None else min(lo, fp.first_ts)
@@ -514,13 +620,23 @@ def _merge(parses: list[FileParse]) -> tuple[list[Session], Activity]:
         if m.ts is not None:
             acc.add_message(m.ts.astimezone(), m.session_id, m.model, m.counts())
     for e in events.values():
-        day = e.ts.astimezone().date().isoformat() if e.ts is not None else None
-        acc.add_tool(e.name, day)
+        if e.kind == "tool":
+            day = e.ts.astimezone().date().isoformat() if e.ts is not None else None
+            acc.add_tool(e.name, day)
 
     sessions = [
         s
         for sid in projects
-        if (s := _session(sid, projects[sid], spans[sid], by_session.get(sid, [])))
+        if (
+            s := _session(
+                sid,
+                projects[sid],
+                spans[sid],
+                by_session.get(sid, []),
+                titles.get(sid),
+                cwds.get(sid),
+            )
+        )
     ]
     sessions.sort(key=lambda s: s.last_ts or "", reverse=True)
     return sessions, acc.finalize()
