@@ -1,0 +1,6 @@
+{
+  "mcpServers": { "github": { "command": "gh-mcp" } },
+  "projects": {
+    "/work/beta": { "mcpServers": { "beta-db": { "command": "db-mcp" } } }
+  }
+}

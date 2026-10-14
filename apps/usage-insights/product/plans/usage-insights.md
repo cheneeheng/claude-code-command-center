@@ -266,9 +266,11 @@ builtin_tools)`, each a list of `Item(name, source)`, with `source` one of `user
 `plugin:<plugin>`, `project`, `built-in`. It reads:
 
 - **User items:** `<claude_dir>/skills/*/SKILL.md` (name = folder) and `<claude_dir>/agents/*.md`.
-- **Plugin items:** `load_installed_plugins` keeps `local` and `project` entries only for the
-  project root it is given. So it is called once per path in `project_paths` and once more for
-  the `user` bucket, and the results are deduped by `installPath`. Each entry's skills and agents
+- **Plugin items:** `claude_plugins.load_plugin_entries` (added in Phase 4) returns every
+  registry entry once. `user` entries count, and `local`/`project` entries count when their
+  normalised `projectPath` is one of `project_paths`, deduped by `installPath`. (Calling
+  `load_installed_plugins` once per project re-normalised every entry each time: 34,383
+  `resolve()` calls and 5.4 s on local data, now 0.15 s.) Each entry's skills and agents
   come from `load_plugin_skills` and `load_plugin_agents`, named `<plugin>:<member>`, where
   `<plugin>` is the registry key before `@`.
 - **Project items:** `<path>/.claude/skills` and `<path>/.claude/agents` for each path in
@@ -277,7 +279,9 @@ builtin_tools)`, each a list of `Item(name, source)`, with `source` one of `user
   `<claude_dir>/.claude.json` when that file exists and `~/.claude.json` otherwise (top level, and under
   `projects[<path>]` for each path in `project_paths`), in `<path>/.mcp.json`, and in each
   installed plugin's `.mcp.json`. A server counts as used when a `tool` event name starts with
-  `mcp__<server>__`, with the server name's non-alphanumerics mapped to `_` before comparing.
+  `mcp__<server>__`, with non-alphanumerics mapped to `_` on both sides before comparing
+  (Claude Code keeps dashes in some, e.g. `mcp__claude-in-chrome__navigate`). Used servers that
+  no config lists still show, with source `unknown`.
 - **Built-in agents:** a constant list: `general-purpose`, `Explore`, `Plan`, `statusline-setup`,
   `claude-code-guide`.
 - **Built-in tools:** a constant list: `Agent`, `AskUserQuestion`, `Bash`, `Edit`, `Glob`,
@@ -310,7 +314,9 @@ so its change values are `null`).
 - Forecast = actual so far (today included) + mean(daily) x remaining days, where remaining days
   = the unelapsed fraction of today + the whole days left in the week or month. Today is never
   counted twice.
-- Band: low = actual + p25(daily) x remaining, high = actual + p75(daily) x remaining.
+- Band: low = actual + min(p25, mean) x remaining, high = actual + max(p75, mean) x remaining,
+  so the band always contains the forecast even when one heavy day pulls the mean outside the
+  quartiles.
 - Computed for tokens and cost, overall and for each project.
 
 **Skill and subagent health**, evaluated over all history in the store, first match wins:
@@ -324,7 +330,8 @@ so its change values are `null`).
 5. `healthy`: everything else.
 
 Rows sort by status in the order above, then by uses. `invoked` is `auto` (only `Skill` calls),
-`typed` (only `command` events), or `both`. Subagents use `agent` events and are never `typed`.
+`typed` (only `command` events), or `both`, and `null` with no uses. Subagents use `agent`
+events and are never `typed`.
 
 ### Interface
 
@@ -389,10 +396,12 @@ Rows sort by status in the order above, then by uses. `invoked` is `auto` (only 
 
   Payload rules:
   - `projection.pace` always holds the last 30 local days, ending today.
-  - Every `project` value in the payload is a display label: the basename of the latest `cwd`
-    among that project's sessions, falling back to the encoded folder name (e.g.
+  - Every `project` value in the payload is a display label: the basename of the launch folder,
+    meaning the `cwd` that encodes (non-alphanumerics to `-`) to the project folder name, else the
+    latest `cwd` among that project's sessions, falling back to the encoded folder name (e.g.
     `C--Users-x-repo`) when no session has a `cwd`. Two projects with the same basename get the
-    folder name appended in parentheses.
+    folder name appended in parentheses. (The latest `cwd` alone renamed this repo's project to
+    `usage-insights` once a session moved into that subfolder.)
   - `projects.change` is the cost change ratio against the previous period, `null` when that
     period's cost is 0 or the range is `all`.
   - `sessions` holds the top 100 by tokens. `models`, `projects` sort by cost. `tools.used` sorts
@@ -581,7 +590,12 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
   - `test_server_smoke` (boots on a free port: `/api/summary` 200, wrong `Host` 403, bad
     `range` 400, `POST /api/refresh` 200, and 409 while another connection holds the write
     lock)
-- **Status:** todo
+- **Status:** done. `uv run ruff check . && uv run mypy src && uv run pytest`: ruff and mypy
+  clean, "24 passed" (all named tests plus `test_project_label_prefers_the_launch_folder`,
+  `test_used_mcp_server_not_configured_shows_unknown`, `test_summary_without_store_is_empty`,
+  `test_cli_reuses_running_instance`). `libs/claude-plugins` gained `load_plugin_entries`
+  (29 passed, coverage 100%). Real data: inventory 0.15 s, summary 0.41 s, payload 85 KB.
+  The plugin/MCP fixture files deferred from Phase 3 landed here.
 
 ### Phase 5: Frontend: catalogue, default layout, all sections
 
@@ -655,3 +669,8 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
 - 2026-10-14 Built Phase 1: `cd libs/claude-usage && uv run pytest && uv run mypy src`, 37 passed, coverage 100%
 - 2026-10-14 Built Phase 2: `cd libs/claude-usage && uv run pytest && uv run mypy src`, 43 passed, coverage 100%
 - 2026-10-14 Built Phase 3: `cd apps/usage-insights && uv run ruff check . && uv run mypy src && uv run pytest`, 8 passed; real-data second export "files parsed 0" in 0.15 s
+- 2026-10-14 Design changed: was "`load_installed_plugins` ... is called once per path in `project_paths`", now "`claude_plugins.load_plugin_entries` returns every entry once", because per-project calls took 5.4 s on local data
+- 2026-10-14 Design changed: was "Band: low = actual + p25(daily) x remaining, high = actual + p75(daily) x remaining", now "min(p25, mean) / max(p75, mean)", because a heavy day can push the mean outside the quartiles
+- 2026-10-14 Design changed: was "the basename of the latest `cwd`", now "the basename of the launch folder (the `cwd` that encodes to the project folder name)", because a session that moved into a subfolder renamed the project
+- 2026-10-14 Design changed: was "server name's non-alphanumerics mapped to `_`", now "both sides mapped, and used-but-unconfigured servers shown as `unknown`", because Claude Code keeps dashes in some MCP tool names and the user's used MCP servers are not in any local config
+- 2026-10-14 Built Phase 4: `cd apps/usage-insights && uv run ruff check . && uv run mypy src && uv run pytest`, 24 passed

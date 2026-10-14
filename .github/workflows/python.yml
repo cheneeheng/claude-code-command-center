@@ -21,6 +21,7 @@ jobs:
           - apps/multi-repo-workspace
           - apps/per-project-plugin-toggler
           - apps/usage-dashboard
+          - apps/usage-insights
           - apps/claude-component-browser
           - tools/usage-report
           - libs/claude-usage
@@ -51,6 +52,8 @@ jobs:
             target: src
           - member: apps/claude-component-browser
             target: server.py
+          - member: apps/usage-insights
+            target: src
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -99,6 +102,21 @@ jobs:
       # board -> session -> order -> end turn -> review -> commit -> close.
       - name: smoke test
         run: uv run bash tests/smoke.sh
+
+  test-usage-insights:
+    name: pytest (usage-insights)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/usage-insights
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # Covers the exporter, aggregation, and a booted server (test_server_smoke).
+      - name: pytest
+        run: uv run pytest
 
   smoke:
     name: Smoke test (${{ matrix.member }})

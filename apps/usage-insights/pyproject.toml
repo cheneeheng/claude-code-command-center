@@ -8,7 +8,10 @@ version = "0.1.0"
 description = "Decision-focused Claude Code usage dashboard: projection, spend, and skill health."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["claude-usage"]
+dependencies = [
+    "claude-plugins",
+    "claude-usage",
+]
 
 [project.scripts]
 usage-insights = "usage_insights.cli:main"
@@ -21,6 +24,7 @@ package = true
 
 [tool.uv.sources]
 claude-usage = { path = "../../libs/claude-usage", editable = true }
+claude-plugins = { path = "../../libs/claude-plugins", editable = true }
 
 [dependency-groups]
 dev = [

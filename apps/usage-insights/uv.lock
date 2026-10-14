@@ -71,6 +71,21 @@ wheels = [
 ]
 
 [[package]]
+name = "claude-plugins"
+version = "0.1.0"
+source = { editable = "../../libs/claude-plugins" }
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "ruff", specifier = ">=0.15" },
+]
+
+[[package]]
 name = "claude-usage"
 version = "0.1.0"
 source = { editable = "../../libs/claude-usage" }
@@ -379,6 +394,7 @@ name = "usage-insights"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "claude-plugins" },
     { name = "claude-usage" },
 ]
 
@@ -390,7 +406,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "claude-usage", editable = "../../libs/claude-usage" }]
+requires-dist = [
+    { name = "claude-plugins", editable = "../../libs/claude-plugins" },
+    { name = "claude-usage", editable = "../../libs/claude-usage" },
+]
 
 [package.metadata.requires-dev]
 dev = [

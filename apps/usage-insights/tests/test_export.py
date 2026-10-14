@@ -10,21 +10,6 @@ import pytest
 
 from usage_insights import cli, export, store
 
-FIXTURE = Path(__file__).parent / "fixtures" / "claude"
-
-
-@pytest.fixture
-def claude_dir(tmp_path: Path) -> Path:
-    """A writable copy of the fixture Claude dir."""
-    dest = tmp_path / "claude"
-    shutil.copytree(FIXTURE, dest)
-    return dest
-
-
-@pytest.fixture
-def db(tmp_path: Path) -> Path:
-    return tmp_path / "home" / "usage.db"
-
 
 def _rows(db: Path, sql: str) -> list[tuple[object, ...]]:
     with sqlite3.connect(db) as conn:
@@ -34,7 +19,7 @@ def _rows(db: Path, sql: str) -> list[tuple[object, ...]]:
 def test_export_counts_match_fixture(claude_dir: Path, db: Path) -> None:
     result = export.run_export(db, [claude_dir])
     assert (result.files_scanned, result.files_parsed) == (3, 3)
-    assert (result.messages, result.events) == (4, 9)
+    assert (result.messages, result.events) == (4, 10)
     assert _rows(db, "SELECT id, project, title, cwd FROM sessions ORDER BY id") == [
         ("11111111", "C--work-alpha", "Alpha work", "/work/alpha"),
         ("22222222", "C--work-beta", "Beta prompt", "/work/beta"),
@@ -147,5 +132,5 @@ def test_cli_export_prints_counts(
     monkeypatch.setenv("C4_USAGE_INSIGHTS_HOME", str(db.parent))
     assert cli.main(["export", "--claude-dir", str(claude_dir)]) == 0
     out = capsys.readouterr().out
-    assert "files scanned 3, files parsed 3, messages 4, events 9" in out
+    assert "files scanned 3, files parsed 3, messages 4, events 10" in out
     assert store.store_path() == db
