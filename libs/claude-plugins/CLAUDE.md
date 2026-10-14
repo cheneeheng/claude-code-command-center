@@ -20,7 +20,8 @@ changed file (`uv run python -m py_compile src/claude_plugins/<file>.py`); lint/
 ## Code structure (`src/claude_plugins/`)
 
 - `__init__.py` — the public surface (`__all__`). This is the API boundary.
-- `plugins.py` — registry reading and scope bucketing: `load_installed_plugins`, `plugins_base`,
+- `plugins.py` — registry reading and scope bucketing: `load_installed_plugins` (built on
+  `load_plugin_entries`, the unfiltered entry list), `plugins_base`,
   `normalise_path`, `loose_bases`.
 - `members.py` — member parsing: `parse_frontmatter`, `load_plugin_skills`, `load_plugin_agents`,
   `load_plugin_hooks`, and the `PluginMember` / `PluginHook` dataclasses.

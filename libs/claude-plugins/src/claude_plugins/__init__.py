@@ -17,6 +17,7 @@ from claude_plugins.members import (
 from claude_plugins.plugins import (
     claude_dir,
     load_installed_plugins,
+    load_plugin_entries,
     loose_bases,
     normalise_path,
     plugins_base,
@@ -28,6 +29,7 @@ __all__ = [
     "claude_dir",
     "load_installed_plugins",
     "load_plugin_agents",
+    "load_plugin_entries",
     "load_plugin_hooks",
     "load_plugin_skills",
     "loose_bases",
