@@ -37,6 +37,7 @@ jobs:
           bash tests/run.sh pwsh archive
           bash tests/run.sh pwsh daily
           bash tests/run.sh pwsh weekly
+          bash tests/run.sh pwsh questions
 
   windows:
     name: session-digests (windows, pwsh + registry)

@@ -76,7 +76,7 @@ Windows spelling first; Bash uses `--kebab-case` (`--meta-dir`, `--dry-run`, ...
 |---|---|
 | `install [-MetaDir <p>] [-DailyAt HH:MM] [-WeeklyDay <Day>] [-WeeklyAt HH:MM] [-NoSchedule] [-NoArchive] [-Yes]` | Sets everything up. `-NoSchedule`: manual runs only. `-NoArchive`: skip the one-time archive of sessions already on disk. Safe to run again. |
 | `run [-Job daily\|weekly] [-All] [-Since yyyy-mm-dd] [-DryRun] [-Yes]` | Runs a job now (daily by default). |
-| `status` | Schedule, next runs, progress, the last run of each job and its error, and given-up sessions. |
+| `status` | Schedule, next runs, progress, the last run of each job and its error, and given-up sessions. With `decisions` on: SOUL.md's size, the open question count, and the line to add to `~/.claude/CLAUDE.md`. |
 | `uninstall [-Purge] [-Yes]` | Removes the schedule and the tool's files. Keeps your lessons, transcripts, logs, and `config.json` unless you pass `-Purge`. Never touches the meta repo itself or its `.git`. |
 
 `-MetaDir` (`--meta-dir`) works with every command. It defaults to `$C4_CLAUDE_META_DIR`, then
@@ -99,9 +99,47 @@ Windows spelling first; Bash uses `--kebab-case` (`--meta-dir`, `--dry-run`, ...
 ## Extractions
 
 The daily job is built around **extractions**: each one is a prompt section and an output
-folder in `config.json`. The product ships one, `lessons`. Every session is sent to `claude`
+folder in `config.json`. The product ships two: `lessons`, on, and `decisions`, off (see
+below). Every session is sent to `claude`
 **once**, asking for every extraction it still needs, and the answer is split and filed per
 extraction. An extraction added later only processes the sessions that lack its output.
+
+## Decisions and SOUL.md (optional)
+
+A second extraction, `decisions`, teaches Claude Code how **you** weigh options, not only
+which mistakes to avoid. It is off by default.
+
+- **Every night**, the same `claude` call that writes a session's lessons also records each
+  decision you made in it: the options on the table, what you picked, and your reason in your
+  own words (`none given` when you gave none). Files land in `decisions/<yyyy>/<MM>/`.
+- **Every week**, the new decisions are folded into `SOUL.md` at the root of the meta repo: a
+  short file (at most 150 lines) of priorities and "when X, prefer Y, because Z, unless W"
+  rules. It ends with a fixed "When to ask" section that tells agents to ask you instead of
+  guessing when no rule covers a decision.
+- **What the records cannot settle** (a rule with no stated reason, two choices that
+  contradict each other) becomes a question. With the question queue on, each question is a
+  GitHub issue on your meta repo, labelled `decision-question`. Answer it in a comment, from
+  any device, and close it. The next weekly run reads your comment back as a decision with
+  your stated reason.
+
+To turn it on, set `"enabled": true` under `extractions.decisions` in
+`<meta>/.claude/session-lessons/config.json`. Then add the line `status` prints to your
+global `~/.claude/CLAUDE.md`, so every session loads SOUL.md:
+
+```text
+@C:/Users/you/claude-meta/SOUL.md
+```
+
+The question queue needs `gh` on your PATH when you run `install` (re-run `install` after
+installing it), signed in as the owner of the meta repo, and an `origin` remote on GitHub. It
+opens issues **only on a private repo**: issue bodies quote your sessions. Without it,
+questions are still written to `decisions/questions/`, and SOUL.md tells agents to proceed
+conservatively when you are away. Only comments by the repo owner count as answers.
+
+From then on, each new session gets a decisions file. To backfill, `run -All` asks every
+session still on disk for its missing decisions part, at one `sonnet` call per session. A
+manual run is not capped, so preview it with `run -DryRun -All` first. Sessions Claude Code
+has already deleted cannot be backfilled.
 
 ## The transcript archive
 
@@ -123,7 +161,8 @@ calls.
 
 ## Privacy
 
-The meta repo holds extracts of your private sessions: lessons, and cleaned transcripts. It
+The meta repo holds extracts of your private sessions: lessons, decisions, and cleaned
+transcripts. It
 stays on your machine unless you add a git remote. **Before adding one, make sure the remote
 repo is private.** From then on, every run pushes.
 
@@ -147,5 +186,5 @@ bash tests/run.sh bash      # every suite against the Bash scripts, plus bash-vs
 bash tests/run.sh pwsh      # every suite against the PowerShell scripts
 ```
 
-The tests use synthetic transcripts and a fake `claude`, so they spend no credit. They never
-register a real scheduled task outside CI.
+The tests use synthetic transcripts, a fake `claude`, and a fake `gh`, so they spend no credit
+and never reach GitHub. They never register a real scheduled task outside CI.

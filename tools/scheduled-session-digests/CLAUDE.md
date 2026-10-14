@@ -22,12 +22,15 @@ and every session's cleaned transcript is archived. PowerShell 7.4+ on Windows, 
   - `finish` / `finish-weekly`: split, validate, move into place, attempts, cursors, the
     last-run summary.
   - `git-sync`: commit and push.
+  - `questions`: the question queue on GitHub issues (`collect`, `open`, `count`) for a
+    weekly `replace` extraction (decisions' SOUL.md).
   - `lib.ps1` / `lib.sh`: shared helpers (lock, due rule).
   - `clean.jq`, `split.jq`, `merge.jq`: the Bash cleanup, answer split, and weekly merge.
   - `prompts/`: `daily-frame.md`, `extract/<extraction>.md`, `merge/<extraction>.md`.
   - `config.default.json`: the defaults `install` writes.
-- `tests/run.sh <bash|pwsh> [suite]`: suites `archive`, `daily`, `weekly`, `cli`,
-  `equivalence`. A fake `claude` (`tests/fake-claude.{sh,ps1}`) answers.
+- `tests/run.sh <bash|pwsh> [suite]`: suites `archive`, `daily`, `weekly`, `questions`,
+  `cli`, `equivalence`. A fake `claude` (`tests/fake-claude.{sh,ps1}`) and a fake `gh`
+  (`tests/fake-gh.{sh,ps1}`) answer; no test reaches GitHub.
 
 ## Invariants — do not break these
 

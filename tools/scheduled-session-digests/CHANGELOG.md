@@ -7,6 +7,35 @@ installs from a clone at that tag.
 
 ## [Unreleased]
 
+### Added
+
+- A `decisions` extraction, off by default: the daily call also records each decision the user
+  made in a session, with their own reason, in `decisions/<yyyy>/<MM>/`.
+- A weekly merge that rewrites `SOUL.md` (at most `weekly.maxLines` lines of priorities and
+  "when X, prefer Y, because Z, unless W" rules) and ends it with a fixed "When to ask"
+  section, for the user to import from `~/.claude/CLAUDE.md`.
+- A question queue on GitHub issues (`decision-question`): the weekly merge's open questions
+  are opened as issues on a private meta repo only, and closed issues the repo owner answered
+  are read back before the next merge. Its failures are a `questionsWarning`, never the run's
+  error.
+- `install` and `status` print the `@` import line while `decisions` is enabled, and `status`
+  shows SOUL.md's size and the open question count.
+
+### Changed
+
+- Re-running `install` merges new default keys into each existing extraction, keeping the
+  user's own values (it used to add only missing extractions).
+- Each extraction's "nothing found" text lives in `config.json` (`none`).
+- In the weekly job, an invalid answer ends only that extraction's batches; the next
+  extraction still runs.
+
+### Fixed
+
+- A failed `claude` call now records its cause when `claude` prints the error on stdout (an
+  API error such as `529 Overloaded`), instead of `claude exited 1: ` with nothing after it.
+- A failed `gh` call in the question queue now ends its `questionsWarning` with gh's own first
+  error line, such as a token that may not create issues.
+
 ## [0.2.0] - 2026-10-13
 
 First tagged release: a from-scratch rebuild as a headless background pipeline that ships

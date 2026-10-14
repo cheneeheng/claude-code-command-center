@@ -57,7 +57,24 @@ function Confirm-Change {
     if ((Read-Host 'Proceed? [y/N]') -notmatch '^[Yy]$') { Write-Output 'Nothing changed.'; exit 0 }
 }
 function Format-Time([long]$Epoch) { (ConvertFrom-Epoch $Epoch).ToString('yyyy-MM-dd HH:mm') }
+# The line that loads an enabled weekly "replace" master (decisions' SOUL.md)
+# into every session, with forward slashes. Printed, never written:
+# ~/.claude/CLAUDE.md is the user's.
+function Write-ImportLine([string]$Master) {
+    Write-Output 'Add this line to ~/.claude/CLAUDE.md to load your decisions:'
+    Write-Output "  @$($meta -replace '\\', '/')/$Master"
+}
+function Get-ReplaceMasters { @($SlConfig.extractions.PSObject.Properties | Where-Object { $_.Value.enabled -and $_.Value.weekly.mode -eq 'replace' }) }
 function Get-OurTask { Get-ScheduledTask -TaskPath $taskFolder -TaskName $taskName -ErrorAction SilentlyContinue }
+# Adds every key of $Default missing from $User, recursing into objects, so new
+# default keys reach existing extractions while the user's own values win (jq's
+# `*` in lessons.sh).
+function Merge-Default($Default, $User) {
+    foreach ($k in $Default.Keys) {
+        if (-not $User.Contains($k)) { $User[$k] = $Default[$k] }
+        elseif ($User[$k] -is [Collections.IDictionary] -and $Default[$k] -is [Collections.IDictionary]) { Merge-Default $Default[$k] $User[$k] }
+    }
+}
 
 # ------------------------------------------------------------------------------
 function Invoke-Install {
@@ -108,7 +125,7 @@ function Invoke-Install {
     if ([Environment]::GetEnvironmentVariable('C4_CLAUDE_META_DIR', 'User')) { $keep.Add('the C4_CLAUDE_META_DIR variable') }
 
     $changes.Add('Install the scripts into .claude/session-lessons/src/.')
-    $changes.Add($(if (Test-Path -LiteralPath $cfgPath) { 'Keep config.json (add any missing extraction).' } else { 'Create .claude/session-lessons/config.json.' }))
+    $changes.Add($(if (Test-Path -LiteralPath $cfgPath) { 'Keep config.json (add any missing extraction or setting).' } else { 'Create .claude/session-lessons/config.json.' }))
     $gi = Join-Path $meta '.gitignore'
     $giHave = if (Test-Path -LiteralPath $gi) { @(Get-Content -LiteralPath $gi) } else { @() }
     $giNew = @('logs/*session-lessons-*', '.claude/session-lessons/state/', '.claude/session-lessons/staging/' | Where-Object { $giHave -cnotcontains $_ })
@@ -164,7 +181,7 @@ function Invoke-Install {
     if (Test-Path -LiteralPath $cfgPath) {
         $cfg = Get-Content -Raw $cfgPath | ConvertFrom-Json -AsHashtable
         if (-not $cfg.extractions) { $cfg.extractions = [ordered]@{} }
-        foreach ($k in $defaults.extractions.Keys) { if (-not $cfg.extractions.Contains($k)) { $cfg.extractions[$k] = $defaults.extractions[$k] } }
+        Merge-Default $defaults.extractions $cfg.extractions
     } else {
         $cfg = $defaults
         if ($carry) {
@@ -189,6 +206,8 @@ function Invoke-Install {
         claudePath = $claude
         claudeNoToolsArgs = @('--tools', '', '--no-session-persistence')
         scanRoots = @($roots)
+        # The question queue's gh; none is fine (the queue stays off).
+        ghPath = (Get-Command gh -ErrorAction SilentlyContinue | Select-Object -First 1).Source
         taskName = "$taskFolder$taskName"
         installed = [ordered]@{
             createdMetaDir = $(if ($null -ne $old.installed.createdMetaDir) { $old.installed.createdMetaDir } else { $newMeta })
@@ -220,6 +239,7 @@ function Invoke-Install {
     else { Write-Output "First scheduled run: $(Format-Time (Get-NextScheduled 'daily' (Get-NowEpoch)))." }
     Write-Output 'For a first look, in the clone folder:'
     Write-Output "  pwsh ./lessons.ps1 run -DryRun -MetaDir '$meta'"
+    foreach ($p in Get-ReplaceMasters) { Write-ImportLine $p.Value.weekly.master }
 }
 
 # ------------------------------------------------------------------------------
@@ -262,6 +282,13 @@ function Invoke-Status {
         Write-Output "Given up ($($lines.Count)), retried after removing the line from state/given-up.txt:"
         foreach ($l in $lines) { Write-Output "  $($l.Substring(0, [Math]::Min(76, $l.Length)))" }
     } else { Write-Output 'Given up: none.' }
+    foreach ($p in Get-ReplaceMasters) {
+        $m = $p.Value.weekly.master; $mp = Join-Path $meta $m
+        $n = if (Test-Path -LiteralPath $mp) { @(Get-Content -LiteralPath $mp).Count } else { 0 }
+        $k = & (Join-Path $h 'src/questions.ps1') count -Ext $p.Name
+        Write-Output "$($p.Name): $(Split-Path -Leaf $m) $n lines, $k open question(s)."
+        Write-ImportLine $m
+    }
 }
 
 # ------------------------------------------------------------------------------

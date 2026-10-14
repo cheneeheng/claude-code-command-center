@@ -37,8 +37,9 @@ valid_part() {  # <extraction> <uuid> <file>
     *) [[ -s "$3" ]] && grep -qF "$2" "$3" ;;
   esac
 }
-is_none() {  # <extraction> <file>: the "nothing found" form of a valid part
-  [[ "$1" == lessons ]] && grep -qF "_No lessons extracted from this session._" "$2"
+is_none() {  # <extraction> <file>: the "nothing found" form (config .none) of a valid part
+  local n; n="$(cfg ".extractions[\"$1\"].none // empty")"
+  [[ -n "$n" ]] && grep -qF "$n" "$2"
 }
 
 processed=0; failed=0; given=0; oldest_undone=""

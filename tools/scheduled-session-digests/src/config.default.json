@@ -15,7 +15,21 @@
       "enabled": true,
       "prompt": "extract/lessons.md",
       "outputDir": "lessons-learned",
+      "none": "_No lessons extracted from this session._",
       "weekly": { "prompt": "merge/lessons.md", "master": "master-lessons/MASTER_LESSONS_LEARNED.md" }
+    },
+    "decisions": {
+      "enabled": false,
+      "prompt": "extract/decisions.md",
+      "outputDir": "decisions",
+      "none": "_No decisions extracted from this session._",
+      "weekly": {
+        "prompt": "merge/decisions.md",
+        "master": "SOUL.md",
+        "mode": "replace",
+        "maxLines": 150,
+        "questions": { "enabled": true, "label": "decision-question" }
+      }
     }
   }
 }

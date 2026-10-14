@@ -37,7 +37,29 @@ safe_title() { printf '%s' "$1" | LC_ALL=C sed -E 's/[\\/:*?"<>|]/_/g; s/[[:spac
 # The categories src/prompts/merge/lessons.md offers. Keep the three in sync
 # (this list, the prompt, and $script:LessonsCategories in lib.ps1).
 LESSONS_CATEGORIES='["Architecture","Debugging","Performance","Security","Testing","Tooling","Workflow","API behaviour","Database","Other"]'
-LESSONS_STUB="_No lessons extracted from this session._"
+
+# --- SOUL.md (a weekly "replace" master) ----------------------------------------
+# soul_body <file>: the file up to its first "## When to ask" line (the section
+# the script owns), trailing blank lines dropped, LF-terminated; empty when none.
+soul_body() {
+  [[ -f "$1" ]] || return 0
+  awk '$0 == "## When to ask" {exit} {a[n++] = $0}
+       END {while (n > 0 && a[n-1] == "") n--; for (i = 0; i < n; i++) print a[i]}' "$1"
+}
+# ask_section <owner/repo or empty> <label>: the fixed section appended to SOUL.md.
+# The issue bullet appears only when the question queue is active on a private repo.
+ask_section() {
+  printf '%s\n' '## When to ask' '' \
+    '- No priority or rule above covers the decision, or it is irreversible: ask the user in the' \
+    '  session if they are present.'
+  if [[ -n "$1" ]]; then
+    printf -- '- When they are not: run `gh issue create --repo %s --label %s`\n' "$1" "$2"
+    printf '%s\n' '  with the situation, the options, and your recommendation, then continue on the most' \
+      '  conservative option and say so. Never comment on or close these issues.'
+  else
+    printf '%s\n' '- When they are not: continue on the most conservative option and say so.'
+  fi
+}
 
 now_epoch() { date +%s; }
 

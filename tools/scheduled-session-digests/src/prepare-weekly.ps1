@@ -20,6 +20,10 @@ if ($Log) { $script:SlLog = $Log }
 
 $e = $SlConfig.extractions.$Ext
 $outDir = $e.outputDir; $master = $e.weekly.master
+# append: the master gains new entries (lessons). replace: claude rewrites the
+# whole master (decisions' SOUL.md); run puts its current text where the
+# {{CURRENT_FILE}} line is, just before each call.
+$wmode = if ($e.weekly.mode) { $e.weekly.mode } else { 'append' }
 $limit = [long]$SlConfig.weeklyBatchChars
 $dir = Join-Path $SlStaging "weekly-$Ext"
 $runDate = Get-Date -Format 'yyyy-MM-dd'
@@ -35,7 +39,9 @@ if (Test-Path -LiteralPath $od) {
     foreach ($f in Get-ChildItem -LiteralPath $od -Recurse -File -Filter '*.md') {
         $m = Get-MtimeEpoch $f
         if ($m -le $Cutoff) { continue }
-        $found.Add([pscustomobject]@{ Mtime = $m; Rel = ([IO.Path]::GetRelativePath($SlMeta, $f.FullName) -replace '\\', '/'); Path = $f.FullName })
+        $rel = [IO.Path]::GetRelativePath($SlMeta, $f.FullName) -replace '\\', '/'
+        if (Test-Starts $rel "$outDir/questions/") { continue }
+        $found.Add([pscustomobject]@{ Mtime = $m; Rel = $rel; Path = $f.FullName })
     }
 }
 $keys = [string[]]@(for ($i = 0; $i -lt $found.Count; $i++) { '{0:D12} {1}{2}{3}' -f $found[$i].Mtime, $found[$i].Rel, [char]0, $i })
@@ -47,16 +53,43 @@ $files = [System.Collections.Generic.List[object]]::new()
 foreach ($c in $items) {
     $newest = $c.Mtime
     if ($gone.Contains("weekly-${Ext}:$($c.Rel)")) { continue }
-    if ($Ext -eq 'lessons' -and [IO.File]::ReadAllText($c.Path, $script:Utf8).Contains($script:LessonsStub)) { continue }
+    if ($e.none -and [IO.File]::ReadAllText($c.Path, $script:Utf8).Contains($e.none)) { continue }
     $files.Add($c)
 }
 
-# The master's titles, grouped under their headings.
-$titles = '(none yet)'
-$mp = Join-Path $SlMeta $master
-if (Test-Path -LiteralPath $mp) {
-    $t = @((ConvertTo-Lines ([IO.File]::ReadAllText($mp, $script:Utf8))) | Where-Object { (Test-Starts $_ '## ') -or (Test-Starts $_ '### ') })
-    if ($t.Count) { $titles = $t -join "`n" }
+# What precedes the new files. append: the master's titles, grouped under their
+# headings. replace: the current-file slot, then every "### " question title in
+# <outputDir>/questions/*.md (by file name, first occurrence) that no
+# <outputDir>/answered/issue-*.md answers (its first line is "## <title>").
+if ($wmode -eq 'replace') {
+    $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    $ad = Join-Path $SlMeta "$outDir/answered"
+    if (Test-Path -LiteralPath $ad) {
+        foreach ($f in Get-ChildItem -LiteralPath $ad -File -Filter 'issue-*.md') {
+            $first = (ConvertTo-Lines ([IO.File]::ReadAllText($f.FullName, $script:Utf8)))[0]
+            [void]$seen.Add('### ' + $(if (Test-Starts $first '## ') { $first.Substring(3) } else { $first }))
+        }
+    }
+    $open = [System.Collections.Generic.List[string]]::new()
+    $qd = Join-Path $SlMeta "$outDir/questions"
+    if (Test-Path -LiteralPath $qd) {
+        $names = [string[]]@(Get-ChildItem -LiteralPath $qd -File -Filter '*.md' | ForEach-Object Name)
+        [Array]::Sort($names, [StringComparer]::Ordinal)
+        foreach ($n in $names) {
+            foreach ($l in (ConvertTo-Lines ([IO.File]::ReadAllText((Join-Path $qd $n), $script:Utf8)))) {
+                if ((Test-Starts $l '### ') -and $seen.Add($l)) { $open.Add($l) }
+            }
+        }
+    }
+    $headText = "# Current file`n`n{{CURRENT_FILE}}`n`n# Open questions`n`n" + $(if ($open.Count) { $open -join "`n" } else { '(none)' })
+} else {
+    $titles = '(none yet)'
+    $mp = Join-Path $SlMeta $master
+    if (Test-Path -LiteralPath $mp) {
+        $t = @((ConvertTo-Lines ([IO.File]::ReadAllText($mp, $script:Utf8))) | Where-Object { (Test-Starts $_ '## ') -or (Test-Starts $_ '### ') })
+        if ($t.Count) { $titles = $t -join "`n" }
+    }
+    $headText = "# Existing titles`n`n$titles"
 }
 
 # One file's section: "## Source: <file name>", a blank line, and the file's
@@ -75,7 +108,7 @@ $cur = [System.Collections.Generic.List[object]]::new(); $curChars = 0; $totalTo
 function Close-Batch {
     if ($script:cur.Count -eq 0) { return }
     $k = $script:batches.Count
-    $body = "Run date: $runDate`n`n# Existing titles`n`n$titles`n`n# New session files`n"
+    $body = "Run date: $runDate`n`n$headText`n`n# New session files`n"
     foreach ($c in $script:cur) { $body += "`n" + (Get-Section $c) + "`n" }
     $script:totalTokens += [Math]::Floor((Get-CodePointLength $body) / 4)
     if ($Mode -eq 'stage') { Write-Utf8 (Join-Path $dir "in/batch-$k.md") $body }
@@ -108,7 +141,7 @@ if ($Mode -eq 'stage') {
     $manifest = [ordered]@{
         job = 'weekly'; extraction = $Ext; cursorFile = ".claude/session-lessons/state/weekly-$Ext.cursor"
         cutoffEpoch = $Cutoff; cursorEpoch = $newest; writeCursor = [bool]$WriteCursor; since = $since
-        master = $master; runDate = $runDate; batches = @($batches)
+        master = $master; mode = $wmode; runDate = $runDate; batches = @($batches)
     }
     Write-Utf8 (Join-Path $dir 'manifest.json') (($manifest | ConvertTo-Json -Depth 6) + "`n")
 }

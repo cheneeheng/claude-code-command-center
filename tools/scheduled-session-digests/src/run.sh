@@ -83,6 +83,13 @@ if [[ "$JOB" == weekly ]]; then
     confirm
   fi
   open_log weekly
+  # Answers to earlier questions, read before staging so this week's merge sees them.
+  QWARN=""
+  for e in "${EXTS[@]}"; do
+    [[ "$(cfg ".extractions[\"$e\"].weekly.questions.enabled // false")" == true ]] || continue
+    w="$(bash "$SL_SRC/questions.sh" collect --ext "$e" --log "$SL_LOG")"
+    [[ -z "$w" ]] || QWARN+="${QWARN:+; }$w"
+  done
   for e in "${EXTS[@]}"; do
     [[ -n "${STO[$e]}" ]] || { printf '%s\n' "${CUT[$e]}" > "$SL_STATE/weekly-$e.cursor"; STO[$e]="${CUT[$e]}"; }
     W=0; (( CUT[$e] <= STO[$e] )) && W=1
@@ -97,11 +104,22 @@ if [[ "$JOB" == weekly ]]; then
     for e in "${EXTS[@]}"; do
       M="$SL_STAGING/weekly-$e/manifest.json"
       prompt="$(cat "$SL_SRC/prompts/$(cfg ".extractions[\"$e\"].weekly.prompt")")"
+      max="$(cfg ".extractions[\"$e\"].weekly.maxLines // empty")"
+      prompt="${prompt//\{\{MAX_LINES\}\}/$max}"
+      wmode="$("${JQ[@]}" -r .mode "$M")"; master="$SL_META/$("${JQ[@]}" -r .master "$M")"
       n="$("${JQ[@]}" '.batches | length' "$M")"
       stop=0
       for (( k = 0; k < n; k++ )); do
         in="$SL_META/$("${JQ[@]}" -r --argjson k "$k" '.batches[$k].input' "$M")"
         out="$SL_META/$("${JQ[@]}" -r --argjson k "$k" '.batches[$k].pending' "$M")"
+        if [[ "$wmode" == replace ]]; then
+          # The master as it is now (an earlier batch may have rewritten it),
+          # without the section the script owns, goes where {{CURRENT_FILE}} is.
+          IFS= read -r -d '' text < "$in" || true
+          cur="$(soul_body "$master")"; [[ -n "$cur" ]] || cur="(none yet)"
+          printf '%s%s%s' "${text%%\{\{CURRENT_FILE\}\}*}" "$cur" "${text#*\{\{CURRENT_FILE\}\}}" > "$in.call"
+          in="$in.call"
+        fi
         set +e
         "$CLAUDE" --print --model "$MODEL" --effort "$EFFORT" "${NOTOOLS[@]}" "$prompt" < "$in" > "$out" 2> "$out.err"
         code=$?
@@ -110,16 +128,21 @@ if [[ "$JOB" == weekly ]]; then
         tmp="$(mktemp)"; "${JQ[@]}" --argjson k "$k" --argjson x "$code" '.batches[$k].exit = $x' "$M" > "$tmp" && mv "$tmp" "$M"
         if (( code != 0 )); then
           say "Batch $((k + 1)): claude exited $code, stopping."
-          ERROR="claude exited $code: $(grep -m 1 -v '^[[:space:]]*$' "$out.err" || true)"
+          ERROR="claude exited $code: $(cat "$out.err" "$out" | grep -m 1 -v '^[[:space:]]*$' || true)"
           stop=1; break
         fi
-        bash "$SL_SRC/finish-weekly.sh" --ext "$e" --batch "$k" --log "$SL_LOG" || { stop=1; break; }
+        # Exit 3: an invalid answer ends this extraction's batches, and the next
+        # extraction still runs. Anything else non-zero stops the run.
+        rc=0; bash "$SL_SRC/finish-weekly.sh" --ext "$e" --batch "$k" --log "$SL_LOG" || rc=$?
+        (( rc == 3 )) && break
+        (( rc == 0 )) || { stop=1; break; }
       done
       (( stop )) && break
     done
   fi
   # finish-weekly exits 1 when the run has an error: claude's, or a failed commit.
-  bash "$SL_SRC/finish-weekly.sh" --close --started "$STARTED" --trigger "$TRIGGER" --error "$ERROR" --log "$SL_LOG" || exit 1
+  bash "$SL_SRC/finish-weekly.sh" --close --started "$STARTED" --trigger "$TRIGGER" --error "$ERROR" \
+    --questions-warning "$QWARN" --log "$SL_LOG" || exit 1
   exit 0
 fi
 
@@ -182,7 +205,8 @@ else
     "${JQ[@]}" --arg u "$uuid" --argjson x "$code" '(.jobs[] | select(.uuid == $u) | .exit) = $x' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
     if (( code != 0 )); then
       say "[$i/$total] $date ${uuid:0:8}: claude exited $code, stopping."
-      ERROR="claude exited $code: $(grep -m 1 -v '^[[:space:]]*$' "$err" || true)"
+      # claude prints an API error on stdout, so stdout backs up an empty stderr.
+      ERROR="claude exited $code: $(cat "$err" "$SL_STAGING/daily/out/$uuid.md" | grep -m 1 -v '^[[:space:]]*$' || true)"
       break
     fi
     say "[$i/$total] $date ${uuid:0:8}: answered"

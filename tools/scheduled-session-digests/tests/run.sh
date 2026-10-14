@@ -55,6 +55,7 @@ new_env() {
               "weekly": { "model": "opus", "effort": "medium" } },
   "extractions": {
     "lessons": { "enabled": true, "prompt": "extract/lessons.md", "outputDir": "lessons-learned",
+                 "none": "_No lessons extracted from this session._",
                  "weekly": { "prompt": "merge/lessons.md", "master": "master-lessons/MASTER_LESSONS_LEARNED.md" } },
     "echo": { "enabled": true, "prompt": "extract/echo.md", "outputDir": "echo-out" }
   }
@@ -242,6 +243,8 @@ reject_commits() {
   chmod +x "$META/.git/hooks/pre-commit"
 }
 set_inst() { local t; t="$(mktemp)"; "${JQ[@]}" "$1" "$META/.claude/session-lessons/state/install.json" > "$t" && mv "$t" "$META/.claude/session-lessons/state/install.json"; }
+# Adds the shipped decisions entry, enabled, after lessons and echo.
+enable_decisions() { set_cfg ".extractions.decisions = $("${JQ[@]}" -c '.extractions.decisions | .enabled = true' "$MEMBER/src/config.default.json")"; }
 
 suite_daily() {
   echo "suite daily ($SHELL_UT)"
@@ -318,6 +321,11 @@ suite_daily() {
   rm -f "$META/.fake-claude/exit1"; clear_calls
   run_ut --yes >/dev/null
   eq "$(calls | wc -l | tr -d ' ')" 4 "uncalled sessions are staged again"
+
+  # claude prints an API error on stdout, none on stderr: the error still names it.
+  new_env "$T/c-stdout"; fake_ctl touch "$META/.fake-claude/exit1-stdout"
+  run_ut --yes >/dev/null
+  eq "$(lastrun .error)" "claude exited 1: API Error: 529 Overloaded." "error falls back to claude's stdout"
 
   # D. Leftover answers from a killed run are never read.
   new_env "$T/d"; spread_mtimes
@@ -404,6 +412,21 @@ suite_daily() {
   eq "$rc" 0 "a failed push still exits 0"
   eq "$(lastrun .committed) $(lastrun .pushed) $(lastrun .error)" "true false null" "a failed push: committed, not pushed, no error"
 
+  # M. The decisions extraction rides the same call, with its own none form.
+  new_env "$T/m"; spread_mtimes; enable_decisions
+  fake_ctl bash -c "echo 'decisions:$U1' > '$META/.fake-claude/fail.txt'; echo 'decisions:$U6' > '$META/.fake-claude/none.txt'"
+  run_ut --yes >/dev/null
+  eq "$(calls | grep -c ': lessons echo decisions$')" 4 "one call carries lessons, echo, and decisions"
+  check "a decisions file lands in decisions/YYYY/MM/" \
+    bash -c 'ls "$1"/decisions/[0-9][0-9][0-9][0-9]/[0-9][0-9]/*_"$2"*.md >/dev/null' _ "$META" "$U8"
+  check "the decisions file is the fake's part" bash -c 'head -n 1 "$1" | grep -q "^# Decisions "' _ "$(out_of decisions "$U8")"
+  check "lessons kept when the decisions part fails" has_out lessons-learned "$U1"
+  check "a failed decisions part is not written" no_out decisions "$U1"
+  eq "$(lastrun .results.decisions.none)" 1 "the decisions none form counts as nothing found"
+  eq "$(lastrun .results.decisions.written)" 2 "decisions written for the other sessions"
+  rm -f "$META/.fake-claude/fail.txt"; clear_calls; run_ut --yes >/dev/null
+  eq "$(calls)" "$U1: decisions" "the retry asks only for decisions"
+
   rm -rf "$T"
 }
 
@@ -431,6 +454,31 @@ weekly_env() {
   git -C "$META" add -A >/dev/null; git -C "$META" commit -qm seed
 }
 master_sha() { sha256sum "$META/$MASTER_REL" | cut -c1-16; }
+
+# decisions_env <dir>: decisions files a, b, c (4, 3, 2 days old) plus a stub,
+# and a SOUL.md that still carries an old When-to-ask section.
+decisions_env() {
+  new_env "$1"; enable_decisions
+  local D="$META/decisions/2026/10" d
+  mkdir -p "$D"
+  for d in a b c; do
+    printf '# Decisions \xe2\x80\x94 2026-10-0x\n**Session**: %s\n\n## Synthetic decision %s\n\n- **Chosen:** %s.\n' "$d" "$d" "$d" > "$D/2026-10-01_$d.md"
+  done
+  printf '# Decisions \xe2\x80\x94 x\n**Session**: s\n\n_No decisions extracted from this session._\n' > "$D/2026-10-01_stub.md"
+  touch -d "@$((NOW - 4 * 86400))" "$D/2026-10-01_a.md"
+  touch -d "@$((NOW - 3 * 86400))" "$D/2026-10-01_b.md"
+  touch -d "@$((NOW - 2 * 86400))" "$D/2026-10-01_c.md"
+  touch -d "@$((NOW - 1 * 86400))" "$D/2026-10-01_stub.md"
+  printf '%s\n' '# SOUL' '' '## Priorities' '' '1. Seed priority.' '' '## Rules' '' '- Seed rule.' '' \
+    '## When to ask' '' '- OLD-SECTION-MARKER' > "$META/SOUL.md"
+  git -C "$META" add -A >/dev/null; git -C "$META" commit -qm seed
+}
+fake_input() { echo "$META/.fake-claude/input-$1"; }
+lastrun_w() { "${JQ[@]}" -r "$1" "$META/.claude/session-lessons/state/last-run-weekly.json"; }
+SHORT_ASK="$(printf '%s\n' '## When to ask' '' \
+  '- No priority or rule above covers the decision, or it is irreversible: ask the user in the' \
+  '  session if they are present.' \
+  '- When they are not: continue on the most conservative option and say so.')"
 
 suite_weekly() {
   echo "suite weekly ($SHELL_UT)"
@@ -508,6 +556,10 @@ suite_weekly() {
   run_ut --job weekly --yes >/dev/null 2>&1; rc=$?
   check "a failed weekly run exits non-zero" test "$rc" -ne 0
   check "weekly error recorded" bash -c '[[ "$(jq -r .error "$1")" == "claude exited 1"* ]]' _ "$META/.claude/session-lessons/state/last-run-weekly.json"
+  weekly_env "$T/x2"; fake_ctl touch "$META/.fake-claude/exit1-stdout"
+  run_ut --job weekly --yes >/dev/null 2>&1
+  eq "$("${JQ[@]}" -r .error "$META/.claude/session-lessons/state/last-run-weekly.json")" \
+    "claude exited 1: API Error: 529 Overloaded." "weekly error falls back to claude's stdout"
 
   # A failed commit in a weekly run is an error too.
   weekly_env "$T/y"; reject_commits
@@ -521,6 +573,152 @@ suite_weekly() {
   run_ut --job weekly --yes >/dev/null; run_ut --job weekly --yes >/dev/null; run_ut --job weekly --yes >/dev/null
   check "the batch is given up after 3 invalid answers" grep -qx "weekly-lessons:$L/2026-10-01_a.md" "$META/.claude/session-lessons/state/given-up.txt"
   check "the run after the give-up went on to the next batch" grep -qx '### Weekly lesson from 2026-10-01_b.md' "$META/$MASTER_REL"
+
+  # Decisions: the replace merge rewrites SOUL.md, one batch after another.
+  decisions_env "$T/s1"; set_cfg '.weeklyBatchChars = 50'
+  run_ut --job weekly --yes >/dev/null; rc=$?
+  eq "$rc" 0 "a decisions weekly run exits 0"
+  eq "$(calls | tr '\n' '|')" "weekly-decisions: 2026-10-01_a.md|weekly-decisions: 2026-10-01_b.md|weekly-decisions: 2026-10-01_c.md|" "one decisions batch per file, stub skipped"
+  check "batch 1 sees the current SOUL.md" grep -qxF -- '- Seed rule.' "$(fake_input 2026-10-01_a.md)"
+  check "batch 1 never sees the When-to-ask section" \
+    bash -c '! grep -q -e "^## When to ask" -e OLD-SECTION-MARKER "$1"' _ "$(fake_input 2026-10-01_a.md)"
+  check "batch 2 sees batch 1's SOUL.md" grep -qxF -- '- When synthetic, prefer 2026-10-01_a.md.' "$(fake_input 2026-10-01_b.md)"
+  check "batch 2 never sees the When-to-ask section" bash -c '! grep -q "^## When to ask" "$1"' _ "$(fake_input 2026-10-01_b.md)"
+  check "a batch input has an Open questions section" grep -qx '# Open questions' "$(fake_input 2026-10-01_a.md)"
+  eq "$(head -n 1 "$META/SOUL.md")" "# SOUL" "SOUL.md is the last batch's soul part"
+  check "SOUL.md holds the last batch's rule" grep -qxF -- '- When synthetic, prefer 2026-10-01_c.md.' "$META/SOUL.md"
+  eq "$(sed -n '/^## When to ask$/,$p' "$META/SOUL.md")" "$SHORT_ASK" "SOUL.md ends with the short fixed section"
+  eq "$(grep -c 'OLD-SECTION-MARKER' "$META/SOUL.md")" 0 "the old fixed section is replaced"
+  eq "$(find "$META/decisions/questions" -name '*.md' | wc -l | tr -d ' ')" 3 "every batch's questions are kept"
+  eq "$(lastrun_w .results.decisions.written)" 3 "last run: 3 SOUL.md updates"
+
+  # Open questions: listed until answered; questions files are never new files.
+  decisions_env "$T/s2"
+  mkdir -p "$META/decisions/questions" "$META/decisions/answered"
+  printf '%s\n' '### Old open question?' '' 'Context.' '' '### Answered question?' '' 'Context.' > "$META/decisions/questions/2026-01-01_1.md"
+  printf '%s\n' '## Answered question?' '' 'Answer.' > "$META/decisions/answered/issue-7.md"
+  touch -d "@$((NOW - 30 * 86400))" "$META/decisions/answered/issue-7.md"
+  run_ut --job weekly --yes >/dev/null
+  local qi; qi="$(fake_input 2026-10-01_a.md)"
+  check "an open question is listed" grep -qxF '### Old open question?' "$qi"
+  check "an answered question is not listed" bash -c '! grep -q "Answered question" "$1"' _ "$qi"
+  check "a questions file is not sent as a new file" bash -c '! grep -q "^## Source: 2026-01-01_1.md" "$1"' _ "$qi"
+
+  # A soul part over maxLines is invalid: an attempt is counted, SOUL.md kept.
+  decisions_env "$T/s3"; set_cfg '.extractions.decisions.weekly.maxLines = 3'
+  run_ut --job weekly --yes >/dev/null
+  check "an over-long soul part leaves SOUL.md's rules" grep -qxF -- '- Seed rule.' "$META/SOUL.md"
+  eq "$("${JQ[@]}" -r '.["weekly-decisions:decisions/2026/10/2026-10-01_a.md"]' "$META/.claude/session-lessons/state/attempts.json")" 1 "an over-long soul part counts an attempt"
+
+  # A soul part carrying its own When-to-ask is cut, not rejected; a missing
+  # questions part keeps a valid soul.
+  decisions_env "$T/s4"
+  printf '%s\n' '<<<extraction:soul>>>' '# SOUL' '' '## Priorities' '' '1. P.' '' '## Rules' '' '- R.' '' \
+    '## When to ask' '' '- INJECTED' > "$META/answer.tmp"
+  fake_ctl mv "$META/answer.tmp" "$META/.fake-claude/weekly-decisions-answer.md"
+  run_ut --job weekly --yes >/dev/null
+  check "a soul part with a When-to-ask section is accepted" grep -qxF -- '- R.' "$META/SOUL.md"
+  eq "$(grep -c 'INJECTED' "$META/SOUL.md")" 0 "the model's When-to-ask section is cut"
+  eq "$(grep -c '^## When to ask$' "$META/SOUL.md")" 1 "SOUL.md has one When-to-ask section"
+  check "a missing questions part writes no questions file" test ! -e "$META/decisions/questions"
+
+  # An invalid lessons batch still lets the decisions merge run.
+  decisions_env "$T/s5"
+  mkdir -p "$META/$L"; printf '# Lessons \xe2\x80\x94 x\n**Session**: z\n\n## L\n\n**Lesson:** R.\n' > "$META/$L/2026-10-01_z.md"
+  fake_ctl touch "$META/.fake-claude/weekly-bad"
+  run_ut --job weekly --yes >/dev/null
+  check "a failed lessons batch did not stop the decisions merge" grep -qx 'weekly-decisions: 2026-10-01_a.md' "$META/.fake-claude/calls.log"
+
+  rm -rf "$T"
+}
+
+# --- questions -------------------------------------------------------------------
+# q_env <dir>: decisions_env with a GitHub origin whose pushes go to a local bare
+# repo (git-sync never reaches github.com), and the fake gh as ghPath.
+q_env() {
+  decisions_env "$1"
+  git init -q --bare "$1/bare.git"
+  git -C "$META" remote add origin https://github.com/synth-owner/synth-meta.git
+  git -C "$META" config remote.origin.pushurl "$(native "$1/bare.git")"
+  local fake t
+  if [[ "$SHELL_UT" == bash ]]; then cp "$HERE/fake-gh.sh" "$1/fake-gh.sh"; chmod +x "$1/fake-gh.sh"; fake="$1/fake-gh.sh"
+  else cp "$HERE/fake-gh.ps1" "$1/fake-gh.ps1"; fake="$(native "$1/fake-gh.ps1")"; fi
+  t="$(mktemp)"; "${JQ[@]}" --arg g "$fake" '.ghPath = $g' "$META/.claude/session-lessons/state/install.json" > "$t" \
+    && mv "$t" "$META/.claude/session-lessons/state/install.json"
+  G="$META/.fake-gh"; mkdir -p "$G"
+  printf '%s\n' '.fake-gh/' >> "$META/.gitignore"
+}
+# 35 closed issues: #1 has an owner answer (CRLF) and a stranger's comment, #2
+# only a stranger's, #35 (past gh's default 30) an owner answer.
+q_closed() {
+  "${JQ[@]}" -n '[range(1; 36) | {number: ., title: "Q \(.)?", body: "Situation \(.).", comments: []}]
+    | .[0].comments = [{author: {login: "Synth-Owner"}, body: "Because owner.\r\nSecond line.\r\n"},
+                       {author: {login: "someone-else"}, body: "NOT-OWNER"}]
+    | .[1].comments = [{author: {login: "someone-else"}, body: "Only a stranger."}]
+    | .[34].comments = [{author: {login: "synth-owner"}, body: "Late answer."}]' > "$G/closed.json"
+}
+
+suite_questions() {
+  echo "suite questions ($SHELL_UT)"
+  local T rc A="decisions/answered"; T="$(mktemp -d)"
+
+  # A. A private repo: answers come back, new questions go out, SOUL.md names the repo.
+  q_env "$T/a"; q_closed
+  printf '[{"title":"Synthetic question from 2026-10-01_a.md?"}]\n' > "$G/all.json"
+  mkdir -p "$META/decisions/questions"
+  printf '%s\n' '### Brand new question?' '' 'Context: seeded.' > "$META/decisions/questions/2026-01-01_1.md"
+  run_ut --job weekly --yes >/dev/null; rc=$?
+  eq "$rc" 0 "a weekly run with the queue exits 0"
+  check "an owner's answer is read back" grep -qxF 'Because owner.' "$META/$A/issue-1.md"
+  check "a stranger's comment is left out" bash -c '! grep -q NOT-OWNER "$1"' _ "$META/$A/issue-1.md"
+  check "an answer has no CR" bash -c "! grep -q $'\r' \"\$1\"" _ "$META/$A/issue-1.md"
+  check "an answer is marked stated" grep -qxF '**Reason source:** stated' "$META/$A/issue-1.md"
+  eq "$(head -n 1 "$META/$A/issue-1.md")" "## Q 1?" "an answer starts with the question title"
+  check "an issue with only a stranger's comment is skipped" test ! -e "$META/$A/issue-2.md"
+  check "issue 35 is read (--limit 1000)" test -f "$META/$A/issue-35.md"
+  check "this week's merge sees the answers" grep -qx '## Source: issue-1.md' "$(fake_input 2026-10-01_a.md)"
+  eq "$(cat "$G/created.txt")" "Brand new question?" "only a title no issue has is opened"
+  check "the label is created" grep -qxF 'label create decision-question --repo synth-owner/synth-meta --force' "$G/calls.log"
+  check "the closed list asks for 1000" grep -qxF \
+    'issue list --repo synth-owner/synth-meta --state closed --label decision-question --limit 1000 --json number,title,body,comments' "$G/calls.log"
+  check "SOUL.md names the private repo" \
+    grep -qF -- '- When they are not: run `gh issue create --repo synth-owner/synth-meta --label decision-question`' "$META/SOUL.md"
+  eq "$(lastrun_w .questionsWarning) $(lastrun_w .error)" "null null" "no warning, no error"
+  # The next run opens nothing again and rewrites no answer.
+  : > "$G/created.txt"; local before; before="$(sha256sum "$META/$A/issue-1.md")"
+  printf '[{"title":"Synthetic question from 2026-10-01_a.md?"},{"title":"Brand new question?"}]\n' > "$G/all.json"
+  run_ut --job weekly --yes >/dev/null
+  eq "$(cat "$G/created.txt")" "" "the next run opens nothing again"
+  eq "$(sha256sum "$META/$A/issue-1.md")" "$before" "the next run leaves an answer as it is"
+
+  # B. A public repo: no issue, a warning, the short section.
+  q_env "$T/b"; printf '{"visibility":"PUBLIC"}\n' > "$G/repo.json"
+  run_ut --job weekly --yes >/dev/null
+  check "a public repo gets no issue" test ! -e "$G/created.txt"
+  check "a public repo is a warning" bash -c '[[ "$1" == *"is not private"* ]]' _ "$(lastrun_w .questionsWarning)"
+  eq "$(sed -n '/^## When to ask$/,$p' "$META/SOUL.md")" "$SHORT_ASK" "a public repo keeps the short section"
+
+  # C. gh failing is a warning, never the run's error.
+  q_env "$T/c"; touch "$G/fail"
+  run_ut --job weekly --yes >/dev/null 2>&1; rc=$?
+  eq "$rc" 0 "a failing gh still exits 0"
+  eq "$(lastrun_w .error)" null "a failing gh is not the run's error"
+  check "a failing gh is a warning naming gh's error" bash -c '[[ "$1" == *"gh label create failed: fake gh: simulated failure"* ]]' _ "$(lastrun_w .questionsWarning)"
+  # A token that may not create issues: the warning carries gh's own error.
+  q_env "$T/c2"; touch "$G/deny-create"
+  run_ut --job weekly --yes >/dev/null 2>&1
+  eq "$(lastrun_w .questionsWarning)" "questions open: gh issue create failed: GraphQL: Resource not accessible (createIssue)" \
+    "a refused issue create names gh's error"
+
+  # D. A dry run never calls gh.
+  q_env "$T/d"; run_ut --job weekly --dry-run >/dev/null
+  check "a dry run calls no gh" test ! -e "$G/calls.log"
+
+  # E. gh signed in as someone else: no answer is read.
+  q_env "$T/e"; q_closed; printf '{"login":"intruder"}\n' > "$G/user.json"
+  run_ut --job weekly --yes >/dev/null
+  check "another gh user reads no answer" test ! -e "$META/$A"
+  check "another gh user is a warning" bash -c '[[ "$1" == *"someone other than synth-owner"* ]]' _ "$(lastrun_w .questionsWarning)"
 
   rm -rf "$T"
 }
@@ -543,8 +741,15 @@ cli_env() {
   cp "$HERE/fake-claude.sh" "$base/bin/claude"; chmod +x "$base/bin/claude"
   cp "$HERE/fake-claude.ps1" "$base/bin/claude.ps1"
   # Folders with a real claude.exe are left out: install prefers it to the fake.
+  # So is a folder that holds only gh (Windows), to test an install without it;
+  # on Linux gh shares /usr/bin with bash. No CLI test turns the question queue
+  # on (no GitHub origin), so a real gh is never called either way.
   local d; CLI_PATH="$base/bin"
-  while IFS= read -r d; do [[ -e "$d/claude.exe" ]] || CLI_PATH+=":$d"; done < <(tr ':' '\n' <<<"$PATH")
+  while IFS= read -r d; do
+    [[ -e "$d/claude.exe" ]] && continue
+    [[ ( -e "$d/gh" || -e "$d/gh.exe" ) && ! -e "$d/bash" && ! -e "$d/bash.exe" ]] && continue
+    CLI_PATH+=":$d"
+  done < <(tr ':' '\n' <<<"$PATH")
   if [[ "$SHELL_UT" == pwsh ]]; then CLI_ROOTS="$(native "$FX/claude");$(native "$FX/claude_devcontainer")"
   else CLI_ROOTS="$FX/claude:$FX/claude_devcontainer"; fi
 }
@@ -591,6 +796,11 @@ suite_cli() {
   eq "$(ijq '.claudeNoToolsArgs | join(" ")')" "--tools  --no-session-persistence" "install records the headless flags"
   check "install records the claude path" bash -c '[[ "$1" == *claude* ]]' _ "$(ijq .claudePath)"
   eq "$(ijq '.scanRoots | length')" 2 "install takes the scan roots from C4_CLAUDE_DIR"
+  if PATH="$CLI_PATH" command -v gh >/dev/null 2>&1; then
+    check "install records gh's path" bash -c '[[ "$1" == *gh* ]]' _ "$(ijq .ghPath)"
+  else
+    eq "$(ijq .ghPath)" null "install without gh on PATH records no ghPath"
+  fi
   eq "$(grep -c 'session-lessons' "$META/.gitignore")" 3 "install adds 3 .gitignore lines"
   check "the one-time archive covers sessions on disk" has_archive "$U1"
   check "nothing ran yet: no daily cursor" test ! -e "$(H_)/state/daily.cursor"
@@ -611,13 +821,27 @@ suite_cli() {
   check "status shows the last run" grep -q '^Last daily run: ' <<<"$out"
   check "status shows the last error" grep -q 'Error: claude exited 1: synthetic' <<<"$out"
   check "status lists the given-up session" grep -q "lessons:$U4" <<<"$out"
+  # Decisions: status names SOUL.md and the import line only while it is enabled.
+  check "status prints no import line while decisions is off" bash -c '! grep -q "CLAUDE.md" <<<"$1"' _ "$out"
+  set_cfg2 '.extractions.decisions.enabled = true'
+  out="$(cli_ut status --meta-dir "$META")"
+  check "status shows SOUL.md before its first weekly run" grep -qxF 'decisions: SOUL.md 0 lines, unknown open question(s).' <<<"$out"
+  check "status prints the import line" grep -qxF 'Add this line to ~/.claude/CLAUDE.md to load your decisions:' <<<"$out"
+  local imp="$META"; [[ "$SHELL_UT" == pwsh ]] && imp="$(native "$META" | tr '\\' '/')"
+  check "the import path uses forward slashes" grep -qxF "  @$imp/SOUL.md" <<<"$out"
+  set_cfg2 '.extractions.decisions.enabled = false'
 
-  # C. Re-install keeps edits and the first install time.
-  set_cfg2 '.maxSessionsPerRun = 7'
+  # C. Re-install keeps edits and the first install time, and adds new default
+  #    keys inside an existing extraction (an old config has no lessons.none).
+  set_cfg2 '.maxSessionsPerRun = 7 | .extractions.lessons |= (del(.none) | .enabled = false) | del(.extractions.decisions)'
   local first; first="$(ijq .installedAt)"
   sleep 1
   cli_ut install --meta-dir "$META" "${sched[@]}" --no-archive --yes >/dev/null
   eq "$("${JQ[@]}" -r .maxSessionsPerRun "$(H_)/config.json")" 7 "re-install keeps an edited value"
+  eq "$("${JQ[@]}" -r .extractions.lessons.none "$(H_)/config.json")" "_No lessons extracted from this session._" "re-install adds a new key inside an extraction"
+  eq "$("${JQ[@]}" -r .extractions.lessons.enabled "$(H_)/config.json")" false "re-install keeps an edited key inside an extraction"
+  eq "$("${JQ[@]}" -r .extractions.decisions.enabled "$(H_)/config.json")" false "re-install adds the decisions extraction, off"
+  set_cfg2 '.extractions.lessons.enabled = true'
   eq "$(ijq .installedAt)" "$first" "re-install keeps the first installedAt"
   eq "$(grep -c 'session-lessons' "$META/.gitignore")" 3 "re-install adds no duplicate .gitignore lines"
 
@@ -785,13 +1009,13 @@ suite_equivalence() {
 
   # Daily: the same fixtures, one part failing, run twice in each shell.
   for s in bash pwsh; do
-    SHELL_UT="$s"; new_env "$T/d$s"; spread_mtimes
-    fake_ctl bash -c "echo 'echo:$U1' > '$META/.fake-claude/fail.txt'"
+    SHELL_UT="$s"; new_env "$T/d$s"; spread_mtimes; enable_decisions
+    fake_ctl bash -c "echo 'echo:$U1' > '$META/.fake-claude/fail.txt'; echo 'decisions:$U6' > '$META/.fake-claude/none.txt'"
     run_ut --yes >/dev/null; run_ut --yes >/dev/null
   done
   SHELL_UT="$saved"
   local a="$T/dbash/my meta_dir" b="$T/dpwsh/my meta_dir" d
-  for d in lessons-learned echo-out transcripts; do
+  for d in lessons-learned echo-out decisions transcripts; do
     if diff -r "$a/$d" "$b/$d" >/dev/null; then ok; else bad "daily $d differs"; diff -r "$a/$d" "$b/$d" | head -10; fi
   done
   eq "$(cat "$b/.fake-claude/calls.log")" "$(cat "$a/.fake-claude/calls.log")" "daily: same calls in the same order"
@@ -815,6 +1039,39 @@ suite_equivalence() {
   eq "$(cat "$b/.claude/session-lessons/state/weekly-lessons.cursor")" "$(cat "$a/.claude/session-lessons/state/weekly-lessons.cursor")" "weekly: same cursor"
   eq "$("${JQ[@]}" -S "$norm" "$b/.claude/session-lessons/state/last-run-weekly.json")" \
      "$("${JQ[@]}" -S "$norm" "$a/.claude/session-lessons/state/last-run-weekly.json")" "weekly: same last-run summary"
+
+  # Weekly decisions: the same files, an open question, three batches.
+  for s in bash pwsh; do
+    SHELL_UT="$s"; decisions_env "$T/q$s"; set_cfg '.weeklyBatchChars = 50'
+    mkdir -p "$META/decisions/questions"; printf '%s\n' '### Old open question?' > "$META/decisions/questions/2026-01-01_1.md"
+    run_ut --job weekly --yes >/dev/null
+  done
+  SHELL_UT="$saved"
+  a="$T/qbash/my meta_dir"; b="$T/qpwsh/my meta_dir"
+  if cmp -s "$a/SOUL.md" "$b/SOUL.md"; then ok; else bad "weekly decisions: SOUL.md differs"; diff "$a/SOUL.md" "$b/SOUL.md" | head -10; fi
+  if diff -r "$a/decisions/questions" "$b/decisions/questions" >/dev/null; then ok
+  else bad "weekly decisions: questions files differ"; diff -r "$a/decisions/questions" "$b/decisions/questions" | head -10; fi
+  local f; for f in "$a"/.fake-claude/input-*; do
+    if cmp -s "$f" "$b/.fake-claude/$(basename "$f")"; then ok; else bad "weekly decisions: $(basename "$f") differs"; fi
+  done
+  eq "$(cat "$b/.fake-claude/calls.log")" "$(cat "$a/.fake-claude/calls.log")" "weekly decisions: same batches in the same order"
+  eq "$("${JQ[@]}" -S "$norm" "$b/.claude/session-lessons/state/last-run-weekly.json")" \
+     "$("${JQ[@]}" -S "$norm" "$a/.claude/session-lessons/state/last-run-weekly.json")" "weekly decisions: same last-run summary"
+
+  # Questions: the same closed issues, one new question, a private repo.
+  for s in bash pwsh; do
+    SHELL_UT="$s"; q_env "$T/g$s"; q_closed
+    mkdir -p "$META/decisions/questions"; printf '%s\n' '### Brand new question?' '' 'Context.' > "$META/decisions/questions/2026-01-01_1.md"
+    run_ut --job weekly --yes >/dev/null
+  done
+  SHELL_UT="$saved"
+  a="$T/gbash/my meta_dir"; b="$T/gpwsh/my meta_dir"
+  if diff -r "$a/decisions/answered" "$b/decisions/answered" >/dev/null; then ok
+  else bad "questions: answers differ"; diff -r "$a/decisions/answered" "$b/decisions/answered" | head -10; fi
+  for f in .fake-gh/calls.log .fake-gh/created.txt SOUL.md; do
+    if cmp -s "$a/$f" "$b/$f"; then ok; else bad "questions: $f differs"; diff "$a/$f" "$b/$f" | head -10; fi
+  done
+  check "questions: answers were compared" test -f "$a/decisions/answered/issue-35.md"
   rm -rf "$T"
 }
 
@@ -823,8 +1080,9 @@ case "$SUITE" in
   daily) suite_daily ;;
   weekly) suite_weekly ;;
   cli) suite_cli ;;
+  questions) suite_questions ;;
   equivalence) suite_equivalence ;;
-  all) suite_archive; suite_daily; suite_weekly; suite_cli; [[ "$SHELL_UT" == bash ]] && suite_equivalence ;;
+  all) suite_archive; suite_daily; suite_weekly; suite_questions; suite_cli; [[ "$SHELL_UT" == bash ]] && suite_equivalence ;;
   *) echo "unknown suite: $SUITE" >&2; exit 2 ;;
 esac
 
