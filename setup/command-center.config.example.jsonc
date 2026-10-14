@@ -32,7 +32,7 @@
         "folderA": "C:/Users/you/.claude",
         "folderB": "C:/Users/you/.claude_mirror",
         "strategy": "json-merge",
-        "excludePaths": "statusLine.command",
+        "excludePaths": "statusLine.command,hooks.PreToolUse[0].hooks[0].command",
         "intervalMinutes": 15
       }
     ]
@@ -43,7 +43,16 @@
   // config.json (see tools/scheduled-session-digests/README.md).
   "scheduled-session-digests": {
     "metaDir": "C:/Users/you/claude-meta"
+  },
+
+  // agents-workspace-sync: the .agents_workspace repos to commit and push daily. REQUIRED
+  // for install -All (there is no sensible default repo list). scheduleTime defaults to
+  // 04:00; metaDir defaults like the digests' does.
+  "agents-workspace-sync": {
+    "repos": ["C:/Users/you/projects/my-repo/.agents_workspace"],
+    "scheduleTime": "04:00"
   }
 
-  // session-name-date-prefixer needs no config.
+  // session-name-date-prefixer and usage-dashboard need no config: give each an empty {}
+  // to opt it into install -All.
 }
