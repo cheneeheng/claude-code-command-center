@@ -94,3 +94,4 @@ adopts it.
 - 2026-10-14 Design changed: was "`powershell.exe` stays, matching the current launcher", now "the task runs `pwsh` resolved at install time", because the user dropped Windows PowerShell 5.1 support
 - 2026-10-14 Built Phase 1: pwsh -File check-phase1.ps1, PASS (raw and json-merge), no window seen by the user
 - 2026-10-14 Built Phase 2: git grep -n -i -E "vbs|wscript" -- tools/file-sync .gitignore, only legacy-cleanup and history mentions remain
+- 2026-10-14 PR: #63 https://github.com/cheneeheng/claude-code-command-center/pull/63
