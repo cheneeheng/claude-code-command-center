@@ -14,8 +14,10 @@ member's own setup script and records the outcome in a per-machine **manifest**.
 | `statusline-hook` | Copies the hook into `~/.claude/` and wires `statusLine` in `settings.json` |
 | `file-sync` | Registers Task Scheduler jobs to keep folder pairs in sync (needs config) |
 | `scheduled-session-digests` | Installs the session-lessons pipeline into the meta repo and registers its hourly task |
+| `agents-workspace-sync` | Registers a daily task that commits and pushes each listed `.agents_workspace` repo (needs config) |
+| `usage-dashboard` (app) | Registers a task that starts the dashboard server at logon and on wake |
 
-Apps, `usage-report`, and libs are **not** managed here — they are run on demand, not installed.
+Other apps, `usage-report`, and libs are **not** managed here — they are run on demand, not installed.
 
 ## Usage
 
@@ -34,8 +36,8 @@ Apps, `usage-report`, and libs are **not** managed here — they are run on dema
 (even an empty `{}`); members absent from the config are **skipped** (with a note), as are members
 present but still missing their required config — the run never fails on a skip. Use
 `install -Member <name>` to install a single member with defaults without adding it to the config.
-Only `file-sync` requires config (folder pairs). `file-sync` and `scheduled-session-digests`
-register Windows Task Scheduler jobs — run an elevated shell if their setup scripts ask for it.
+`file-sync` (folder pairs) and `agents-workspace-sync` (repo list) require config. Every
+member installs as the current user, with no elevated shell.
 
 ## Config
 
@@ -55,8 +57,8 @@ defaults, target it directly with `install -Member <name>`.
 ## Manifest
 
 State lives at `~/.claude-command-center/manifest.json` (created on first install). It records, per
-member: `installed`, `installed_at`, `version`, and the params used — `file-sync` and digest
-uninstalls **replay** those recorded params, so the manifest is what makes a later `uninstall` work.
+member: `installed`, `installed_at`, `version`, and the params used — `file-sync`, digest, and
+`agents-workspace-sync` uninstalls **replay** those recorded params, so the manifest is what makes a later `uninstall` work.
 
 `status` compares the manifest against live detection (PATH entry, `settings.json` key, scheduled
 tasks). Yellow = present on the machine but not in the manifest (e.g. installed by hand before);

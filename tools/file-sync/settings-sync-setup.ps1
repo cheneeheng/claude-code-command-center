@@ -1,4 +1,4 @@
-# Install/uninstall a settings.json sync (newer wins, excluded keys preserved). Run as Administrator.
+# Install/uninstall a settings.json sync (newer wins, excluded keys preserved).
 # Thin specialization of sync-setup.ps1 — fixes the file name and strategy.
 # Usage:
 #   .\settings-sync-setup.ps1 -FolderA <dir> -FolderB <dir>                   # install, 15-min interval

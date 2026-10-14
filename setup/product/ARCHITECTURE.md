@@ -35,7 +35,8 @@ flowchart TD
         d2["statusline-hook (multi-instance)"]
         d3["file-sync (RequiredConfig: instances)"]
         d4["scheduled-session-digests"]
-        d5["usage-dashboard"]
+        d5["agents-workspace-sync (RequiredConfig: repos)"]
+        d6["usage-dashboard"]
     end
     cli --> registry --> descriptors
     descriptors -->|"& SetupScript @splat"| member["member setup scripts"]

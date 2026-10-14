@@ -55,6 +55,11 @@ the installable `tools/` members and tracks state in a manifest under `~/.claude
 is a thin **delegator** — it calls each member's own setup script and never reimplements install logic,
 so the no-cross-member-dependency rule still holds (members stay independent; only `setup/` knows them
 all). Register a new installable tool by adding a descriptor to `setup/registry.ps1`.
+**Keep `setup/` in sync in the same change:** whenever a change touches how an installable member
+installs or uninstalls (its setup script's name, path, or parameters; its config keys; what it
+registers, such as task names or folders; its detection signal), or adds or removes an installable
+member, update `setup/` too: the `registry.ps1` descriptor, `command-center.config.example.jsonc`,
+and setup's README, CLAUDE.md, and `product/ARCHITECTURE.md` wherever they name that member.
 
 ## Conventions
 

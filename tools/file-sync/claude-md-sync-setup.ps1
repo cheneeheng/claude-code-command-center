@@ -1,4 +1,4 @@
-# Install/uninstall a CLAUDE.md sync (raw copy, newer wins). Run as Administrator.
+# Install/uninstall a CLAUDE.md sync (raw copy, newer wins).
 # Thin specialization of sync-setup.ps1 — fixes the file name and strategy.
 # Usage:
 #   .\claude-md-sync-setup.ps1 -FolderA <dir> -FolderB <dir>                  # install, 15-min interval
