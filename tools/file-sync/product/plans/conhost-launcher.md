@@ -96,3 +96,4 @@ adopts it.
 - 2026-10-14 Built Phase 2: git grep -n -i -E "vbs|wscript" -- tools/file-sync .gitignore, only legacy-cleanup and history mentions remain
 - 2026-10-14 PR: #63 https://github.com/cheneeheng/claude-code-command-center/pull/63
 - 2026-10-14 Design changed: was "install and uninstall delete a pair's old VBS; the `.gitignore` pattern stays", now "no legacy VBS cleanup and no pattern", because the last VBS installs were reinstalled through setup/ and their files removed
+- 2026-10-14 PR: #66 https://github.com/cheneeheng/claude-code-command-center/pull/66
