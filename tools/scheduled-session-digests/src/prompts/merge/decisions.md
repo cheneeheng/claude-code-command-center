@@ -9,7 +9,7 @@ It starts with a `Run date: YYYY-MM-DD` line, then has three sections:
   `(none)`).
 - `# New session files`: one `## Source: <file name>` section per file. A per-session file
   holds that session's decisions, each with Situation, Options, Chosen, Reason, Reason source
-  (`stated` or `inferred`), Override, and Domain. A file named `issue-<n>.md` is the user's
+  (`stated`, `inferred`, or `none` when the user gave no reason), Override, and Domain. A file named `issue-<n>.md` is the user's
   answer to an earlier question: its Reason is the user's own words.
 
 Do not use any tools.
@@ -24,7 +24,7 @@ Do not use any tools.
 - Keep what the current file says unless new records change it. A record that contradicts an
   existing rule refines its "unless" when the records show what differs between the cases;
   when they do not, keep the rule and ask a question.
-- A rule resting only on inferred reasons becomes a question, not a rule.
+- A rule resting only on `inferred` or `none` reasons becomes a question, not a rule.
 - When several rules point the same way, state the shared priority under `## Priorities`, in
   order of weight.
 - Never ask a question listed under `# Open questions` again. When it still applies, reuse its

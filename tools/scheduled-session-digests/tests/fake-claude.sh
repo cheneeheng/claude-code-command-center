@@ -64,7 +64,7 @@ for n in $names; do
     printf '# Decisions %s\n\n_No decisions extracted from this session._\n' "$header"; continue
   fi
   case "$n" in
-    decisions) printf '# Decisions %s\n\n## Synthetic decision\n\n- **Situation:** A synthetic choice.\n- **Chosen:** Option A.\n- **Reason:** none given\n- **Reason source:** inferred\n' "$header" ;;
+    decisions) printf '# Decisions %s\n\n## Synthetic decision\n\n- **Situation:** A synthetic choice.\n- **Chosen:** Option A.\n- **Reason:** none given\n- **Reason source:** none\n' "$header" ;;
     lessons) printf '# Lessons \xe2\x80\x94 %s\n**Session**: %s\n**Title**: Synthetic\n**Project**: synthetic\n\n## %s \xe2\x80\x94 Synthetic lesson\n\n**What happened:** A synthetic mistake.\n\n**Lesson:** A synthetic rule.\n' "$date" "$uuid" "$date" ;;
     *) echo "$n part for $uuid" ;;
   esac

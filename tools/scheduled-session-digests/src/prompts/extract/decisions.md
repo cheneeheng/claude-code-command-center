@@ -12,8 +12,10 @@ assistant had not proposed, or answered a `[QUESTION]`. Do NOT record:
 - tool and execution details (which command to run, how to read a file).
 
 Reasons come only from the user's own `[USER]` and `[ANSWER]` blocks, quoted or closely
-paraphrased. Never invent one. When the user gave no reason, write `none given`; when the reason
-is your reading of their words rather than their words, mark it `inferred`.
+paraphrased. Never invent one. When the user gave no reason, write `none given` with source
+`none`; when the reason is your reading of their words rather than their words, mark it
+`inferred`. `stated` is only for a reason in the user's own words, never for a choice they
+stated without one.
 
 The part has this exact structure, taking the UUID, Date, Title, and Project from the header:
 
@@ -29,7 +31,7 @@ The part has this exact structure, taking the UUID, Date, Title, and Project fro
 - **Options:** the alternatives on the table, including the assistant's proposal
 - **Chosen:** what the user picked
 - **Reason:** the user's reason, or `none given`
-- **Reason source:** stated | inferred
+- **Reason source:** stated | inferred | none
 - **Override:** yes | no (yes when the user rejected or corrected the assistant's default)
 - **Domain:** architecture | scope | verification | tooling | communication | agent-design | other
 ```

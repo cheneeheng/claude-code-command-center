@@ -132,7 +132,7 @@ The part, after the same four header lines the lessons part uses (`# Decisions â
 - **Options:** the alternatives on the table, including the assistant's proposal
 - **Chosen:** what the user picked
 - **Reason:** the user's reason, quoted or closely paraphrased from [USER]/[ANSWER] blocks, or `none given`
-- **Reason source:** stated | inferred
+- **Reason source:** stated | inferred | none (`none` exactly when the reason is `none given`)
 - **Override:** yes | no (yes when the user rejected or corrected the assistant's default)
 - **Domain:** architecture | scope | verification | tooling | communication | agent-design | other
 ```
@@ -196,7 +196,7 @@ the `none` form counts as valid and nothing-found. Files land where every extrac
   Z, unless W"; a `stated` reason outranks an `inferred` one; an override weighs more than a
   choice the user did not object to; a contradiction with an existing rule refines its "unless"
   when the records show the difference, and becomes a question when they do not; a rule with
-  only an inferred reason becomes a question; never ask a question listed under
+  only `inferred` or `none` reasons becomes a question; never ask a question listed under
   `# Open questions` again, and reuse its exact title when it still applies; stay under
   `maxLines` by merging and retiring rules, never by truncating.
 
@@ -279,11 +279,14 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
   `pwsh lessons.ps1 run -MetaDir <scratch> -Since <a date 1 to 2 days back> -DryRun`, runs the
   same command with `-Yes` when it shows 5 to 10 sessions, and accepts the
   `<scratch>/decisions/` records before Phase 2.
-- **Status:** todo. Automated part passed on 2026-10-13: `tests/run.sh bash daily` "passed 84,
-  failed 0", `pwsh daily` "passed 84, failed 0", `bash cli` "passed 65, failed 0", `pwsh cli`
-  "passed 67, failed 0", `bash equivalence` "passed 16, failed 0". The manual part (the owner
-  reviews real records) is not run: it spends real `claude` calls, and the owner chose to build
-  Phases 2 to 4 first.
+- **Status:** done, 2026-10-14. Automated part passed on 2026-10-13: `tests/run.sh bash daily`
+  "passed 84, failed 0", `pwsh daily` "passed 84, failed 0", `bash cli` "passed 65, failed 0",
+  `pwsh cli` "passed 67, failed 0", `bash equivalence` "passed 16, failed 0". Manual part:
+  `run -Since 2026-10-13 -Yes` on a scratch meta repo processed 12 real sessions ("12
+  processed, 0 failed"; decisions "11 written, 1 with nothing found", 55 decisions). The review
+  found 36 of 45 reasonless decisions marked `stated`, which led to the `none` source (see
+  Record); a rerun of 3 of those sessions with the fixed prompt marked 28 of 28 reasonless
+  decisions `none` and kept the 3 with real reasons as before. The owner accepted the records.
 
 ### Phase 2: Weekly replace merge into SOUL.md
 
@@ -377,3 +380,5 @@ extraction, so decisions share lessons' model. The weekly merge uses the existin
 - 2026-10-13 Design changed: was "`run` prepends `# Current file` plus SOUL.md's current text to each batch input just before the call", now "`prepare-weekly` writes a `{{CURRENT_FILE}}` slot after `Run date`, `run` fills it per call", because the merge prompt says the input starts with `Run date`
 - 2026-10-13 Design changed: was "`install` and `status` both print (R17): `Add this line to ~/.claude/CLAUDE.md to load your decisions: @<meta>/SOUL.md`", now "the text line, then `  @<meta>/SOUL.md` on its own line", because the CLI keeps every non-path line within 80 columns
 - 2026-10-14 Built Phases 1-4 automated checks, full runs on the final tree: `bash tests/run.sh bash` "passed 296, failed 0", `bash tests/run.sh pwsh` "passed 270, failed 0"; Phases 1 and 4 stay todo for their manual checks
+- 2026-10-14 Design changed: was "`Reason source: stated | inferred`", now "`stated | inferred | none`, `none` exactly when the reason is `none given`, and the merge turns a rule resting only on `inferred` or `none` reasons into a question", because the Phase 1 manual run (12 real sessions, 55 decisions) marked 36 of 45 reasonless decisions `stated`, which would let a missing reason skip the question queue
+- 2026-10-14 Built Phase 1 manual check: 12 real sessions, then 3 rerun with the `none` source ("3 processed, 0 failed", 28 of 28 reasonless decisions `none`); owner accepted

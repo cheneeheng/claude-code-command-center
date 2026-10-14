@@ -57,7 +57,7 @@ foreach ($n in $names) {
     if ($fail -ccontains "${n}:$uuid") { 'truncated'; continue }
     if ($noneList -ccontains "${n}:$uuid") { "# Decisions $header`n`n_No decisions extracted from this session._"; continue }
     if ($n -eq 'decisions') {
-        "# Decisions $header`n`n## Synthetic decision`n`n- **Situation:** A synthetic choice.`n- **Chosen:** Option A.`n- **Reason:** none given`n- **Reason source:** inferred"
+        "# Decisions $header`n`n## Synthetic decision`n`n- **Situation:** A synthetic choice.`n- **Chosen:** Option A.`n- **Reason:** none given`n- **Reason source:** none"
     } elseif ($n -eq 'lessons') {
         "# Lessons $d $date`n**Session**: $uuid`n**Title**: Synthetic`n**Project**: synthetic`n`n## $date $d Synthetic lesson`n`n**What happened:** A synthetic mistake.`n`n**Lesson:** A synthetic rule."
     } else { "$n part for $uuid" }
