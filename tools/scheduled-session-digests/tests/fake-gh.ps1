@@ -16,7 +16,12 @@ for ($i = 0; $i -lt $a.Count; $i++) {
     $logged.Add($a[$i])
 }
 [IO.File]::AppendAllText((Join-Path $dir 'calls.log'), ($logged -join ' ') + "`n", $utf8)
-if (Test-Path (Join-Path $dir 'fail')) { [Console]::Error.WriteLine('fake gh: simulated failure'); exit 1 }
+# Run in-process as a .ps1, so stderr goes through Write-Error: the caller's 2>&1
+# catches it the way it catches a native gh's stderr.
+if (Test-Path (Join-Path $dir 'fail')) { Write-Error 'fake gh: simulated failure' -ErrorAction Continue; exit 1 }
+if ((Test-Path (Join-Path $dir 'deny-create')) -and "$($a[0]) $($a[1])" -ceq 'issue create') {
+    Write-Error 'GraphQL: Resource not accessible (createIssue)' -ErrorAction Continue; exit 1
+}
 
 function Read-Canned([string]$Name, [string]$Default) {
     $f = Join-Path $dir $Name

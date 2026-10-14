@@ -43,20 +43,26 @@ if ($off) {
     switch ($Mode) { 'collect' { return '' } 'open' { return @{ Repo = ''; Warning = '' } } 'count' { return 'unknown' } }
 }
 
+# Runs gh in the meta repo and returns its stdout lines. Keeps the first non-blank
+# stderr line in $script:GhErr, so a failure's warning can name gh's own error.
+function Invoke-GhRaw {
+    Push-Location -LiteralPath $SlMeta
+    try { $all = @(& $gh @args 2>&1) } finally { Pop-Location }
+    $script:GhErr = $all | Where-Object { $_ -is [Management.Automation.ErrorRecord] } |
+        ForEach-Object { "$_" } | Where-Object { $_ -match '\S' } | Select-Object -First 1
+    $all | Where-Object { $_ -isnot [Management.Automation.ErrorRecord] }
+}
+function Get-GhErr { if ($script:GhErr) { ": $script:GhErr" } else { '' } }
 # Runs gh in the meta repo; returns the parsed JSON root, or $null when gh fails.
 function Invoke-Gh {
-    Push-Location -LiteralPath $SlMeta
-    try { $o = & $gh @args 2>$null; $ok = $LASTEXITCODE -eq 0 } finally { Pop-Location }
+    $o = Invoke-GhRaw @args; $ok = $LASTEXITCODE -eq 0
     if (-not $ok) { return $null }
     $t = (@($o) -join "`n").Trim()
     if ($t -eq '') { return [System.Text.Json.JsonDocument]::Parse('{}').RootElement }
     [System.Text.Json.JsonDocument]::Parse($t).RootElement
 }
 # Runs gh in the meta repo for its exit code only (create prints plain text).
-function Test-Gh {
-    Push-Location -LiteralPath $SlMeta
-    try { & $gh @args 2>$null | Out-Null; $LASTEXITCODE -eq 0 } finally { Pop-Location }
-}
+function Test-Gh { Invoke-GhRaw @args | Out-Null; $LASTEXITCODE -eq 0 }
 function Get-Clean($El) { $s = Get-Str $El; if ($null -eq $s) { $s = '' }; $s.Replace("`r", '').Trim($script:Ws) }
 
 if ($Mode -eq 'count') {
@@ -67,14 +73,14 @@ if ($Mode -eq 'count') {
 
 # Both modes need the label: gh issue create fails on a missing one.
 if (-not (Test-Gh label create $label --repo $repo --force)) {
-    $w = "questions ${Mode}: gh label create failed"; Write-Say $w
+    $w = "questions ${Mode}: gh label create failed$(Get-GhErr)"; Write-Say $w
     if ($Mode -eq 'open') { return @{ Repo = ''; Warning = $w } } else { return $w }
 }
 
 if ($Mode -eq 'collect') {
     $user = Invoke-Gh api user
     $closed = if ($null -ne $user) { Invoke-Gh issue list --repo $repo --state closed --label $label --limit 1000 --json 'number,title,body,comments' }
-    if ($null -eq $user -or $null -eq $closed) { $w = 'questions collect: gh failed'; Write-Say $w; return $w }
+    if ($null -eq $user -or $null -eq $closed) { $w = "questions collect: gh failed$(Get-GhErr)"; Write-Say $w; return $w }
     $login = Get-Str (Get-Prop $user 'login'); if ($null -eq $login) { $login = '' }
     if ($login.ToLowerInvariant() -cne $owner.ToLowerInvariant()) {
         $w = "questions collect: gh is signed in as someone other than $owner, no answers read"; Write-Say $w; return $w
@@ -105,12 +111,12 @@ if ($Mode -eq 'collect') {
 
 # --- open ------------------------------------------------------------------------
 $rv = Invoke-Gh repo view $repo --json visibility
-if ($null -eq $rv) { $w = 'questions open: gh failed'; Write-Say $w; return @{ Repo = ''; Warning = $w } }
+if ($null -eq $rv) { $w = "questions open: gh failed$(Get-GhErr)"; Write-Say $w; return @{ Repo = ''; Warning = $w } }
 if ((Get-Str (Get-Prop $rv 'visibility')) -cne 'PRIVATE') {
     $w = "questions open: $repo is not private, no issues opened"; Write-Say $w; return @{ Repo = ''; Warning = $w }
 }
 $all = Invoke-Gh issue list --repo $repo --state all --label $label --limit 1000 --json title
-if ($null -eq $all) { $w = 'questions open: gh failed'; Write-Say $w; return @{ Repo = ''; Warning = $w } }
+if ($null -eq $all) { $w = "questions open: gh failed$(Get-GhErr)"; Write-Say $w; return @{ Repo = ''; Warning = $w } }
 $have = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($i in $all.EnumerateArray()) { $t = Get-Str (Get-Prop $i 'title'); if ($null -ne $t) { [void]$have.Add($t) } }
 $w = ''; $new = 0
@@ -129,7 +135,7 @@ if (Test-Path -LiteralPath $qd) {
             if (-not $q.Title -or -not $have.Add($q.Title)) { continue }
             $qb = ($q.Body -join "`n").Trim($script:Ws)
             if (Test-Gh issue create --repo $repo --label $label --title $q.Title --body $qb) { $new++ }
-            else { $w = 'questions open: gh issue create failed' }
+            else { $w = "questions open: gh issue create failed$(Get-GhErr)" }
         }
     }
 }

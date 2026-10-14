@@ -47,7 +47,10 @@ if [[ -n "$off" ]]; then
   exit 0
 fi
 
-gh_() { (cd "$SL_META" && "$GH" "$@"); }
+# gh's stderr goes to a file, so a failure's warning can name gh's own error.
+GHERR="$(mktemp)"; trap 'rm -f "$GHERR"' EXIT
+gh_() { (cd "$SL_META" && "$GH" "$@") 2> "$GHERR"; }
+gh_err() { local e; e="$(grep -m 1 -v '^[[:space:]]*$' "$GHERR" || true)"; if [[ -n "$e" ]]; then printf ': %s' "$e"; fi; }
 lower() { tr '[:upper:]' '[:lower:]' <<<"$1"; }
 TRIM='def trimws: sub("^[ \t\n\r\u000b\u000c]+"; "") | sub("[ \t\n\r\u000b\u000c]+$"; "");'
 
@@ -60,7 +63,7 @@ fi
 
 # Both modes need the label: gh issue create fails on a missing one.
 if ! gh_ label create "$LABEL" --repo "$REPO" --force >/dev/null 2>&1; then
-  w="questions $MODE: gh label create failed"; say "$w" >&2
+  w="questions $MODE: gh label create failed$(gh_err)"; say "$w" >&2
   [[ "$MODE" == open ]] && printf '\n%s\n' "$w" || echo "$w"
   exit 0
 fi
@@ -68,7 +71,7 @@ fi
 if [[ "$MODE" == collect ]]; then
   if ! user="$(gh_ api user 2>/dev/null)" || ! closed="$(gh_ issue list --repo "$REPO" --state closed --label "$LABEL" \
        --limit 1000 --json number,title,body,comments 2>/dev/null)"; then
-    w="questions collect: gh failed"; say "$w" >&2; echo "$w"; exit 0
+    w="questions collect: gh failed$(gh_err)"; say "$w" >&2; echo "$w"; exit 0
   fi
   if [[ "$(lower "$("${JQ[@]}" -r .login <<<"$user")")" != "$(lower "$OWNER")" ]]; then
     w="questions collect: gh is signed in as someone other than $OWNER, no answers read"
@@ -95,13 +98,13 @@ fi
 
 # --- open ------------------------------------------------------------------------
 if ! repo="$(gh_ repo view "$REPO" --json visibility 2>/dev/null)"; then
-  w="questions open: gh failed"; say "$w" >&2; printf '\n%s\n' "$w"; exit 0
+  w="questions open: gh failed$(gh_err)"; say "$w" >&2; printf '\n%s\n' "$w"; exit 0
 fi
 if [[ "$("${JQ[@]}" -r .visibility <<<"$repo")" != PRIVATE ]]; then
   w="questions open: $REPO is not private, no issues opened"; say "$w" >&2; printf '\n%s\n' "$w"; exit 0
 fi
 if ! all="$(gh_ issue list --repo "$REPO" --state all --label "$LABEL" --limit 1000 --json title 2>/dev/null)"; then
-  w="questions open: gh failed"; say "$w" >&2; printf '\n%s\n' "$w"; exit 0
+  w="questions open: gh failed$(gh_err)"; say "$w" >&2; printf '\n%s\n' "$w"; exit 0
 fi
 declare -A HAVE=()
 while IFS= read -r t; do HAVE["$t"]=1; done < <("${JQ[@]}" -r '.[].title' <<<"$all")
@@ -116,7 +119,7 @@ if [[ -d "$qd" ]]; then
       HAVE["$title"]=1
       if gh_ issue create --repo "$REPO" --label "$LABEL" --title "$title" --body "$("${JQ[@]}" -r .body <<<"$q")" >/dev/null 2>&1; then
         n_new=$((n_new + 1))
-      else w="questions open: gh issue create failed"; fi
+      else w="questions open: gh issue create failed$(gh_err)"; fi
     done < <("${JQ[@]}" -Rsc "$TRIM"'
       split("\n") | map(sub("\r$"; ""))
       | reduce .[] as $l ([]; if ($l | startswith("### ")) then . + [{title: ($l[4:] | trimws), body: []}]

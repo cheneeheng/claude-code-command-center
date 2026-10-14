@@ -7,6 +7,8 @@
 #   repo.json   `repo view`  (default {"visibility":"PRIVATE"})
 #   closed.json, all.json, open.json   `issue list --state <state>` (default [])
 #   fail        present: every call exits 1
+#   deny-create present: `issue create` exits 1, as a token without issue
+#               write access does
 # `issue list` honours --limit the way gh does (30 when not given). Every call
 # is logged to calls.log as its arguments, the --body value left out; each
 # `issue create` title is also appended to created.txt.
@@ -26,6 +28,9 @@ for (( i = 0; i < ${#args[@]}; i++ )); do
 done
 echo "${logged[*]}" >> "$dir/calls.log"
 if [[ -e "$dir/fail" ]]; then echo "fake gh: simulated failure" >&2; exit 1; fi
+if [[ -e "$dir/deny-create" && "$1 $2" == "issue create" ]]; then
+  printf '\nGraphQL: Resource not accessible (createIssue)\n' >&2; exit 1
+fi
 
 JQ=(jq); jq --binary -n 1 >/dev/null 2>&1 && JQ=(jq --binary)
 case "$1 $2" in

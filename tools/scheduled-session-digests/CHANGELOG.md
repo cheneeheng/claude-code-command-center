@@ -33,6 +33,8 @@ installs from a clone at that tag.
 
 - A failed `claude` call now records its cause when `claude` prints the error on stdout (an
   API error such as `529 Overloaded`), instead of `claude exited 1: ` with nothing after it.
+- A failed `gh` call in the question queue now ends its `questionsWarning` with gh's own first
+  error line, such as a token that may not create issues.
 
 ## [0.2.0] - 2026-10-13
 

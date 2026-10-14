@@ -703,7 +703,12 @@ suite_questions() {
   run_ut --job weekly --yes >/dev/null 2>&1; rc=$?
   eq "$rc" 0 "a failing gh still exits 0"
   eq "$(lastrun_w .error)" null "a failing gh is not the run's error"
-  check "a failing gh is a warning" bash -c '[[ "$1" == *"gh label create failed"* ]]' _ "$(lastrun_w .questionsWarning)"
+  check "a failing gh is a warning naming gh's error" bash -c '[[ "$1" == *"gh label create failed: fake gh: simulated failure"* ]]' _ "$(lastrun_w .questionsWarning)"
+  # A token that may not create issues: the warning carries gh's own error.
+  q_env "$T/c2"; touch "$G/deny-create"
+  run_ut --job weekly --yes >/dev/null 2>&1
+  eq "$(lastrun_w .questionsWarning)" "questions open: gh issue create failed: GraphQL: Resource not accessible (createIssue)" \
+    "a refused issue create names gh's error"
 
   # D. A dry run never calls gh.
   q_env "$T/d"; run_ut --job weekly --dry-run >/dev/null
