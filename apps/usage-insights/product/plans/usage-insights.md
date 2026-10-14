@@ -1,6 +1,6 @@
 ---
 title: Build usage-insights, a decision-focused Claude Code usage dashboard that replaces usage-dashboard
-status: ready
+status: building
 created: 2026-10-14
 ---
 
@@ -129,7 +129,10 @@ names keep their signatures. `model_family` is unchanged.
   and folded subagent files count each reply once.
 
 **`MessageUsage`:** a frozen dataclass `MessageUsage(key, session_id, model, ts, input, output,
-cache_write, cache_read)`, with `ts` an aware UTC `datetime`.
+cache_write, cache_read, cache_write_1h)`, with `ts` an aware UTC `datetime` (or `None` when the
+line has no timestamp). `cache_write` holds 5-minute-TTL writes and `cache_write_1h` 1-hour-TTL
+writes, split from `usage.cache_creation`. The two never overlap, so summing a `TokenCounts`
+dict still gives the total (`usage-report` sums the values).
 
 **Dedup:**
 - **Usage:** `key` is `message.id` + `requestId` when `message.id` is present, otherwise `uuid`.
@@ -149,8 +152,10 @@ cache_write, cache_read)`, with `ts` an aware UTC `datetime`.
 - `title` and `cwd` come from the parent file only. A folded file's `FileParse` has both `None`.
 
 **Pricing:**
-- **`ModelPrice`:** a new frozen dataclass, `ModelPrice(input, output, cache_write, cache_read)`,
-  in $ per million tokens.
+- **`ModelPrice`:** a new frozen dataclass, `ModelPrice(input, output, cache_write, cache_read,
+  cache_write_1h)`, in $ per million tokens. `cache_write_1h` is 2x input. 87% of local
+  cache-write tokens are 1-hour writes (687M of 789M, measured 2026-10-14), so pricing them at the
+  5-minute rate would under-count cache-write cost by about a third.
 - **`MODEL_PRICES`:** a new table keyed by model-id prefix. The longest matching prefix wins.
 - **`MODEL_COSTS`:** stays family-keyed (`claude-fable`, `claude-opus`, `claude-sonnet`,
   `claude-haiku`) as the fallback table, with its values updated to the fallback rates below.
@@ -166,11 +171,11 @@ Prefix rates come from the claude-api reference (cached 2026-10-06):
 
 | Prefix | Input $/MTok | Output $/MTok |
 | ------ | ------------ | ------------- |
-| `claude-fable-5` | 10.00 | 50.00 |
+| `claude-fable-5-1`, `claude-fable-5` | 10.00 | 50.00 |
 | `claude-opus-5-5` | 4.00 | 20.00 |
 | `claude-opus-5`, `claude-opus-4-8`, `-4-7`, `-4-6`, `-4-5` | 5.00 | 25.00 |
 | `claude-opus-4` (4, 4.1) | 15.00 | 75.00 |
-| `claude-sonnet-5` (5, 5.5) | 2.00 | 10.00 |
+| `claude-sonnet-5-5`, `claude-sonnet-5` | 2.00 | 10.00 |
 | `claude-sonnet-4` (4, 4.5, 4.6) | 3.00 | 15.00 |
 | `claude-haiku-5-5` | 0.10 | 0.50 |
 | `claude-haiku-4-5` | 1.00 | 5.00 |
@@ -179,13 +184,15 @@ Prefix rates come from the claude-api reference (cached 2026-10-06):
 Family fallback rates in `MODEL_COSTS`: `claude-fable` 10.00 / 50.00, `claude-opus` 5.00 / 25.00,
 `claude-sonnet` 3.00 / 15.00, `claude-haiku` 1.00 / 5.00.
 
-Cache write = 1.25x input and cache read = 0.1x input, except where Phase 1 finds a published rate
-that differs (the reference lists cache reads at $0.20 for Opus 5.5 and Sonnet 5.5, and $0.25 for
-Fable 5.1).
+Cache write = 1.25x input (5-minute TTL) or 2x input (1-hour TTL), and cache read = 0.1x input,
+except the published cache reads of $0.20 for Opus 5.5 and Sonnet 5.5 and $0.25 for Fable 5.1
+(confirmed in Phase 1 against the claude-api skill's `shared/prompt-caching.md` and
+`shared/models.md`). `claude-fable-5-1` and `claude-sonnet-5-5` get their own prefix rows for
+those read rates.
 
-Existing tests whose expected prices change, so Phase 1 updates them:
-`test_model_costs_known_and_unknown` and `test_estimated_cost_sums_all_four_token_buckets`. Both
-assert the old $15/$75 Opus rate.
+The existing tests `test_model_costs_known_and_unknown` and
+`test_estimated_cost_sums_all_four_token_buckets` compare against `MODEL_COSTS["claude-opus"]`,
+not a literal, so they pass unedited with the new rates.
 
 **New `Session` fields:**
 - **`title: str`:** the last `custom-title` record's `customTitle`. Otherwise the first
@@ -228,7 +235,7 @@ the derived tables from the transcripts still on disk, after copying the old fil
 - `files(path TEXT PRIMARY KEY, size INTEGER, mtime_ns INTEGER, exported_at TEXT)`
 - `sessions(id TEXT PRIMARY KEY, project TEXT, title TEXT, cwd TEXT, started TEXT, ended TEXT)`
 - `messages(key TEXT PRIMARY KEY, session_id TEXT, model TEXT, ts TEXT, input INTEGER,
-  output INTEGER, cache_write INTEGER, cache_read INTEGER)`
+  output INTEGER, cache_write INTEGER, cache_read INTEGER, cache_write_1h INTEGER)`
 - `events(key TEXT PRIMARY KEY, kind TEXT, name TEXT, ts TEXT, session_id TEXT)`
 - Indexes on `messages(ts)`, `events(kind, ts)`, `events(session_id, ts)`.
 
@@ -487,7 +494,14 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
   Then `cd tools/usage-report && uv run bash tests/smoke.sh` prints `PASS`, and
   `uv run mypy src` passes, with no edits to `tools/usage-report`. The same holds for
   `apps/usage-dashboard`'s `tests/smoke.sh`, with no edits to it.
-- **Status:** todo
+- **Status:** done. `cd libs/claude-usage && uv run pytest && uv run mypy src`: "37 passed",
+  coverage 100%, mypy "no issues found in 3 source files". `usage-report` smoke `PASS` and mypy
+  clean, `usage-dashboard` smoke `PASS`, all unedited. (`usage-dashboard`'s own `mypy .` reports
+  one error in `backend/live_statusline.py:33` on the base commit too, unrelated.) Design
+  changed: 1-hour cache writes priced separately (see Record). `UsageEvent` (kind `tool` only)
+  landed here because the global tool-call dedup needs it; Phase 2 adds the other kinds. On real
+  data: 11.83B tokens / $28,781 / 3,052 sessions before, 5.33B / $4,493 / 2,008 after, full
+  parse 9.3 s.
 
 ### Phase 2: Library session fields and usage events
 
@@ -626,3 +640,5 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
 
 - 2026-10-14 Planned: status ready
 - 2026-10-14 Reviewed: Revise first, 3 blocking (interrupt/command matching too broad, claude-fable dropped from fallback, export lock timeout unhandled)
+- 2026-10-14 Design changed: was "`ModelPrice(input, output, cache_write, cache_read)`", now "`ModelPrice(input, output, cache_write, cache_read, cache_write_1h)`" (and `MessageUsage` / `messages` gain `cache_write_1h`), because 87% of local cache-write tokens are 1-hour writes priced at 2x input
+- 2026-10-14 Built Phase 1: `cd libs/claude-usage && uv run pytest && uv run mypy src`, 37 passed, coverage 100%
