@@ -617,7 +617,10 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
   - Manual check, because no command judges visual quality or whether a glance answers the three
     questions: run against real data, view at 1440 px and 390 px, and pass the `ceh-ui-design`
     review checklist.
-- **Status:** todo
+- **Status:** done (commit `b2f671d`). Rerun 2026-10-15: `bun run typecheck && bun run test &&
+  bun run build`, "17 passed", build clean; the serve check prints `PASS`. The manual review at
+  1440 px and 390 px (iframe) ran on 2026-10-14 and tuned `StatTile` and `HealthTable` (see
+  Record). Open's health-threshold item was settled by that review: interrupts only, rate 0.2.
 
 ### Phase 6: Install, scheduling, CI, docs, setup
 
@@ -643,7 +646,16 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
   - `bash apps/usage-insights/scripts/usage-insights-setup.sh install` under Git Bash exits 0 and
     prints the cron line. A real macOS or Linux run is not available on this machine, so CI's web
     and pytest jobs on Ubuntu are the cross-platform evidence.
-- **Status:** todo
+- **Status:** todo: every Builds item is written, and the install checks have not run. On
+  2026-10-15 the session's permission classifier denied running the install script (it registers
+  a task and installs a `uv` tool), so the user runs the four Check steps by hand. What did run:
+  both scripts parse (`bash -n`, the PowerShell parser), `usage-insights-setup.sh bogus` exits 2
+  with usage, `setup/command-center.ps1 list` shows `usage-insights v0.1.0`, its `Detect` returns
+  `False` before install, and app `ruff`/`mypy`/`pytest` ("24 passed") plus both libs' suites
+  (43 and 29 passed) stay green after the docstring edits. The new CI workflow has not run on
+  GitHub yet. Both scripts pass `--reinstall` to `uv tool install`, so a re-run picks up library
+  changes instead of stopping at "already installed". The Open item on editable installs stays
+  open until the install runs.
 
 ## Open
 
@@ -679,3 +691,5 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
 - 2026-10-14 Design changed: was "copied ... imported first", now "copied without its Google Fonts @import", because the local dashboard makes no network calls
 - 2026-10-14 Design changed: was "`StatTile` (label, actual, ...)", now "no label (the panel eyebrow names it) and a 0..high scale", and `HealthTable` gained status chips with counts that filter, because the manual review found a repeated label and 67 never-used rows hiding the troubled ones
 - 2026-10-14 Built Phase 5: `bun run typecheck && bun run test && bun run build`, 17 passed; serve check PASS; manual review at 1440 px and 390 px (iframe) done
+- 2026-10-15 Phase 5 rechecked: 17 passed, build clean, serve check PASS; Status set to done
+- 2026-10-15 Phase 6 built, not checked: install script run denied in session; scripts, CI workflow, docs, and setup/ descriptor written

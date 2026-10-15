@@ -10,7 +10,7 @@ A monorepo of independent projects centered on Claude Code, grouped by category:
 ```
 apps/      full applications you run (cross-repo-file-diff, multi-repo-plan-runner,
            multi-repo-workspace, per-project-plugin-toggler, usage-dashboard,
-           claude-component-browser)
+           usage-insights, claude-component-browser)
 tools/     single-purpose utilities & scripts (statusline-hook,
            session-name-date-prefixer, file-sync,
            scheduled-session-digests, usage-report)
@@ -28,14 +28,15 @@ surface. When a member bundles both (e.g. the statusline hook + its dashboard), 
 **when something belongs in `libs/`:** only with a **cohesive domain** *and* **≥2 real
 consumers** — never a utilities junk drawer, and never a single-consumer extraction. Extract on
 the second consumer, not the first. `claude-usage` (Claude Code local-data access, used by
-`usage-dashboard` and `usage-report`) is the worked example.
+`usage-dashboard`, `usage-insights`, and `usage-report`) is the worked example.
 
 **intentional duplication:** sometimes a library doesn't fit (e.g. a consumer is deliberately
 zero-dependency, or has a parallel non-Python implementation). When logic is copied across
 members on purpose, register it in `docs/shared-plugin-logic.md` and add a `Cross-reference:`
 comment in each copy, so the copies are kept in sync. That file is the worked example: the
 plugin/skill/agent/hook reader is the `claude-plugins` library, consumed by
-`claude-component-browser` and `per-project-plugin-toggler`'s Python server, with only the
+`claude-component-browser`, `usage-insights`, and `per-project-plugin-toggler`'s Python server,
+with only the
 toggler's VSCode **Node** port left as
 a deliberate copy a Python library can't serve.
 
@@ -89,7 +90,8 @@ and setup's README, CLAUDE.md, and `product/ARCHITECTURE.md` wherever they name 
   `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout),
   `C4_PLAN_PRICE_USD` (usage-dashboard monthly plan price for the Plan Value card),
   `C4_ROUNDTABLE_REGISTRY` (multi-repo-workspace registry path override),
-  `C4_ROUNDTABLE_HOME` (multi-repo-workspace state dir, default `~/.roundtable`). OS-provided
+  `C4_ROUNDTABLE_HOME` (multi-repo-workspace state dir, default `~/.roundtable`),
+  `C4_USAGE_INSIGHTS_HOME` (usage-insights store dir, default `~/.usage-insights`). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
 - **Scheduled tasks:** a member that registers a Windows Task Scheduler task registers it under

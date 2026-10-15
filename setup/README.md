@@ -16,6 +16,7 @@ member's own setup script and records the outcome in a per-machine **manifest**.
 | `scheduled-session-digests` | Installs the session-lessons pipeline into the meta repo and registers its hourly task |
 | `agents-workspace-sync` | Registers a daily task that commits and pushes each listed `.agents_workspace` repo (needs config) |
 | `usage-dashboard` (app) | Registers a task that starts the dashboard server at logon and on wake |
+| `usage-insights` (app) | Builds the web frontend, installs the `usage-insights` command (`uv tool`), and registers a task that exports transcripts into its store daily and at logon (needs `bun` and `uv`) |
 
 Other apps, `usage-report`, and libs are **not** managed here — they are run on demand, not installed.
 

@@ -2,7 +2,8 @@
 
 Public API for parsing ``~/.claude/projects/**/*.jsonl`` transcripts into
 per-session token/cost summaries, the per-file parse behind them, plus the model
-pricing tables behind the *estimated* cost.
+pricing tables behind the *estimated* cost. Shared by the ``usage-dashboard`` and
+``usage-insights`` apps and the ``usage-report`` CLI.
 """
 
 from claude_usage.pricing import (

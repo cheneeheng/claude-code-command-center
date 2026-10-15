@@ -8,8 +8,8 @@ A small, dependency-free library for reading Claude Code's installed plugins and
 skills, agents, and hooks — from local config. It models one external contract — the
 `~/.claude/plugins/installed_plugins.json` registry plus each plugin's `skills/<name>/SKILL.md`,
 `agents/<name>.md`, and `hooks/hooks.json` layout — and turns it into typed records. It exists
-because two members need this exact parsing: the `claude-component-browser` app and the
-`per-project-plugin-toggler` app.
+because several members need this exact parsing: the `claude-component-browser`,
+`per-project-plugin-toggler`, and `usage-insights` apps.
 
 ## Commands
 
@@ -31,7 +31,7 @@ changed file (`uv run python -m py_compile src/claude_plugins/<file>.py`); lint/
 - **This is a library: keep `dependencies = []`.** Stdlib only. Never add a runtime dependency for
   what a few lines of stdlib do, and never add web-service deps.
 - **The public API is `__init__.py` / `__all__`.** Public signature changes are semver-relevant and
-  break consumers (`claude-component-browser`, `per-project-plugin-toggler`) — change deliberately.
+  break consumers (`claude-component-browser`, `per-project-plugin-toggler`, `usage-insights`) — change deliberately.
 - **`PluginMember.path` is server-side detail.** Strip it before sending member lists to untrusted
   clients. Consumers rely on this contract; do not start leaking paths to clients.
 - **A parallel Node.js copy of this logic lives in the toggler's `vscode-extension/extension.js`**

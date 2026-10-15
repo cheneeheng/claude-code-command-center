@@ -251,5 +251,22 @@ function Get-CommandCenterRegistry {
         }
     }
 
-    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $agentsWorkspaceSync, $usageDashboard)
+    # --- usage-insights ------------------------------------------------------
+    $uiDir = Join-Path $apps 'usage-insights'
+    $usageInsights = [pscustomobject]@{
+        Name           = 'usage-insights'
+        DisplayName    = 'Usage insights'
+        Category       = 'apps'
+        SetupScript    = Join-Path (Join-Path $uiDir 'scripts') 'usage-insights-setup.ps1'
+        Version        = Read-MemberVersion $uiDir
+        RequiredConfig = @()
+        Install        = { param($SetupScript, $Config) & $SetupScript -Action install | Out-Null; @{} }
+        Uninstall      = { param($SetupScript, $Entry)  & $SetupScript -Action uninstall | Out-Null }
+        Detect         = {
+            param($Entry)
+            [bool](Get-ScheduledTask -TaskName 'export' -TaskPath '\ClaudeAutomation\usage-insights\' -ErrorAction SilentlyContinue)
+        }
+    }
+
+    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $agentsWorkspaceSync, $usageDashboard, $usageInsights)
 }

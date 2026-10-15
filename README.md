@@ -18,6 +18,7 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 | [`multi-repo-workspace`](apps/multi-repo-workspace/) | Turn-based workspace over your Claude Code repos (internal name *roundtable*): a board of repos with live git/plan state, in-app Claude Code planning sessions, rounds of orders executed headlessly with live streams and per-run cost, and a review phase with diffs, commits, and carried follow-ups. Successor to `multi-repo-plan-runner`; both share the same lifecycle sidecar format. |
 | [`per-project-plugin-toggler`](apps/per-project-plugin-toggler/) | Enable/disable Claude Code plugins per project from a browser UI or inside VSCode; browse and install from known marketplaces. |
 | [`usage-dashboard`](apps/usage-dashboard/) | Interactive local web dashboard for token usage, cost, and rate limits: range/project scoping, plan ROI, trend deltas, activity/model/tool profiles, drill-down with shareable URLs, session economics, a live rate-limit trajectory with cap ETA, and Markdown/CSV export. Reads Claude Code transcripts; live rate limits read an optional statusline JSONL export, which no tool in this repo writes yet. |
+| [`usage-insights`](apps/usage-insights/) | Local dashboard that helps you decide what to change: this week's and month's token and cost forecast, where spend goes by project, model, and session, and which skills, subagents, and tools are never used, fading, or followed by trouble. Keeps its own transcript store, so history outlives Claude Code's cleanup. Replaces `usage-dashboard`. |
 | [`claude-component-browser`](apps/claude-component-browser/) | Local web app to search and read every Claude Code component — skill, agent, and hook — on your machine, from installed plugins and from loose (non-plugin) `.claude` skills/agents, grouped by source. |
 
 ### `tools/` — single-purpose utilities & scripts
@@ -45,8 +46,9 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 
 A library earns a place here only with a **cohesive domain** and **≥2 real consumers** — not as a
 utilities junk drawer. `claude-usage` qualifies (the transcript layout, consumed by the
-`usage-dashboard` app and the `usage-report` CLI); so does `claude-plugins` (the installed-plugin
-layout, consumed by the `claude-component-browser` and `per-project-plugin-toggler` apps).
+`usage-dashboard` and `usage-insights` apps and the `usage-report` CLI); so does `claude-plugins`
+(the installed-plugin layout, consumed by the `claude-component-browser`,
+`per-project-plugin-toggler`, and `usage-insights` apps).
 
 ## Installing the tools
 
@@ -62,8 +64,9 @@ The installable `tools/` members (`statusline-hook`, `session-name-date-prefixer
 ```
 
 It delegates to each tool's own setup script and records state in a manifest under
-`~/.claude-command-center/`. See [`setup/README.md`](setup/README.md). Apps and `usage-report`
-are run on demand, not installed, so they are not managed here.
+`~/.claude-command-center/`. See [`setup/README.md`](setup/README.md). It also manages the two
+apps that register a scheduled task, `usage-dashboard` and `usage-insights`. Other apps and
+`usage-report` are run on demand, not installed, so they are not managed here.
 
 ## Environment variables
 
@@ -72,11 +75,12 @@ never collides with Claude Code's or the OS's variables:
 
 | Variable | Used by | Purpose |
 |----------|---------|---------|
-| `C4_CLAUDE_DIR` | `usage-report`, `usage-dashboard`, `scheduled-session-digests`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. `scheduled-session-digests` reads every entry, at install time. |
+| `C4_CLAUDE_DIR` | `usage-report`, `usage-dashboard`, `usage-insights`, `scheduled-session-digests`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. `scheduled-session-digests` reads every entry, at install time. |
 | `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `agents-workspace-sync`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). `scheduled-session-digests` reads it only as the default for `-MetaDir` and never sets it. |
 | `C4_STATUSLINE_NOW` | `statusline-hook` | Test-only: pins "now" (epoch seconds) for the golden fixtures. |
 | `C4_STATUSLINE_LIVE_TIMEOUT` | `usage-dashboard` | Seconds a session may be idle before dropping out of the live view (default `1800`). |
 | `C4_PLAN_PRICE_USD` | `usage-dashboard` | Monthly Claude subscription price; lights up the dashboard's Plan Value (ROI) card when set. |
+| `C4_USAGE_INSIGHTS_HOME` | `usage-insights` | Store dir holding `usage.db` (default `~/.usage-insights`). |
 | `C4_ROUNDTABLE_REGISTRY` | `multi-repo-workspace` | Registry file path (overridden by `--registry`, ahead of `./.roundtable.json`). |
 | `C4_ROUNDTABLE_HOME` | `multi-repo-workspace` | App state dir — rounds, session transcripts, run output (default `~/.roundtable`). |
 

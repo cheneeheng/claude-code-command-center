@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, dependency-free library for reading Claude Code's local session data. It models one
 external contract — the `~/.claude/projects/**/*.jsonl` transcript layout Claude Code writes — and
-turns it into per-session token/cost summaries. It exists because two members need this exact
-parsing: the `usage-dashboard` app and the `usage-report` CLI.
+turns it into per-session token/cost summaries. It exists because several members need this exact
+parsing: the `usage-dashboard` and `usage-insights` apps and the `usage-report` CLI.
 
 ## Commands
 
@@ -31,7 +31,7 @@ changed file (`uv run python -m py_compile src/claude_usage/<file>.py`); lint/ty
   on every consumer — never add web-service deps, and do not add a runtime dependency for what a few
   lines of stdlib do.
 - **The public API is `__init__.py` / `__all__`.** Anything not exported is private. Treat public
-  signature changes as semver-relevant; do not break consumers (`usage-dashboard`, `usage-report`)
+  signature changes as semver-relevant; do not break consumers (`usage-dashboard`, `usage-insights`, `usage-report`)
   casually.
 - **Cost is estimated, never billed.** `estimated_cost` is token counts × list price from
   `price_for`: the longest matching model-id prefix in `MODEL_PRICES`, else the family row in
