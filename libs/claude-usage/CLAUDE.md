@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A small, dependency-free library for reading Claude Code's local session data. It models one
 external contract — the `~/.claude/projects/**/*.jsonl` transcript layout Claude Code writes — and
-turns it into per-session token/cost summaries. It exists because two members need this exact
-parsing: the `usage-dashboard` app and the `usage-report` CLI.
+turns it into per-session token/cost summaries. It exists because several members need this exact
+parsing: the `usage-dashboard` and `usage-insights` apps and the `usage-report` CLI.
 
 ## Commands
 
@@ -18,10 +18,12 @@ changed file (`uv run python -m py_compile src/claude_usage/<file>.py`); lint/ty
 ## Code structure (`src/claude_usage/`)
 
 - `__init__.py` — the public surface (`__all__`). This is the API boundary.
-- `sessions.py` — transcript discovery and parsing: `load_sessions`, `transcript_files`,
-  `claude_dirs`, the `Session` dataclass.
-- `pricing.py` — the pricing table and cost math: `estimated_cost`, `model_family`, `model_costs`,
-  `MODEL_COSTS`.
+- `sessions.py` — transcript discovery and parsing: `parse_file` (one file, deduped within it),
+  the global merge behind `load_usage` / `load_sessions`, `transcript_files`, `claude_dirs`, and
+  the `Session`, `MessageUsage`, `UsageEvent`, `FileParse` dataclasses.
+- `pricing.py` — the pricing tables and cost math: `price_for` (`MODEL_PRICES` by model-id
+  prefix, then the `MODEL_COSTS` family fallback), `estimated_cost`, `model_family`,
+  `model_costs`.
 
 ## Invariants — do not break these
 
@@ -29,11 +31,16 @@ changed file (`uv run python -m py_compile src/claude_usage/<file>.py`); lint/ty
   on every consumer — never add web-service deps, and do not add a runtime dependency for what a few
   lines of stdlib do.
 - **The public API is `__init__.py` / `__all__`.** Anything not exported is private. Treat public
-  signature changes as semver-relevant; do not break consumers (`usage-dashboard`, `usage-report`)
+  signature changes as semver-relevant; do not break consumers (`usage-dashboard`, `usage-insights`, `usage-report`)
   casually.
 - **Cost is estimated, never billed.** `estimated_cost` is token counts × list price from
-  `MODEL_COSTS`, keyed by model *family* (so e.g. `claude-opus-4-7`/`-4-8` share a row). When
-  Anthropic changes pricing, update `MODEL_COSTS`; if a model id is misfamilied, fix `model_family`.
+  `price_for`: the longest matching model-id prefix in `MODEL_PRICES`, else the family row in
+  `MODEL_COSTS`, else unpriced ($0). When Anthropic changes pricing or ships a model, add or edit
+  its `MODEL_PRICES` row; if a model id is misfamilied, fix `model_family`.
+- **Dedup is global.** A reply counts once per `message.id` + `requestId` across all files (last
+  line's usage, first session seen), and a tool call once per block `id`. `TokenCounts` keys never
+  overlap (`cache_write` is 5-minute writes, `cache_write_1h` 1-hour writes), because consumers
+  sum the values.
 - **Honour `$C4_CLAUDE_DIR`** (pathsep-separated) for config-dir resolution via `claude_dirs`.
 
 ## Conventions

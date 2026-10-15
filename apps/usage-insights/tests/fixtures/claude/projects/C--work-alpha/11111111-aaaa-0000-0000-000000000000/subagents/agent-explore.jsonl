@@ -1,0 +1,2 @@
+{"type":"user","uuid":"s-u1","timestamp":"2026-10-01T09:06:10Z","cwd":"/elsewhere","message":{"role":"user","content":"Explore the auth module"}}
+{"type":"assistant","uuid":"s-a1","requestId":"r3","timestamp":"2026-10-01T09:06:30Z","message":{"id":"m3","model":"claude-haiku-4-5","usage":{"input_tokens":7,"output_tokens":3},"content":[{"type":"tool_use","id":"t4","name":"Grep","input":{}}]}}

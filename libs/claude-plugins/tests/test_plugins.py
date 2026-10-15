@@ -10,6 +10,7 @@ import pytest
 from claude_plugins import (
     claude_dir,
     load_installed_plugins,
+    load_plugin_entries,
     loose_bases,
     normalise_path,
     plugins_base,
@@ -130,3 +131,20 @@ def test_load_installed_plugins_buckets_by_scope_and_project(tmp_path: Path) -> 
     assert buckets["user"][0]["version"] == "1.0"
     assert [p["id"] for p in buckets["project"]] == ["proj-plugin"]
     assert buckets["local"] == []  # other-proj / no-path / bad-scope all excluded
+    assert set(buckets["project"][0]) == {"id", "version", "installPath", "scope"}
+
+
+def test_load_plugin_entries_lists_every_project(tmp_path: Path) -> None:
+    _write_registry(
+        tmp_path,
+        {
+            "u": [{"scope": "user", "installPath": "/u"}],
+            "p": [{"scope": "local", "projectPath": "/a", "installPath": "/p"}],
+            "bad": [{"scope": "global"}],
+        },
+    )
+    assert load_plugin_entries(tmp_path) == [
+        {"id": "u", "version": "", "installPath": "/u", "scope": "user", "projectPath": ""},
+        {"id": "p", "version": "", "installPath": "/p", "scope": "local", "projectPath": "/a"},
+    ]
+    assert load_plugin_entries(tmp_path / "missing") == []

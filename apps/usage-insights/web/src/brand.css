@@ -1,0 +1,597 @@
+/* ============================================================================
+   MERIDIAN — Brand Design System  (2026)
+   ----------------------------------------------------------------------------
+   One canonical foundation for every Meridian project. Import this first,
+   then layer app-specific CSS on top. Everything is token-driven: change a
+   value here and it propagates everywhere.
+ 
+   Identity (v2):  a restrained, mainstream-SaaS system. True cool-gray
+                   neutrals, a blue primary, an amber-gold accent used only to mark
+                   state. Soft elevation over hard flat edges.
+                   Inter throughout · JetBrains Mono for code & IDs only.
+   Principle:      defer to content. One primary, one accent, calm neutrals.
+                   The only memorable device is the active-edge — and it
+                   means something (state), so it stays.
+ 
+   Migration note: Meridian is the 2026 successor to the original Tidewater
+   theme (the earthy boutique identity).
+   The token *vocabulary* is unchanged, so existing markup keeps working —
+   the values behind the names changed. Legacy chart aliases (--red/--green/
+   --blue/--purple) now follow the new palette instead of the old pinned
+   hexes, because the whole identity moved on purpose.
+ 
+   Contents
+     1. Fonts
+     2. Tokens — light (also the :root fallback)
+     3. Tokens — dark (designed as a peer; OS preference + explicit)
+     4. Compatibility alias layer (legacy names → canonical)
+     5. Reset & document base
+     6. Typography primitives
+     7. Surfaces — card
+     8. Controls — buttons, inputs, toggle
+     9. Indicators — badge, dot, spinner, state text
+    10. Data — table, bar, legend
+    11. Accessibility — focus, reduced motion
+   ============================================================================ */
+ 
+/* ----------------------------------------------------------------------------
+   1. Fonts
+   ------------------------------------------------------------------------- */
+/* usage-insights: the Google Fonts @import is removed so the local dashboard makes
+   no network calls. Inter / JetBrains Mono are used when installed, otherwise the
+   system UI and monospace fallbacks in the font stacks below. */
+ 
+/* ----------------------------------------------------------------------------
+   2. Tokens — light  (this :root is also the universal fallback)
+   ------------------------------------------------------------------------- */
+:root {
+  /* — Type families ----------------------------------------------------- */
+  --font-display: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui:      "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+ 
+  /* — Type scale  (anchored at a 16px root; rem so it stays predictable) - */
+  --fs-50:  0.6875rem;  /* 11px · eyebrows, micro-labels                   */
+  --fs-75:  0.75rem;    /* 12px · captions, table cells, badges           */
+  --fs-100: 0.8125rem;  /* 13px · secondary body, controls                */
+  --fs-200: 0.9375rem;  /* 15px · body default                            */
+  --fs-300: 1.0625rem;  /* 17px · emphasized body, lead-in                */
+  --fs-400: 1.375rem;   /* 22px · card / section heading                  */
+  --fs-500: 1.75rem;    /* 28px · stat values                             */
+  --fs-600: 2.25rem;    /* 36px · page heading                            */
+  --fs-700: 3.5rem;     /* 56px · hero                                    */
+ 
+  --lh-tight: 1.1;
+  --lh-snug:  1.3;
+  --lh-base:  1.55;
+ 
+  --tracking-tight:  -0.02em;
+  --tracking-flat:    0;
+  --tracking-wide:    0.04em;
+  --tracking-eyebrow: 0.06em;
+ 
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+  --weight-heavy:    800;
+ 
+  /* — Spacing  (4px grid) ---------------------------------------------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+ 
+  /* — Radius  (softer than v1 — friendlier, mainstream) ----------------- */
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   14px;
+  --radius-full: 999px;
+ 
+  /* — Active-edge width (signature; tune in one place) ------------------ */
+  --edge: 5px;
+ 
+  /* — Elevation  (soft neutral shadows; depth, not atmosphere) ---------- */
+  --shadow-sm: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+  --shadow-md: 0 4px 16px rgba(16,24,40,.10), 0 2px 6px rgba(16,24,40,.06);
+  --shadow-lg: 0 12px 32px rgba(16,24,40,.14), 0 4px 12px rgba(16,24,40,.08); /* overlays */
+ 
+  /* — Motion ------------------------------------------------------------ */
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 130ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+ 
+  /* — Surfaces  (true cool-gray neutrals) ------------------------------- */
+  --bg:        #FAFAFB;
+  --surface:   #FFFFFF;
+  --surface-2: #F4F4F6;
+ 
+  /* — Ink --------------------------------------------------------------- */
+  --fg:        #18181B;
+  --fg-muted:  #52525B;
+  --fg-subtle: #A1A1AA;   /* third tier: placeholders, disabled, inherited */
+ 
+  /* — Lines ------------------------------------------------------------- */
+  --border:        #E4E4E7;
+  --border-strong: #D4D4D8;
+ 
+  /* — Brand: blue (the workhorse — buttons, links, focus) --------------- */
+  --secondary:      #2563EB;
+  --secondary-hi:   #1D4ED8;
+  --secondary-wash: #E8F0FE;
+ 
+  /* — Brand: amber-gold accent (marks state — the active-edge, emphasis)  */
+  --accent:      #D97706;
+  --accent-hi:   #B45309;
+  --accent-wash: #FCEFCE;
+ 
+  /* — Text that sits on a brand fill ------------------------------------ */
+  --on-text: #FFFFFF;
+ 
+  /* — Semantic state ---------------------------------------------------- */
+  --success:      #16A34A; --success-wash: #E7F6EC;
+  --warning:      #EA580C; --warning-wash: #FCE8DD;
+  --danger:       #DC2626; --danger-wash:  #FBE9E9;
+  --error: var(--danger);  /* alias kept for legacy var(--error,…) usage   */
+ 
+  /* — Data visualization  (cohesive categorical ramp) ------------------- */
+  --data-1: #2563EB;  /* blue    */
+  --data-2: #0EA5E9;  /* sky     */
+  --data-3: #8B5CF6;  /* violet  */
+  --data-4: #14B8A6;  /* teal    */
+  --data-5: #F59E0B;  /* amber   */
+  --data-6: #EC4899;  /* pink    */
+ 
+  /* — App-specific neutrals (inherited / nested rows) ------------------- */
+  --inherited-fg: #A1A1AA;
+  --inherited-bg: #F1F1F3;
+ 
+  /* — Focus ------------------------------------------------------------- */
+  --focus-ring: var(--secondary);
+}
+ 
+/* ----------------------------------------------------------------------------
+   3. Tokens — dark  (designed as a peer on a near-black neutral ramp)
+   ------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.40);
+    --shadow-md: 0 8px 24px rgba(0,0,0,.50), 0 2px 8px rgba(0,0,0,.40);
+    --shadow-lg: 0 16px 40px rgba(0,0,0,.60), 0 4px 14px rgba(0,0,0,.45);
+ 
+    --bg:        #0A0A0C;
+    --surface:   #1F1F24;
+    --surface-2: #2A2A30;
+ 
+    --fg:        #FAFAFA;
+    --fg-muted:  #A1A1AA;
+    --fg-subtle: #71717A;
+ 
+    --border:        #303036;
+    --border-strong: #41414A;
+ 
+    --secondary:      #60A5FA;
+    --secondary-hi:   #93BBFC;
+    --secondary-wash: rgba(96,165,250,.16);
+ 
+    --accent:      #FBBF24;
+    --accent-hi:   #FCD34D;
+    --accent-wash: rgba(251,191,36,.16);
+ 
+    --on-text: #0B1220;  /* dark text reads cleanly on the lighter brand fills */
+ 
+    --success: #4ADE80; --success-wash: rgba(74,222,128,.14);
+    --warning: #FB923C; --warning-wash: rgba(251,146,60,.16);
+    --danger:  #F87171; --danger-wash:  rgba(248,113,113,.14);
+ 
+    --data-1: #60A5FA;
+    --data-2: #38BDF8;
+    --data-3: #A78BFA;
+    --data-4: #2DD4BF;
+    --data-5: #FBBF24;
+    --data-6: #F472B6;
+ 
+    --inherited-fg: #71717A;
+    --inherited-bg: #232329;
+  }
+}
+ 
+:root[data-theme="dark"] {
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.40);
+  --shadow-md: 0 8px 24px rgba(0,0,0,.50), 0 2px 8px rgba(0,0,0,.40);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,.60), 0 4px 14px rgba(0,0,0,.45);
+ 
+  --bg:        #0A0A0C;
+  --surface:   #1F1F24;
+  --surface-2: #2A2A30;
+ 
+  --fg:        #FAFAFA;
+  --fg-muted:  #A1A1AA;
+  --fg-subtle: #71717A;
+ 
+  --border:        #303036;
+  --border-strong: #41414A;
+ 
+  --secondary:      #60A5FA;
+  --secondary-hi:   #93BBFC;
+  --secondary-wash: rgba(96,165,250,.16);
+ 
+  --accent:      #FBBF24;
+  --accent-hi:   #FCD34D;
+  --accent-wash: rgba(251,191,36,.16);
+ 
+  --on-text: #0B1220;
+ 
+  --success: #4ADE80; --success-wash: rgba(74,222,128,.14);
+  --warning: #FB923C; --warning-wash: rgba(251,146,60,.16);
+  --danger:  #F87171; --danger-wash:  rgba(248,113,113,.14);
+ 
+  --data-1: #60A5FA;
+  --data-2: #38BDF8;
+  --data-3: #A78BFA;
+  --data-4: #2DD4BF;
+  --data-5: #FBBF24;
+  --data-6: #F472B6;
+ 
+  --inherited-fg: #71717A;
+  --inherited-bg: #232329;
+}
+ 
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark;  }
+ 
+/* ----------------------------------------------------------------------------
+   4. Compatibility alias layer
+   Legacy names used by existing markup map onto the canonical tokens so
+   older stylesheets keep working unchanged. New projects: use the canonical
+   names above and ignore these.
+   ------------------------------------------------------------------------- */
+:root {
+  --text:    var(--fg);
+  --muted:   var(--fg-muted);
+  --border2: var(--border-strong);
+  --accent2: var(--accent);
+  --sans:    var(--font-ui);
+  --mono:    var(--font-mono);
+ 
+  /* legacy flat chart names → new palette (re-pointed in v2 on purpose) */
+  --green:  var(--success);
+  --blue:   var(--data-2);
+  --purple: var(--data-3);
+  --red:    var(--danger);
+}
+ 
+/* ----------------------------------------------------------------------------
+   5. Reset & document base
+   ------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+html {
+  font-size: 100%;            /* canonical 16px root — the rem scale depends on it */
+  -webkit-text-size-adjust: 100%;
+}
+ 
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--fs-200);
+  line-height: var(--lh-base);
+  min-height: 100vh;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+ 
+::selection { background: var(--secondary-wash); color: var(--fg); }
+ 
+a { color: var(--secondary); text-decoration: none; }
+a:hover { color: var(--secondary-hi); text-decoration: underline; }
+ 
+hr { border: none; border-top: 1px solid var(--border); }
+ 
+/* ----------------------------------------------------------------------------
+   6. Typography primitives
+   ------------------------------------------------------------------------- */
+h1, .display-1 {
+  font-family: var(--font-display);
+  font-size: var(--fs-600);
+  font-weight: var(--weight-heavy);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+ 
+h2, .display-2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-400);
+  font-weight: var(--weight-bold);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+ 
+h3 {
+  font-family: var(--font-ui);
+  font-size: var(--fs-300);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+}
+ 
+/* The eyebrow: small uppercase sans label. The system's connective tissue.
+   (v2: moved off mono — sans reads mainstream, not developer-niche.) */
+.eyebrow,
+.section-title {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--fs-50);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+ 
+.lead    { font-size: var(--fs-300); color: var(--fg); }
+.muted   { color: var(--fg-muted); }
+.subtle  { color: var(--fg-subtle); }
+.mono    { font-family: var(--font-mono); font-variant-numeric: tabular-nums; } /* code & IDs */
+.numeric { font-variant-numeric: tabular-nums; }
+ 
+/* ----------------------------------------------------------------------------
+   7. Surfaces — card
+   ------------------------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+ 
+/* Signature: the active-edge. A solid brand rule + wash on the leading
+   border of an element that is "on". It marks state, not decoration — so it
+   only ever appears on something the user has activated. Width: --edge. */
+.has-edge      { border-left: var(--edge) solid var(--secondary); }
+.is-active,
+.has-edge.is-active {
+  border-left: var(--edge) solid var(--accent);
+  background: var(--accent-wash);
+}
+ 
+/* ----------------------------------------------------------------------------
+   8. Controls
+   ------------------------------------------------------------------------- */
+button,
+.btn {
+  font-family: var(--font-ui);
+  font-size: var(--fs-100);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard),
+              border-color var(--dur-fast) var(--ease-standard),
+              color var(--dur-fast) var(--ease-standard),
+              box-shadow var(--dur-fast) var(--ease-standard);
+}
+button:hover,
+.btn:hover { background: var(--surface-2); border-color: var(--fg-subtle); }
+button:disabled,
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+ 
+/* Primary: solid blue. Use once per view — the single most important action. */
+.btn-primary {
+  background: var(--secondary);
+  border-color: var(--secondary);
+  color: var(--on-text);
+}
+.btn-primary:hover { background: var(--secondary-hi); border-color: var(--secondary-hi); }
+ 
+/* Outline: blue hairline that fills on hover. The workhorse affordance. */
+.btn-outline {
+  background: transparent;
+  border-color: var(--secondary);
+  color: var(--secondary);
+}
+.btn-outline:hover:not(:disabled) { background: var(--secondary); border-color: var(--secondary); color: var(--on-text); }
+.btn-outline:disabled { border-color: var(--border); color: var(--fg-muted); }
+ 
+/* Ghost: no chrome until needed. */
+.btn-ghost {
+  background: none;
+  border-color: transparent;
+  color: var(--fg-muted);
+}
+.btn-ghost:hover { background: var(--surface-2); color: var(--fg); border-color: transparent; }
+ 
+/* Danger: reserved for destructive, irreversible actions. */
+.btn-danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: transparent;
+}
+.btn-danger:hover { background: var(--danger-wash); border-color: var(--danger); color: var(--danger); }
+ 
+.btn-sm { font-size: var(--fs-75); padding: var(--space-1) var(--space-3); }
+ 
+/* Inputs */
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="email"],
+select,
+textarea,
+.input {
+  font-family: var(--font-ui);
+  font-size: var(--fs-100);
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color var(--dur-fast) var(--ease-standard),
+              box-shadow var(--dur-fast) var(--ease-standard);
+}
+input::placeholder, textarea::placeholder { color: var(--fg-subtle); }
+input:focus, select:focus, textarea:focus, .input:focus {
+  outline: none;
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 3px var(--secondary-wash);
+}
+.input-mono { font-family: var(--font-mono); }
+ 
+/* Toggle switch */
+.toggle {
+  appearance: none; -webkit-appearance: none;
+  width: 36px; height: 20px;
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.toggle::after {
+  content: "";
+  position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px;
+  background: var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(16,24,40,.30);
+  transition: left var(--dur-fast) var(--ease-standard);
+}
+.toggle:checked { background: var(--secondary); }
+.toggle:checked::after { left: 19px; }
+.toggle:disabled { opacity: 0.4; cursor: not-allowed; }
+ 
+/* ----------------------------------------------------------------------------
+   9. Indicators
+   ------------------------------------------------------------------------- */
+.badge {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: var(--fs-50);
+  font-weight: var(--weight-medium);
+  color: var(--fg-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.12rem 0.45rem;
+  white-space: nowrap;
+}
+.badge-accent    { color: var(--accent);    background: var(--accent-wash);    border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+.badge-secondary { color: var(--secondary); background: var(--secondary-wash); border-color: color-mix(in srgb, var(--secondary) 30%, transparent); }
+.badge-dashed    { border-style: dashed; }
+.badge-mono      { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+ 
+/* State text */
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-danger  { color: var(--danger);  }
+ 
+/* Status dot — steady, or live (pulsing) */
+.dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--fg-subtle);
+  vertical-align: middle;
+}
+.dot-live     { background: var(--success); animation: tw-pulse 2s var(--ease-standard) infinite; }
+.dot-success  { background: var(--success); }
+.dot-warning  { background: var(--warning); }
+.dot-danger   { background: var(--danger);  }
+ 
+@keyframes tw-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+ 
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 1.5px solid var(--border-strong);
+  border-top-color: var(--secondary);
+  border-radius: 50%;
+  animation: tw-spin 0.8s linear infinite;
+}
+@keyframes tw-spin { to { transform: rotate(360deg); } }
+ 
+/* ----------------------------------------------------------------------------
+   10. Data — table, bar, legend
+   ------------------------------------------------------------------------- */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: var(--fs-100);
+  font-variant-numeric: tabular-nums;
+}
+.table th {
+  text-align: left;
+  font-size: var(--fs-50);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  padding: 0 var(--space-3) var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.table td {
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  vertical-align: middle;
+}
+.table tr:last-child td { border-bottom: none; }
+ 
+/* Horizontal bar (CSS-only meter) */
+.bar-track {
+  height: 7px;
+  background: var(--surface-2);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--secondary);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+.bar-fill.is-1 { background: var(--data-1); }
+.bar-fill.is-2 { background: var(--data-2); }
+.bar-fill.is-3 { background: var(--data-3); }
+.bar-fill.is-4 { background: var(--data-4); }
+ 
+.legend-dot {
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+ 
+/* ----------------------------------------------------------------------------
+   11. Accessibility
+   ------------------------------------------------------------------------- */
+:where(a, button, .btn, input, select, textarea, .toggle, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+ 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

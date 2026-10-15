@@ -12,6 +12,7 @@ from pathlib import Path
 __all__ = [
     "claude_dir",
     "load_installed_plugins",
+    "load_plugin_entries",
     "loose_bases",
     "normalise_path",
     "plugins_base",
@@ -112,28 +113,47 @@ def load_installed_plugins(
         registry is missing or unreadable.
     """
     buckets: dict[str, list[dict[str, str]]] = {"local": [], "project": [], "user": []}
+    norm_project = normalise_path(str(project_root))
+    for entry in load_plugin_entries(claude_dir):
+        project_path = entry.pop("projectPath")
+        if entry["scope"] != "user" and (
+            not project_path or normalise_path(project_path) != norm_project
+        ):
+            continue  # belongs to a different project
+        buckets[entry["scope"]].append(entry)
+    return buckets
+
+
+def load_plugin_entries(claude_dir: Path | None = None) -> list[dict[str, str]]:
+    """Every entry of the installed-plugins registry, for every project.
+
+    The unfiltered view behind :func:`load_installed_plugins`, for callers that
+    need several projects at once without re-reading the registry per project.
+
+    Args:
+        claude_dir: Explicit Claude config dir whose
+            ``plugins/installed_plugins.json`` is read. Defaults to ``~/.claude``.
+
+    Returns:
+        One ``{"id", "version", "installPath", "scope", "projectPath"}`` per
+        entry whose scope is ``local``, ``project``, or ``user``
+        (``projectPath`` is ``""`` when absent). Empty if the registry is
+        missing or unreadable.
+    """
     installed_path = plugins_base(claude_dir) / "installed_plugins.json"
     try:
         raw = json.loads(installed_path.read_text(encoding="utf-8"))["plugins"]
     except (OSError, KeyError, json.JSONDecodeError):
-        return buckets
-
-    norm_project = normalise_path(str(project_root))
-    for plugin_id, entries in raw.items():
-        for entry in entries:
-            scope = entry.get("scope")
-            if scope not in buckets:
-                continue
-            if scope in ("local", "project"):
-                entry_project = entry.get("projectPath", "")
-                if not entry_project or normalise_path(entry_project) != norm_project:
-                    continue  # belongs to a different project
-            buckets[scope].append(
-                {
-                    "id": plugin_id,
-                    "version": entry.get("version", ""),
-                    "installPath": entry.get("installPath", ""),
-                    "scope": scope,
-                }
-            )
-    return buckets
+        return []
+    return [
+        {
+            "id": plugin_id,
+            "version": entry.get("version", ""),
+            "installPath": entry.get("installPath", ""),
+            "scope": entry["scope"],
+            "projectPath": entry.get("projectPath", ""),
+        }
+        for plugin_id, entries in raw.items()
+        for entry in entries
+        if entry.get("scope") in ("local", "project", "user")
+    ]

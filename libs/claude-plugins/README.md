@@ -7,9 +7,9 @@ It models one well-defined external contract — the
 `~/.claude/plugins/installed_plugins.json` registry and each plugin's
 `skills/<name>/SKILL.md`, `agents/<name>.md` and `hooks/hooks.json` layout — and
 turns it into typed records. It exists because more than one member needs this
-exact parsing: the [`claude-component-browser`](../../apps/claude-component-browser/) app and the
-[`per-project-plugin-toggler`](../../apps/per-project-plugin-toggler/) app both
-consume it.
+exact parsing: the [`claude-component-browser`](../../apps/claude-component-browser/),
+[`per-project-plugin-toggler`](../../apps/per-project-plugin-toggler/), and
+[`usage-insights`](../../apps/usage-insights/) apps all consume it.
 
 ## API
 
@@ -26,6 +26,7 @@ for entry in buckets["user"]:
 | Symbol | Purpose |
 |--------|---------|
 | `load_installed_plugins(project_root, claude_dir=None)` | Bucket installed plugins by **scope** (`local`/`project`/`user`), matching `projectPath` against the project root. Empty buckets if the registry is missing/unreadable. |
+| `load_plugin_entries(claude_dir=None)` | Every registry entry for every project, with its `scope` and `projectPath`. For callers that match many projects at once (the registry is read and each path normalised once). |
 | `plugins_base(claude_dir=None)` | Resolve `<claude_dir>/plugins`. `claude_dir=None` defaults to `~/.claude`; pass an explicit `Path` to override. |
 | `normalise_path(p)` | Cross-platform path normalisation for project-root comparison. |
 | `parse_frontmatter(path, fallback="")` | Extract `(name, description)` from a markdown file's YAML frontmatter (regex; inline, wrapped and `>-`/`>`/`\|` block scalars, always in full). |

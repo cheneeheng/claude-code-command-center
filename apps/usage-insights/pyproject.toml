@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "usage-insights"
+dynamic = ["version"]
+description = "Decision-focused Claude Code usage dashboard: projection, spend, and skill health."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "claude-plugins",
+    "claude-usage",
+]
+
+[project.scripts]
+usage-insights = "usage_insights.cli:main"
+
+[project.gui-scripts]
+usage-insights-bg = "usage_insights.cli:main"
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+claude-usage = { path = "../../libs/claude-usage", editable = true }
+claude-plugins = { path = "../../libs/claude-plugins", editable = true }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15",
+    "mypy>=1.11",
+    "pytest>=8.3",
+]
+
+# VERSION is the one place the version lives; setup/registry.ps1 reads it too.
+[tool.hatch.version]
+path = "VERSION"
+pattern = "(?P<version>.+)"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/usage_insights"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

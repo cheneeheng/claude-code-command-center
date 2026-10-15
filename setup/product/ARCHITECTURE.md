@@ -37,6 +37,7 @@ flowchart TD
         d4["scheduled-session-digests"]
         d5["agents-workspace-sync (RequiredConfig: repos)"]
         d6["usage-dashboard"]
+        d7["usage-insights"]
     end
     cli --> registry --> descriptors
     descriptors -->|"& SetupScript @splat"| member["member setup scripts"]
@@ -153,4 +154,4 @@ defaults; for a single member, incomplete required config throws rather than ski
 **Consequences:** Batch installs are safe and predictable — you get exactly the members you opted
 in. Only `file-sync` has `RequiredConfig` (no sensible default folder pair exists). Apps,
 `usage-report`, and libs are deliberately excluded from management (run on demand); `usage-dashboard`
-is the one app in the registry because it registers a scheduled task.
+and `usage-insights` are the apps in the registry because each registers a scheduled task.
