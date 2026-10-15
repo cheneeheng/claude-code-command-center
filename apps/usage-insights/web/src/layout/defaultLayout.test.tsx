@@ -27,14 +27,14 @@ describe('defaultLayout', () => {
   it('keeps the server ranking and puts troubled skills right after never-used', () => {
     render(<Dashboard layout={defaultLayout} data={summary} />);
     const projects = screen.getByText('Projects · 2').parentElement as HTMLElement;
-    const labels = within(projects).getAllByRole('listitem').map((li) => li.querySelector('.ranked-label')?.textContent);
-    expect(labels).toEqual(['alpha', 'beta']);
+    const items = within(projects).getAllByRole('listitem').map((li) => li.textContent ?? '');
+    expect(items.map((t) => t.match(/^(alpha|beta)/)?.[1])).toEqual(['alpha', 'beta']);
     const skills = screen.getByText('Skills · 3').parentElement as HTMLElement;
-    const names = within(skills)
+    const firstCells = within(skills)
       .getAllByRole('row')
       .slice(1)
-      .map((tr) => tr.querySelector('.mono')?.textContent);
-    expect(names).toEqual(['never-skill', 'flaky-skill', 'good-skill']);
+      .map((tr) => within(tr).getAllByRole('cell')[0].textContent ?? '');
+    expect(firstCells.map((t) => t.split(' ')[0])).toEqual(['never-skill', 'flaky-skill', 'good-skill']);
   });
 
   it('lists only MCP servers without calls as not called', () => {

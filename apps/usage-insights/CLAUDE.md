@@ -51,8 +51,11 @@ replace the layout at runtime. Keep it data, not JSX.
 - **Parsing and pricing live in `claude-usage`.** This app stores and aggregates; it never parses
   transcripts itself.
 - **The store is upsert-only.** Rows are never deleted, so history outlives Claude Code's
-  transcript cleanup. A message keeps the `session_id` it was first stored with. A folded subagent
-  file never blanks a session's `title` or `cwd`.
+  transcript cleanup. A message keeps the `session_id` it was first stored with, and a copy with
+  fewer output tokens (a fork's mid-stream snapshot) never replaces it. A folded subagent file
+  never blanks a session's `title` or `cwd`.
+- **The server only reads the store** (`store.connect_read_only`, `mode=ro`); only an export
+  writes. `POST /api/refresh` rejects cross-site requests, on top of the Host check.
 - **Cost is computed at query time** from `claude_usage.price_for`, never stored, so a price fix
   needs no re-export.
 - **One writer at a time.** An export takes `BEGIN IMMEDIATE` with a short timeout and raises

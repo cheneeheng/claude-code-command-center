@@ -53,13 +53,16 @@ def _write(conn: sqlite3.Connection, fp: FileParse) -> None:
     )
     for m in fp.messages:
         # session_id is not updated: a reply stays with the session that saw it first.
+        # A copy with fewer output tokens is a mid-stream snapshot (a fork made while the
+        # reply streamed), so it never replaces the stored counts.
         execute(
             "INSERT INTO messages (key, session_id, model, ts, input, output, "
             "cache_write, cache_read, cache_write_1h) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT (key) DO UPDATE SET model = excluded.model, ts = excluded.ts, "
             "input = excluded.input, output = excluded.output, "
             "cache_write = excluded.cache_write, cache_read = excluded.cache_read, "
-            "cache_write_1h = excluded.cache_write_1h",
+            "cache_write_1h = excluded.cache_write_1h "
+            "WHERE excluded.output >= messages.output",
             (
                 m.key, m.session_id, m.model, _iso(m.ts), m.input, m.output,
                 m.cache_write, m.cache_read, m.cache_write_1h,

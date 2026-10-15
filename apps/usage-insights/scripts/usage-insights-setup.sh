@@ -36,7 +36,8 @@ case "$action" in
     ;;
   uninstall)
     require uv https://docs.astral.sh/uv/
-    if uv tool list | grep -q '^usage-insights '; then
+    # Not grep -q: exiting early could kill uv with SIGPIPE, which pipefail reports.
+    if uv tool list | grep '^usage-insights ' >/dev/null; then
       uv tool uninstall usage-insights
     else
       echo "usage-insights command not installed, skipped."

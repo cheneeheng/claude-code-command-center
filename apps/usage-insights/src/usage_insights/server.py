@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import mimetypes
-import sqlite3
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -51,7 +50,7 @@ def _project_paths(db: Path) -> list[Path]:
     """Session working dirs that still exist: their project config counts as installed."""
     if not db.is_file():
         return []
-    with sqlite3.connect(db) as conn:
+    with store.connect_read_only(db) as conn:
         rows = conn.execute("SELECT DISTINCT cwd FROM sessions WHERE cwd IS NOT NULL")
         return [p for (cwd,) in rows if (p := Path(cwd)).is_dir()]
 
@@ -79,6 +78,18 @@ class Handler(BaseHTTPRequestHandler):
         self._json(HTTPStatus.FORBIDDEN, {"error": "forbidden host"})
         return False
 
+    def _same_origin(self) -> bool:
+        """Whether a POST came from this page, not from another site's form or fetch.
+
+        ``Sec-Fetch-Site`` decides when the browser sends it: the Vite dev proxy keeps
+        the dev server's ``Origin`` but the browser still calls it same-origin.
+        """
+        site = self.headers.get("Sec-Fetch-Site")
+        if site is not None:
+            return site in ("same-origin", "none")
+        origin = self.headers.get("Origin")
+        return origin is None or urlsplit(origin).netloc in self.server.allowed_hosts
+
     def do_GET(self) -> None:
         if not self._host_ok():
             return
@@ -98,6 +109,9 @@ class Handler(BaseHTTPRequestHandler):
         if urlsplit(self.path).path != "/api/refresh":
             self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
             return
+        if not self._same_origin():
+            self._json(HTTPStatus.FORBIDDEN, {"error": "cross-site request"})
+            return
         try:
             result = export.run_export(self.server.db, self.server.claude_dirs, progress=_quiet)
         except store.ExportBusy:
@@ -110,12 +124,17 @@ class Handler(BaseHTTPRequestHandler):
 
     def _summary(self, range_key: str) -> None:
         db = self.server.db
-        inventory = load_inventory(self.server.claude_dirs, _project_paths(db))
         now = datetime.now().astimezone()
         try:
-            data = aggregate.summary(db, inventory, range_key, now, self.server.claude_dirs)
+            inventory = load_inventory(self.server.claude_dirs, _project_paths(db))
+            # tz None: local dates follow the system zone's rules at each timestamp, so
+            # history from before a DST change keeps that day's offset.
+            data = aggregate.summary(db, inventory, range_key, now, self.server.claude_dirs, None)
         except ValueError as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
+        except Exception as exc:  # noqa: BLE001 - e.g. a store without schema; the page shows it
+            self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
             return
         self._json(HTTPStatus.OK, data)
 

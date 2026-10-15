@@ -83,7 +83,9 @@ sequenceDiagram
 size or mtime changed, and only ever upserts rows. A schema version change backs the file up to
 `usage.db.bak` and rebuilds from the transcripts still on disk.
 **Consequences:** History outlives Claude Code's cleanup, and a repeat export takes well under 1 s.
-A schema change loses rows for deleted transcripts, so additive changes are preferred.
+A schema change loses rows for deleted transcripts, so additive changes are preferred. A copy of a
+reply with fewer output tokens never replaces the stored one (added 2026-10-15), because a fork's
+mid-stream snapshot, re-parsed later, used to shrink the finished reply.
 
 ### 2026-10-14 — Cost is computed at query time
 
@@ -124,6 +126,19 @@ not `127.0.0.1:<port>` or `localhost:<port>` with 403, against DNS rebinding.
 `allow_reuse_address = False`, because on Windows `SO_REUSEADDR` lets a second bind onto a busy
 port succeed.
 **Consequences:** No web framework dependency. The Vite dev proxy must set `changeOrigin`.
+
+### 2026-10-15 — Same-origin refresh, and a read-only server
+
+**Status:** Accepted
+**Context:** The review found that any web page could fire a no-cors `POST /api/refresh` (the
+Host check passes, since the browser sends `Host: 127.0.0.1:<port>`), and that the server opened
+the store read-write.
+**Decision:** A POST must be same-origin: `Sec-Fetch-Site` decides when the browser sends it
+(only `same-origin` and `none` pass), else an `Origin`, when present, must be the server's own
+host. `Origin` alone is not enough, because the Vite dev proxy forwards the dev server's
+`Origin`. The server reads the store through `store.connect_read_only` (`mode=ro`).
+**Consequences:** Only the page itself, or a tool with no `Origin` such as `curl`, can start an
+export. A server bug cannot write to the store.
 
 ### 2026-10-14 — The page layout is data, ready for AG-UI
 

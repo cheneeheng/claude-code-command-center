@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 
 import pytest
@@ -47,7 +47,22 @@ class StoreBuilder:
 
 
 def _summary(db: Path, range_key: str = "30d", inventory: Inventory = EMPTY, now: datetime = NOW) -> dict:
-    return aggregate.summary(db, inventory, range_key, now, [Path("/claude")])
+    return aggregate.summary(db, inventory, range_key, now, [Path("/claude")], now.tzinfo)
+
+
+class _DstEnd(tzinfo):
+    """UTC+2 until 2026-10-25 01:00 UTC, UTC+1 after: Europe's DST end, no tzdata needed."""
+
+    CUT = datetime(2026, 10, 25, 1, 0)
+
+    def fromutc(self, dt: datetime) -> datetime:
+        return dt + timedelta(hours=2 if dt.replace(tzinfo=None) < self.CUT else 1)
+
+    def utcoffset(self, dt: datetime | None) -> timedelta:
+        return timedelta(hours=2 if dt is None or dt.replace(tzinfo=None) < self.CUT else 1)
+
+    def dst(self, dt: datetime | None) -> timedelta:
+        return timedelta(0)
 
 
 # ── totals and spend ────────────────────────────────────────────────────────
@@ -127,6 +142,18 @@ def test_used_mcp_server_not_configured_shows_unknown(db: Path) -> None:
 
 
 # ── projection ──────────────────────────────────────────────────────────────
+
+
+def test_local_dates_follow_the_zone_rules_of_each_timestamp(db: Path) -> None:
+    # The server's "now" carries today's fixed offset (UTC+1, after DST ended), but a
+    # message from before the change must use that day's offset (UTC+2).
+    now = datetime(2026, 10, 28, 12, 0, tzinfo=timezone(timedelta(hours=1)))
+    b = StoreBuilder(db)
+    b.session("s1")
+    b.message("s1", datetime(2026, 10, 20, 22, 30, tzinfo=UTC), 1000)  # 00:30 on the 21st
+    out = aggregate.summary(db, EMPTY, "30d", now, [Path("/claude")], _DstEnd())
+    pace = {d["date"]: d["tokens"] for d in out["projection"]["pace"]}
+    assert (pace["2026-10-20"], pace["2026-10-21"]) == (0, 1000)
 
 
 def test_projection_forecast_and_band(db: Path) -> None:

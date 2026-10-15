@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 SCHEMA_VERSION = 1
@@ -56,6 +58,16 @@ def connect(path: Path, timeout: float | None = None) -> sqlite3.Connection:
     )
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
+
+
+@contextmanager
+def connect_read_only(path: Path) -> Iterator[sqlite3.Connection]:
+    """Open the store for reading only, and close it afterwards. Never creates the file."""
+    conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def begin_write(conn: sqlite3.Connection) -> None:

@@ -6,10 +6,13 @@ import { ApiRequestError, apiClient } from '../lib/api';
 export function useRefresh(onDone: () => void) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | undefined>(undefined);
+  // A failure other than "already running": the top bar offers a Retry.
+  const [failed, setFailed] = useState(false);
 
   const run = useCallback(async () => {
     setBusy(true);
     setMessage(undefined);
+    setFailed(false);
     try {
       await apiClient.refresh();
       onDone();
@@ -18,11 +21,12 @@ export function useRefresh(onDone: () => void) {
         setMessage('Export already running, try again shortly.');
       } else {
         setMessage(`Refresh failed: ${e instanceof Error ? e.message : String(e)}`);
+        setFailed(true);
       }
     } finally {
       setBusy(false);
     }
   }, [onDone]);
 
-  return { busy, message, run };
+  return { busy, message, failed, run };
 }

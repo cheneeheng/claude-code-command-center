@@ -28,9 +28,17 @@ describe('PaceStrip', () => {
     const bars = within(screen.getByRole('list', { name: /last 30 days/ })).getAllByRole('listitem');
     expect(bars).toHaveLength(30);
     const today = new Date().toLocaleDateString('en', { month: 'short', day: 'numeric' });
-    expect(bars[29].getAttribute('aria-label')).toBe(`${today}: $30.00`);
+    // The value is text inside each bar, so screen readers and keyboard users get it too.
+    expect(bars[29].textContent).toBe(`${today}: $30.00`);
     fireEvent.click(screen.getByRole('button', { name: 'Tokens' }));
-    expect(bars[29].getAttribute('aria-label')).toBe(`${today}: 30K`);
+    expect(bars[29].textContent).toBe(`${today}: 30K`);
+  });
+
+  it('names its span and last day from the data, not a fixed 30 and "Today"', () => {
+    const days = summary.projection.pace.slice(0, 7);
+    render(<PaceStrip days={days} />);
+    expect(screen.getByRole('list', { name: 'Daily usage, last 7 days' })).toBeTruthy();
+    expect(screen.queryByText('Today')).toBeNull();
   });
 });
 
@@ -79,6 +87,24 @@ describe('HealthTable', () => {
     expect(screen.getByText('flaky-skill')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'All 3' }));
     expect(screen.getAllByRole('row')).toHaveLength(4);
+  });
+
+  it('shows last used, the 30-day trend, and the trouble rate for every row', () => {
+    render(<HealthTable rows={summary.skills} noun="skill" />);
+    const headers = screen.getAllByRole('columnheader').map((th) => th.textContent);
+    expect(headers).toEqual(expect.arrayContaining(['Last used', 'Trend', 'Trouble']));
+    const good = screen.getByText('good-skill').closest('tr') as HTMLElement;
+    const cells = within(good).getAllByRole('cell').map((td) => td.textContent);
+    expect(cells).toEqual(expect.arrayContaining(['8 → 9', '0%']));
+  });
+
+  it('drops a status filter whose status no longer has rows', () => {
+    const { rerender } = render(<HealthTable rows={summary.skills} noun="skill" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Troubled 1' }));
+    const calm = summary.skills.filter((r) => r.status !== 'troubled');
+    rerender(<HealthTable rows={calm} noun="skill" />);
+    expect(screen.getByRole('button', { name: 'All 2' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getAllByRole('row')).toHaveLength(3);
   });
 });
 

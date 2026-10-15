@@ -8,13 +8,23 @@ export type TopBarProps = {
   lastExport: string | null | undefined;
   refreshing: boolean;
   refreshMessage: string | undefined;
+  /** The last refresh failed (not "already running"): show a Retry beside the message. */
+  refreshFailed: boolean;
   onRefresh: () => void;
 };
 
 const RANGE_LABEL: Record<Range, string> = { '7d': '7 days', '30d': '30 days', '90d': '90 days', all: 'All' };
 
 /** Product name, range control, last export time, and the one primary action. */
-export function TopBar({ range, onRange, lastExport, refreshing, refreshMessage, onRefresh }: TopBarProps) {
+export function TopBar({
+  range,
+  onRange,
+  lastExport,
+  refreshing,
+  refreshMessage,
+  refreshFailed,
+  onRefresh,
+}: TopBarProps) {
   return (
     <header className="topbar">
       <h1 className="brand">usage-insights</h1>
@@ -40,6 +50,14 @@ export function TopBar({ range, onRange, lastExport, refreshing, refreshMessage,
       </div>
       <p className="refresh-message" role="status" aria-live="polite">
         {refreshMessage}
+        {refreshFailed && !refreshing && (
+          <>
+            {' '}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onRefresh}>
+              Retry
+            </button>
+          </>
+        )}
       </p>
     </header>
   );

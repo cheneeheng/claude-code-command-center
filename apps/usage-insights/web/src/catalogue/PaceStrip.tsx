@@ -6,7 +6,7 @@ import { shortDate, tokens, usd } from '../lib/format';
 /** Props of {@link PaceStrip}. */
 export type PaceStripProps = { days: PaceDay[] };
 
-/** Daily bars for the last 30 days, switchable between tokens and cost. */
+/** Daily bars for the given days (the server sends the last 30), tokens or cost. */
 export function PaceStrip({ days }: PaceStripProps) {
   const [metric, setMetric] = useState<'cost_usd' | 'tokens'>('cost_usd');
   const fmt = metric === 'cost_usd' ? usd : tokens;
@@ -26,20 +26,21 @@ export function PaceStrip({ days }: PaceStripProps) {
           </button>
         ))}
       </div>
-      <ol className="pace-bars" aria-label="Daily usage, last 30 days">
+      <ol className="pace-bars" aria-label={`Daily usage, last ${days.length} days`}>
         {days.map((d) => {
           const label = `${shortDate(d.date)}: ${fmt(d[metric])}`;
           const height = peak > 0 ? Math.max(2, Math.round((d[metric] / peak) * 100)) : 2;
           return (
-            <li key={d.date} className="pace-day" title={label} aria-label={label}>
+            <li key={d.date} className="pace-day" title={label}>
               <span className="pace-bar" style={{ height: `${height}%` }} />
+              <span className="sr-only">{label}</span>
             </li>
           );
         })}
       </ol>
-      <div className="pace-axis subtle">
+      <div className="pace-axis subtle" aria-hidden="true">
         <span>{shortDate(days[0]?.date ?? null)}</span>
-        <span>Today</span>
+        <span>{shortDate(days.at(-1)?.date ?? null)}</span>
       </div>
     </div>
   );

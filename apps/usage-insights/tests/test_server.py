@@ -39,9 +39,17 @@ def running(claude_dir: Path, db: Path, tmp_path: Path) -> Iterator[tuple[int, P
     httpd.server_close()
 
 
-def _get(port: int, path: str, host: str | None = None, method: str = "GET") -> tuple[int, bytes]:
+def _get(
+    port: int,
+    path: str,
+    host: str | None = None,
+    method: str = "GET",
+    headers: dict[str, str] | None = None,
+) -> tuple[int, bytes]:
     req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", method=method)
     req.add_header("Host", host or f"127.0.0.1:{port}")
+    for name, value in (headers or {}).items():
+        req.add_header(name, value)
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             return resp.status, resp.read()
@@ -81,6 +89,29 @@ def test_index_served_from_static(running: tuple[int, Path]) -> None:
     (static / "index.html").unlink()
     status, body = _get(port, "/")
     assert status == 503 and b"frontend not built" in body
+
+
+def test_cross_site_refresh_is_refused(running: tuple[int, Path]) -> None:
+    port, _ = running
+    for headers in ({"Origin": "http://evil.example"}, {"Sec-Fetch-Site": "cross-site"}):
+        status, body = _get(port, "/api/refresh", method="POST", headers=headers)
+        assert (status, json.loads(body)) == (403, {"error": "cross-site request"})
+    own = {"Origin": f"http://127.0.0.1:{port}", "Sec-Fetch-Site": "same-origin"}
+    assert _get(port, "/api/refresh", method="POST", headers=own)[0] == 200
+
+
+def test_unreadable_store_gives_json_500(claude_dir: Path, tmp_path: Path) -> None:
+    db = tmp_path / "usage.db"
+    db.write_bytes(b"")  # created, but the first export never wrote the schema
+    port = _free_port()
+    httpd = server.make_server("127.0.0.1", port, db, [claude_dir], tmp_path)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    try:
+        status, body = _get(port, "/api/summary")
+        assert status == 500 and "no such table" in json.loads(body)["error"]
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
 
 
 def test_summary_without_store_is_empty(claude_dir: Path, tmp_path: Path) -> None:

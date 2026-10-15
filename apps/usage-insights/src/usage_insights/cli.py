@@ -20,6 +20,8 @@ def _parser() -> argparse.ArgumentParser:
         "--claude-dir",
         action="append",
         type=Path,
+        # No default: the export subparser would otherwise reset a value given before it.
+        default=argparse.SUPPRESS,
         help="Claude config dir to read (repeatable). Default: $C4_CLAUDE_DIR or ~/.claude",
     )
     parser = argparse.ArgumentParser(prog="usage-insights", parents=[dirs])
@@ -59,7 +61,7 @@ def _running(host: str, port: int) -> bool:
 def main(argv: list[str] | None = None) -> int:
     """Run the command line and return its exit code."""
     args = _parser().parse_args(argv)
-    dirs: list[Path] = args.claude_dir or claude_dirs()
+    dirs: list[Path] = getattr(args, "claude_dir", None) or claude_dirs()
     db = store.store_path()
     _export(db, dirs)
     if args.command == "export":

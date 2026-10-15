@@ -10,7 +10,7 @@ import { useSummary } from './hooks/useSummary';
 import { defaultLayout } from './layout/defaultLayout';
 import type { Range, Summary } from './lib/api';
 
-/** No store yet, or a store with no usage at all. */
+/** No store yet, or no sessions in the range and no usage in the last 30 days. */
 export function isEmpty(data: Summary): boolean {
   return (
     data.last_export === null ||
@@ -21,13 +21,21 @@ export function isEmpty(data: Summary): boolean {
 /** The page: top bar, then the dashboard or the state that stands in for it. */
 export function App() {
   const [range, setRange] = useState<Range>('30d');
-  const { data, error, reload } = useSummary(range);
+  const { data, error, loading, reload } = useSummary(range);
   const refresh = useRefresh(reload);
+  // Figures from another range (or being replaced) are dimmed and marked busy.
+  const stale = data !== undefined && (loading || data.range !== range);
 
   let body;
-  if (error && !data) body = <ErrorState message={error} onRetry={reload} />;
-  else if (!data) body = <LoadingState />;
-  else if (isEmpty(data)) body = <EmptyState dataDirs={data.data_dirs} storePath={data.store_path} />;
+  if (!data) body = error && !loading ? <ErrorState message={error} onRetry={reload} /> : <LoadingState />;
+  else if (isEmpty(data))
+    body = (
+      <EmptyState
+        dataDirs={data.data_dirs}
+        storePath={data.store_path}
+        quietRange={data.last_export === null ? null : data.range}
+      />
+    );
   else body = <Dashboard layout={defaultLayout} data={data} />;
 
   return (
@@ -38,9 +46,12 @@ export function App() {
         lastExport={data?.last_export}
         refreshing={refresh.busy}
         refreshMessage={refresh.message ?? (error && data ? `Could not reload: ${error}` : undefined)}
+        refreshFailed={refresh.failed}
         onRefresh={() => void refresh.run()}
       />
-      <main className="content">{body}</main>
+      <main className={stale ? 'content stale' : 'content'} aria-busy={stale}>
+        {body}
+      </main>
     </>
   );
 }

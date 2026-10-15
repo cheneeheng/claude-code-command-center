@@ -74,6 +74,8 @@ The store is a SQLite file at `~/.usage-insights/usage.db`, or `$C4_USAGE_INSIGH
 - **Retention:** rows are never deleted. When Claude Code removes an old transcript, the sessions,
   messages, and events already exported stay in the store.
 - **Incremental:** an export re-reads only transcripts whose size or modification time changed.
+- **Untimed lines:** a transcript line with no timestamp is stored but counts in no dashboard
+  figure, because it has no date to place it on. The export's message count includes it.
 - **Cost** is computed when the page loads, from the price table in `claude-usage`, so a price fix
   needs no re-export. Models missing from the table are listed as unpriced instead of costed at $0.
 - **Upgrades:** when a new version changes the store's schema, the next export copies the old file

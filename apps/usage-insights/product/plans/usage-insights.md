@@ -244,8 +244,12 @@ at query time from `price_for`, so a price fix needs no re-export.
 
 **Export rules:**
 - A file is re-parsed only when its `size` or `mtime_ns` differs from `files`.
-- Rows are upserted (`INSERT ... ON CONFLICT(key) DO UPDATE`), never deleted, so a reply seen in
-  two files counts once (last wins) and rows survive transcript deletion.
+- Rows are upserted, never deleted, so a reply seen in two files counts once and rows survive
+  transcript deletion. A message is replaced only by a copy with at least as many output tokens
+  (`ON CONFLICT(key) DO UPDATE ... WHERE excluded.output >= messages.output`), so a fork's
+  mid-stream snapshot never shrinks a finished reply. Events are first-seen-wins
+  (`ON CONFLICT(key) DO NOTHING`), like the library's event dedup.
+- Messages and events without a timestamp are stored but left out of every dashboard figure.
 - `sessions`: `started` is the minimum and `ended` the maximum `ts` over the session's messages.
   `title` and `cwd` are only overwritten by a non-`None` value, so a folded subagent file never
   blanks them.
@@ -265,7 +269,9 @@ at query time from `price_for`, so a price fix needs no re-export.
 builtin_tools)`, each a list of `Item(name, source)`, with `source` one of `user`,
 `plugin:<plugin>`, `project`, `built-in`. It reads:
 
-- **User items:** `<claude_dir>/skills/*/SKILL.md` (name = folder) and `<claude_dir>/agents/*.md`.
+- **User items:** `<claude_dir>/skills/*/SKILL.md` and `<claude_dir>/agents/*.md`, read with
+  `load_plugin_skills` / `load_plugin_agents`: the frontmatter `name:`, else the folder or file
+  name.
 - **Plugin items:** `claude_plugins.load_plugin_entries` (added in Phase 4) returns every
   registry entry once. `user` entries count, and `local`/`project` entries count when their
   normalised `projectPath` is one of `project_paths`, deduped by `installPath`. (Calling
@@ -317,7 +323,10 @@ so its change values are `null`).
 - Band: low = actual + min(p25, mean) x remaining, high = actual + max(p75, mean) x remaining,
   so the band always contains the forecast even when one heavy day pulls the mean outside the
   quartiles.
-- Computed for tokens and cost, overall and for each project.
+- Computed for tokens and cost overall, and for cost per project (the payload's `by_project`).
+  Projects with a zero month forecast are left out of `by_project`.
+- Local dates use the system zone with the rules in force at each timestamp (the server passes
+  `tz=None` to `aggregate.summary`), so history from before a DST change keeps its own offset.
 
 **Skill and subagent health**, evaluated over all history in the store, first match wins:
 1. `never_used`: in the inventory, no uses ever.
@@ -353,7 +362,13 @@ events and are never `typed`.
   rebinding.
 - `GET /api/health` returns `{"ok": true}`.
 - `POST /api/refresh` runs an export and returns its counts. The frontend calls it from the
-  refresh button.
+  refresh button. A cross-site POST gets 403 `{"error": "cross-site request"}`: when the browser
+  sends `Sec-Fetch-Site`, only `same-origin` and `none` pass (the Vite dev proxy keeps its own
+  `Origin`, so `Origin` alone would reject it); otherwise an `Origin`, when present, must be the
+  server's own host.
+- Any other failure building the summary (e.g. a store file without schema) returns 500
+  `{"error": "..."}`, so the page's error state can show it. The server opens the store with
+  `mode=ro`.
 - `GET /api/summary?range=7d|30d|90d|all` (default `30d`; anything else gets 400
   `{"error": "..."}`) returns:
 
@@ -422,8 +437,9 @@ series, metric toggle), `RankedBars` (rows of label, value, secondary text), `Se
 `HealthTable` (skill or subagent rows with a status badge), `UnusedList` (names with source).
 
 **Default layout:** `web/src/layout/defaultLayout.ts` exports an ordered list of sections, each
-`{ id, title, question, panels: { component, select } [] }`, where `select` maps the summary
-payload to that component's props. `App.tsx` renders the list. The AG-UI phase replaces this list
+`{ id, question, panels: Panel[] }`, with `Panel = { id, component, select, eyebrow, caption,
+count?, wide? }`, where `select` maps the summary payload to that component's props. The
+question is the section heading. `App.tsx` renders the list. The AG-UI phase replaces this list
 at runtime, which is why it is data, not JSX.
 
 Top bar plus three sections, following the `ceh-ui-design` dashboard rules:
@@ -445,11 +461,13 @@ Top bar plus three sections, following the `ceh-ui-design` dashboard rules:
 **States:**
 - Loading: skeleton blocks shaped like the sections.
 - Error: in place, with what failed and a Retry button.
-- Empty (no store or no transcripts): a title, one line, the `data_dirs` searched, and the
-  `store_path`.
+- Empty (no store, or no sessions in the range and no usage in the last 30 days): a title, one
+  line, the `data_dirs` searched, and the `store_path`. The title is "No Claude Code usage yet"
+  with no history or on All, and "No usage in the last N days" on a shorter range.
 - Unpriced models: a warning badge on the cost tiles that lists them.
+- While a range change or reload runs, the current figures stay, dimmed, with `aria-busy`.
 
-Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
+Every panel carries an eyebrow, with a count where the panel is a list, e.g. `PROJECTS · 7`.
 
 ### Install and scheduling
 
@@ -693,3 +711,10 @@ Every section header carries an eyebrow with a count, e.g. `PROJECTS · 7`.
 - 2026-10-14 Built Phase 5: `bun run typecheck && bun run test && bun run build`, 17 passed; serve check PASS; manual review at 1440 px and 390 px (iframe) done
 - 2026-10-15 Phase 5 rechecked: 17 passed, build clean, serve check PASS; Status set to done
 - 2026-10-15 Phase 6 built, not checked: install script run denied in session; scripts, CI workflow, docs, and setup/ descriptor written
+- 2026-10-15 Reviewed: Request changes, 2 blocking (`--claude-dir` before `export` dropped; 7 unrecorded divergences), 13 advisory; review in `.agents_workspace/code-reviews/feat-usage-insights-2026-10-15.md`
+- 2026-10-15 Design changed: was "Rows are upserted (`INSERT ... ON CONFLICT(key) DO UPDATE`) ... (last wins)", now "replaced only by a copy with at least as many output tokens; events first-seen-wins", because a fork's mid-stream snapshot re-parsed later shrank finished replies
+- 2026-10-15 Design changed: was "`<claude_dir>/skills/*/SKILL.md` (name = folder)", now "frontmatter `name:`, else the folder", recording what `load_plugin_skills` already did
+- 2026-10-15 Design changed: was "Computed for tokens and cost, overall and for each project", now "tokens and cost overall, cost per project, zero-forecast projects omitted", matching the payload schema the plan already gave
+- 2026-10-15 Design changed: was "`{ id, title, question, panels: { component, select } [] }`" and "Every section header carries an eyebrow with a count", now "`{ id, question, panels }`, eyebrows per panel, counts on list panels", recording the Phase 5 build: the question is the heading, so a separate title repeated it
+- 2026-10-15 Design changed: was "Empty (no store or no transcripts)", now "range-aware empty title", because a quiet 7-day range claimed "No Claude Code usage yet"
+- 2026-10-15 Fixed review findings: `--claude-dir` in either position, `mode=ro` store reads, JSON 500 from `/api/summary`, cross-site POST 403, DST-correct local dates, health table Last used / Trend / Trouble columns, refresh Retry, stale-range dimming, a11y text in the pace strip and loading state; `uv run pytest` 30 passed, `bun run test` 26 passed

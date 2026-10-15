@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import type { HealthRow, HealthStatus } from '../lib/api';
-import { shortDate } from '../lib/format';
+import { share, shortDate } from '../lib/format';
 
 /** Props of {@link HealthTable}. */
 export type HealthTableProps = { rows: HealthRow[]; noun: 'skill' | 'subagent' };
@@ -40,11 +40,13 @@ const FIRST = 15;
  */
 export function HealthTable({ rows, noun }: HealthTableProps) {
   const [all, setAll] = useState(false);
-  const [status, setStatus] = useState<HealthStatus | undefined>(undefined);
+  const [picked, setStatus] = useState<HealthStatus | undefined>(undefined);
   if (rows.length === 0) return <p className="muted empty-line">No {noun}s installed or used.</p>;
   const counts = (Object.keys(STATUS_LABEL) as HealthStatus[])
     .map((s) => [s, rows.filter((r) => r.status === s).length] as const)
     .filter(([, n]) => n > 0);
+  // A picked status with no rows left (after a range change) falls back to All.
+  const status = counts.some(([s]) => s === picked) ? picked : undefined;
   const filtered = status ? rows.filter((r) => r.status === status) : rows;
   const shown = all ? filtered : filtered.slice(0, FIRST);
   return (
@@ -79,6 +81,13 @@ export function HealthTable({ rows, noun }: HealthTableProps) {
             <th scope="col" className="num">
               Uses
             </th>
+            <th scope="col">Last used</th>
+            <th scope="col" className="num" title="Uses in the previous 30 days → the last 30">
+              Trend
+            </th>
+            <th scope="col" className="num" title="Share of recent uses you interrupted within 15 minutes">
+              Trouble
+            </th>
             <th scope="col">Called by</th>
           </tr>
         </thead>
@@ -94,6 +103,9 @@ export function HealthTable({ rows, noun }: HealthTableProps) {
               </td>
               <td className="muted reason">{reason(r, noun)}</td>
               <td className="num numeric">{r.uses > 0 ? r.uses : '—'}</td>
+              <td className="nowrap">{shortDate(r.last_used)}</td>
+              <td className="num numeric nowrap">{`${r.trend[0]} → ${r.trend[1]}`}</td>
+              <td className="num numeric">{share(r.trouble_rate)}</td>
               <td>{r.invoked ? INVOKED_LABEL[r.invoked] : '—'}</td>
             </tr>
           ))}

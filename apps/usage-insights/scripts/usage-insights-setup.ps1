@@ -45,7 +45,9 @@ if ($Action -eq 'uninstall') {
         Write-Host "Task $TaskFolder$TaskName not found, skipped."
     }
     Assert-OnPath 'uv' 'Install it from https://docs.astral.sh/uv/'
-    if (uv tool list | Select-String -Pattern '^usage-insights ' -Quiet) {
+    $tools = uv tool list
+    if ($LASTEXITCODE -ne 0) { throw "uv tool list failed (exit $LASTEXITCODE)" }
+    if ($tools | Select-String -Pattern '^usage-insights ' -Quiet) {
         Invoke-Native 'uv tool uninstall' { uv tool uninstall usage-insights }
     } else {
         Write-Host 'usage-insights command not installed, skipped.'

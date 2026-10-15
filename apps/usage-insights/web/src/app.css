@@ -231,6 +231,22 @@ body {
 .health .reason {
   min-width: 30ch;
 }
+.content.stale {
+  opacity: 0.55;
+  transition: opacity 150ms;
+}
+.nowrap {
+  white-space: nowrap;
+}
+/* Read by screen readers, not shown. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .health .source {
   font-size: var(--fs-75);
 }

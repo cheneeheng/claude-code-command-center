@@ -7,16 +7,16 @@ from __future__ import annotations
 
 import calendar
 import re
-import sqlite3
 import statistics
 from bisect import bisect_right
 from collections import Counter, defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, tzinfo
 from pathlib import Path, PurePath
 from typing import Any
 
 from claude_usage import estimated_cost, price_for
 
+from usage_insights import store
 from usage_insights.inventory import Inventory, Item
 
 RANGES: dict[str, int | None] = {"7d": 7, "30d": 30, "90d": 90, "all": None}
@@ -175,16 +175,26 @@ def _empty() -> Json:
 
 
 def summary(
-    db: Path, inventory: Inventory, range_key: str, now: datetime, data_dirs: list[Path]
+    db: Path,
+    inventory: Inventory,
+    range_key: str,
+    now: datetime,
+    data_dirs: list[Path],
+    tz: tzinfo | None,
 ) -> Json:
     """Build the ``/api/summary`` payload.
+
+    Messages and events without a timestamp are left out of every figure.
 
     Args:
         db: The store file. A missing store gives the empty payload.
         inventory: What is installed.
         range_key: One of :data:`RANGES`.
-        now: The aware current time; its timezone defines local dates.
+        now: The aware current time; its date is today.
         data_dirs: The Claude dirs searched, echoed for the empty state.
+        tz: The zone that turns timestamps into local dates. ``None`` is the
+            system zone, applied with the rules in force at each timestamp, so
+            dates before a DST change keep that day's offset.
 
     Raises:
         ValueError: ``range_key`` is not a known range.
@@ -200,7 +210,7 @@ def summary(
     if not db.is_file():
         return {**payload, **_empty()}
 
-    with sqlite3.connect(db) as conn:
+    with store.connect_read_only(db) as conn:
         sessions = {r[0]: r[1:] for r in conn.execute(
             "SELECT id, project, title, cwd, started, ended FROM sessions")}
         messages = conn.execute(
@@ -210,7 +220,6 @@ def summary(
             "SELECT kind, name, ts, session_id FROM events WHERE ts IS NOT NULL").fetchall()
         last = conn.execute("SELECT value FROM meta WHERE key = 'last_export'").fetchone()
 
-    tz = now.tzinfo
     today = now.date()
     days = RANGES[range_key]
     start = today - timedelta(days=days - 1) if days else None

@@ -134,3 +134,36 @@ def test_cli_export_prints_counts(
     out = capsys.readouterr().out
     assert "files scanned 3, files parsed 3, messages 4, events 10" in out
     assert store.store_path() == db
+
+
+@pytest.mark.parametrize("before_command", [True, False])
+def test_cli_export_keeps_claude_dir_in_either_position(
+    before_command: bool,
+    claude_dir: Path,
+    db: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("C4_USAGE_INSIGHTS_HOME", str(db.parent))
+    empty = tmp_path / "default-claude"
+    empty.mkdir()
+    monkeypatch.setenv("C4_CLAUDE_DIR", str(empty))  # what a dropped flag falls back to
+    flag = ["--claude-dir", str(claude_dir)]
+    argv = [*flag, "export"] if before_command else ["export", *flag]
+    assert cli.main(argv) == 0
+    assert "files scanned 3," in capsys.readouterr().out
+
+
+def test_partial_copy_of_a_reply_does_not_shrink_it(claude_dir: Path, db: Path) -> None:
+    export.run_export(db, [claude_dir])
+    # A later fork holding a mid-stream copy of reply m1 (50 output tokens when final).
+    fork = claude_dir / "projects" / "C--work-beta" / "33333333-cccc-0000-0000-000000000000.jsonl"
+    fork.write_text(
+        '{"type":"assistant","uuid":"c-copy","requestId":"r1",'
+        '"timestamp":"2026-10-01T09:01:05Z","message":{"id":"m1",'
+        '"model":"claude-opus-4-8","usage":{"input_tokens":100,"output_tokens":5}}}\n',
+        encoding="utf-8",
+    )
+    export.run_export(db, [claude_dir])
+    assert _rows(db, "SELECT output FROM messages WHERE key LIKE 'm1:%'") == [(50,)]
