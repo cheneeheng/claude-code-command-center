@@ -81,7 +81,8 @@ sequenceDiagram
 **Context:** Claude Code deletes old transcripts, and re-parsing 979 MB of them takes about 9 s.
 **Decision:** `usage-insights export` copies transcripts into SQLite, re-parsing only files whose
 size or mtime changed, and only ever upserts rows. A schema version change backs the file up to
-`usage.db.bak` and rebuilds from the transcripts still on disk.
+`usage.db.bak.v<old version>` (one file per version, so a second change never overwrites the
+first backup, added 2026-10-15) and rebuilds from the transcripts still on disk.
 **Consequences:** History outlives Claude Code's cleanup, and a repeat export takes well under 1 s.
 A schema change loses rows for deleted transcripts, so additive changes are preferred. A copy of a
 reply with fewer output tokens never replaces the stored one (added 2026-10-15), because a fork's

@@ -80,32 +80,37 @@ def begin_write(conn: sqlite3.Connection) -> None:
         raise
 
 
-def _stale(conn: sqlite3.Connection) -> bool:
-    """Whether the store holds tables of another schema version."""
-    version = conn.execute("PRAGMA user_version").fetchone()[0]
+def _stale_version(conn: sqlite3.Connection) -> int | None:
+    """The schema version of a store holding tables of another version, else None."""
+    version: int = conn.execute("PRAGMA user_version").fetchone()[0]
     has_tables = conn.execute(
         "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'"
     ).fetchone()[0]
-    return bool(has_tables) and version != SCHEMA_VERSION
+    return version if has_tables and version != SCHEMA_VERSION else None
 
 
-def backup_if_stale(conn: sqlite3.Connection, path: Path) -> bool:
-    """Copy a store of another schema version to ``usage.db.bak``.
+def backup_if_stale(conn: sqlite3.Connection, path: Path) -> Path | None:
+    """Copy a store of another schema version to ``usage.db.bak.v<old version>``.
 
-    Must run before the write transaction: a backup cannot read through the same
+    One file per old version, so a later schema change never overwrites an earlier
+    backup, which may be the only copy of rows for deleted transcripts. Must run
+    before the write transaction: a backup cannot read through the same
     connection's open write lock.
 
     Returns:
-        ``True`` when the store is stale, so :func:`ensure_schema` will rebuild it.
+        The backup file when the store is stale, so :func:`ensure_schema` will
+        rebuild it, else ``None``.
     """
-    if not _stale(conn):
-        return False
-    backup = sqlite3.connect(path.with_name(path.name + ".bak"))
+    old = _stale_version(conn)
+    if old is None:
+        return None
+    target = path.with_name(f"{path.name}.bak.v{old}")
+    backup = sqlite3.connect(target)
     try:
         conn.backup(backup)
     finally:
         backup.close()
-    return True
+    return target
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
@@ -113,7 +118,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
 
     Must run inside the write transaction.
     """
-    if _stale(conn):
+    if _stale_version(conn) is not None:
         for table in _TABLES:
             conn.execute(f"DROP TABLE IF EXISTS {table}")
     for statement in _SCHEMA.split(";"):

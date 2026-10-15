@@ -100,12 +100,12 @@ def run_export(
     db.parent.mkdir(parents=True, exist_ok=True)
     conn = store.connect(db, timeout)
     try:
-        rebuilt = store.backup_if_stale(conn, db)
+        backup = store.backup_if_stale(conn, db)
         store.begin_write(conn)
         store.ensure_schema(conn)
-        if rebuilt:
+        if backup:
             progress(
-                f"store schema changed: old store copied to {db.name}.bak and rebuilt "
+                f"store schema changed: old store copied to {backup.name} and rebuilt "
                 "from transcripts on disk; rows for deleted transcripts are lost"
             )
         known = {

@@ -228,7 +228,8 @@ and shows the empty state when it is missing.
 
 **Schema** (`PRAGMA user_version = 1`; a mismatched version makes `export` drop and rebuild
 the derived tables from the transcripts still on disk, after copying the old file to
-`usage.db.bak`, and print a warning that rows for deleted transcripts are lost):
+`usage.db.bak.v<old version>`, one file per version, and print a warning that rows for deleted
+transcripts are lost):
 
 - `meta(key TEXT PRIMARY KEY, value TEXT)`: holds `last_export`, set at the end of every export
   run, even when no file changed. The payload's `last_export` reads it.
@@ -718,3 +719,4 @@ Every panel carries an eyebrow, with a count where the panel is a list, e.g. `PR
 - 2026-10-15 Design changed: was "`{ id, title, question, panels: { component, select } [] }`" and "Every section header carries an eyebrow with a count", now "`{ id, question, panels }`, eyebrows per panel, counts on list panels", recording the Phase 5 build: the question is the heading, so a separate title repeated it
 - 2026-10-15 Design changed: was "Empty (no store or no transcripts)", now "range-aware empty title", because a quiet 7-day range claimed "No Claude Code usage yet"
 - 2026-10-15 Fixed review findings: `--claude-dir` in either position, `mode=ro` store reads, JSON 500 from `/api/summary`, cross-site POST 403, DST-correct local dates, health table Last used / Trend / Trouble columns, refresh Retry, stale-range dimming, a11y text in the pace strip and loading state; `uv run pytest` 30 passed, `bun run test` 26 passed
+- 2026-10-15 Design changed: was "copying the old file to `usage.db.bak`", now "`usage.db.bak.v<old version>`, one file per version", because a second schema change overwrote the first backup, which can be the only copy of rows for deleted transcripts (user's call on the review question)

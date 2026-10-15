@@ -79,8 +79,9 @@ The store is a SQLite file at `~/.usage-insights/usage.db`, or `$C4_USAGE_INSIGH
 - **Cost** is computed when the page loads, from the price table in `claude-usage`, so a price fix
   needs no re-export. Models missing from the table are listed as unpriced instead of costed at $0.
 - **Upgrades:** when a new version changes the store's schema, the next export copies the old file
-  to `usage.db.bak` and rebuilds from the transcripts still on disk. Rows for transcripts Claude
-  Code already deleted are lost in that rebuild, and the export prints a warning.
+  to `usage.db.bak.v<old version>` and rebuilds from the transcripts still on disk. Rows for
+  transcripts Claude Code already deleted are lost from the new store, and the export prints a
+  warning. Each schema version gets its own backup, so a later upgrade never overwrites one.
 
 ## Health statuses
 

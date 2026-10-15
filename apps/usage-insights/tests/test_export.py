@@ -99,7 +99,22 @@ def test_version_mismatch_backs_up_and_rebuilds(
     assert "rebuilt" in capsys.readouterr().out
     assert _rows(db, "PRAGMA user_version") == [(store.SCHEMA_VERSION,)]
     assert _rows(db, "SELECT COUNT(*) FROM sessions WHERE id = 'gone'") == [(0,)]
-    assert _rows(db.with_name("usage.db.bak"), "SELECT COUNT(*) FROM sessions") == [(3,)]
+    backup = db.with_name("usage.db.bak.v99")
+    assert _rows(backup, "SELECT COUNT(*) FROM sessions") == [(3,)]
+
+
+def test_second_schema_change_keeps_first_backup(claude_dir: Path, db: Path) -> None:
+    export.run_export(db, [claude_dir])
+    for old, marker in ((97, "first"), (98, "second")):
+        with sqlite3.connect(db) as conn:
+            conn.execute(f"PRAGMA user_version = {old}")
+            conn.execute("INSERT INTO sessions (id) VALUES (?)", (marker,))
+        export.run_export(db, [claude_dir])
+    for old, marker in ((97, "first"), (98, "second")):
+        backup = db.with_name(f"usage.db.bak.v{old}")
+        assert _rows(backup, f"SELECT id FROM sessions WHERE id = '{marker}'") == [
+            (marker,)
+        ]
 
 
 def test_concurrent_export_raises_export_busy(
