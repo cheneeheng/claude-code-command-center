@@ -1,6 +1,6 @@
 ---
 title: Build usage-insights, a decision-focused Claude Code usage dashboard that replaces usage-dashboard
-status: building
+status: built
 created: 2026-10-14
 ---
 
@@ -665,16 +665,19 @@ Every panel carries an eyebrow, with a count where the panel is a list, e.g. `PR
   - `bash apps/usage-insights/scripts/usage-insights-setup.sh install` under Git Bash exits 0 and
     prints the cron line. A real macOS or Linux run is not available on this machine, so CI's web
     and pytest jobs on Ubuntu are the cross-platform evidence.
-- **Status:** todo: every Builds item is written, and the install checks have not run. On
-  2026-10-15 the session's permission classifier denied running the install script (it registers
-  a task and installs a `uv` tool), so the user runs the four Check steps by hand. What did run:
+- **Status:** done. On 2026-10-15 the user ran every Check step by hand and all passed: install
+  exits 0, the task finishes with `LastTaskResult` 0 and moves `last_export` forward with no
+  console window, `usage-insights` opens on real data and stops on Ctrl+C, the bash script exits
+  0 with the cron line, and uninstall removes the task and the command and keeps `usage.db`.
+  Earlier, the session's permission classifier denied running the install script (it registers
+  a task and installs a `uv` tool), which is why the user ran the steps. What the session ran:
   both scripts parse (`bash -n`, the PowerShell parser), `usage-insights-setup.sh bogus` exits 2
   with usage, `setup/command-center.ps1 list` shows `usage-insights v0.1.0`, its `Detect` returns
   `False` before install, and app `ruff`/`mypy`/`pytest` ("24 passed") plus both libs' suites
   (43 and 29 passed) stay green after the docstring edits. The new CI workflow has not run on
   GitHub yet. Both scripts pass `--reinstall` to `uv tool install`, so a re-run picks up library
-  changes instead of stopping at "already installed". The Open item on editable installs stays
-  open until the install runs.
+  changes instead of stopping at "already installed". The user's install run settled the Open
+  item on editable installs.
 
 ## Open
 
@@ -687,7 +690,8 @@ Every panel carries an eyebrow, with a count where the panel is a list, e.g. `PR
   reviews the flagged skills on real data and tunes the constants.
 - **Editable install:** `uv tool install --editable` is assumed to honour the `[tool.uv.sources]`
   path entries. Phase 6's check proves it. If it doesn't, the setup scripts install a shim that
-  runs `uv run --project <app dir> usage-insights`.
+  runs `uv run --project <app dir> usage-insights`. Resolved 2026-10-15: the installed command
+  ran the dashboard, which imports both path-sourced libs, so no shim is needed.
 - **Built-in lists:** the built-in agent and tool lists are hand-kept and can drift from Claude
   Code's. Unknown used names still show, with source `unknown`.
 - **Required checks:** making the new CI checks required needs a branch-protection change on
@@ -720,3 +724,5 @@ Every panel carries an eyebrow, with a count where the panel is a list, e.g. `PR
 - 2026-10-15 Design changed: was "Empty (no store or no transcripts)", now "range-aware empty title", because a quiet 7-day range claimed "No Claude Code usage yet"
 - 2026-10-15 Fixed review findings: `--claude-dir` in either position, `mode=ro` store reads, JSON 500 from `/api/summary`, cross-site POST 403, DST-correct local dates, health table Last used / Trend / Trouble columns, refresh Retry, stale-range dimming, a11y text in the pace strip and loading state; `uv run pytest` 30 passed, `bun run test` 26 passed
 - 2026-10-15 Design changed: was "copying the old file to `usage.db.bak`", now "`usage.db.bak.v<old version>`, one file per version", because a second schema change overwrote the first backup, which can be the only copy of rows for deleted transcripts (user's call on the review question)
+- 2026-10-15 Built Phase 6: the user ran the install checks by hand, all passed (install exit 0, task `LastTaskResult` 0, dashboard on real data, bash cron line, uninstall keeps `usage.db`)
+- 2026-10-15 Status: built
