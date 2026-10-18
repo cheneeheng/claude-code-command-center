@@ -452,12 +452,15 @@ Top bar plus three sections, following the `ceh-ui-design` dashboard rules:
    shows "Export already running, try again shortly" next to the button. On any other failure it
    shows the error next to the button with a Retry.
 2. **What will I spend?:** `StatTile` for this week and this month (cost, with tokens in the
-   secondary line and the low/high band), and `PaceStrip` with a Tokens / Cost toggle. A
-   `RankedBars` of month forecast by project.
+   secondary line and the low/high band), and `PaceStrip` with a Tokens / Cost toggle and about
+   six date labels on its axis, the last one today. A `RankedBars` of month forecast by project.
 3. **Where does it go?:** `RankedBars` for projects (with change), `RankedBars` for models, and
-   `SessionTable` (10 rows, "Show 100").
-4. **What should I fix?:** `HealthTable` for skills and for subagents, `RankedBars` for tools
-   (top 10, "Show all"), and `UnusedList` for unused built-in tools and MCP servers.
+   `SessionTable`.
+4. **What should I fix?:** `HealthTable` for skills and for subagents, `RankedBars` for tools,
+   and `UnusedList` for unused built-in tools and MCP servers.
+
+Every `RankedBars`, `SessionTable`, and `HealthTable` shows 5 rows, then a "Show all N" / "Show
+less" toggle.
 
 **States:**
 - Loading: skeleton blocks shaped like the sections.
@@ -726,3 +729,4 @@ Every panel carries an eyebrow, with a count where the panel is a list, e.g. `PR
 - 2026-10-15 Design changed: was "copying the old file to `usage.db.bak`", now "`usage.db.bak.v<old version>`, one file per version", because a second schema change overwrote the first backup, which can be the only copy of rows for deleted transcripts (user's call on the review question)
 - 2026-10-15 Built Phase 6: the user ran the install checks by hand, all passed (install exit 0, task `LastTaskResult` 0, dashboard on real data, bash cron line, uninstall keeps `usage.db`)
 - 2026-10-15 Status: built
+- 2026-10-18 Design changed: was "`SessionTable` (10 rows, "Show 100")", "tools (top 10)", and a pace axis with only the first and last date, now "5 rows then Show all / Show less on every ranked list and table" and "about six axis dates", because the user asked for both; `bun run test` 30 passed

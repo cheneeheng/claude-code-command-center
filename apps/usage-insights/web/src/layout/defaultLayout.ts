@@ -80,7 +80,6 @@ export const defaultLayout: Section[] = [
             display: usd(p.month_cost_forecast),
             secondary: `${usd(p.week_cost_forecast)} this week`,
           })),
-          limit: 8,
           emptyText: 'No spend this month yet.',
         }),
       },

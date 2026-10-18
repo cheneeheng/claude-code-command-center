@@ -181,9 +181,16 @@ body {
 }
 .pace-axis {
   display: flex;
-  justify-content: space-between;
+  gap: var(--space-1);
   margin-top: var(--space-2);
   font-size: var(--fs-50);
+}
+.pace-axis span {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible;
 }
 
 /* ── RankedBars ──────────────────────────────────────────────────────────── */
