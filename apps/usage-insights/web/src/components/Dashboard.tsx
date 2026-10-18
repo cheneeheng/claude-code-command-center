@@ -32,6 +32,7 @@ export function Dashboard({ layout, data }: DashboardProps) {
       {layout.map((section) => (
         <section key={section.id} className="section" aria-labelledby={`q-${section.id}`}>
           <h2 id={`q-${section.id}`}>{section.question}</h2>
+          {section.note && <p className="section-note muted">{section.note}</p>}
           <div className="grid">
             {section.panels.map((panel) => (
               <PanelBlock key={panel.id} panel={panel} data={data} />

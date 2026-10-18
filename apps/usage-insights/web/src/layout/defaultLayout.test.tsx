@@ -17,6 +17,14 @@ describe('defaultLayout', () => {
     ]);
   });
 
+  it('says the projection section does not follow the range', () => {
+    render(<Dashboard layout={defaultLayout} data={summary} />);
+    const heading = screen.getByRole('heading', { name: 'What will I spend?' });
+    expect(heading.nextElementSibling?.textContent).toBe(
+      'Based on the last 14 days, not affected by the range.',
+    );
+  });
+
   it('labels each section with an eyebrow count', () => {
     render(<Dashboard layout={defaultLayout} data={summary} />);
     for (const label of ['Projects · 2', 'Models · 1', 'Skills · 3', 'Tools · 2', 'Not called · 2']) {

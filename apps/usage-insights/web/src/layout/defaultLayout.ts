@@ -23,7 +23,13 @@ export type Panel = {
 }[CatalogueName];
 
 /** A group of panels that answers one question. */
-export type Section = { id: string; question: string; panels: Panel[] };
+export type Section = {
+  id: string;
+  question: string;
+  /** One line under the question, e.g. what the range does not change. */
+  note?: string;
+  panels: Panel[];
+};
 
 /**
  * The default dashboard. It is data, not JSX, so the AG-UI phase can replace or
@@ -33,6 +39,7 @@ export const defaultLayout: Section[] = [
   {
     id: 'spend-ahead',
     question: 'What will I spend?',
+    note: 'Based on the last 14 days, not affected by the range.',
     panels: [
       {
         id: 'week',
