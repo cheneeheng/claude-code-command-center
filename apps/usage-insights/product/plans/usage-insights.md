@@ -451,7 +451,8 @@ Top bar plus three sections, following the `ceh-ui-design` dashboard rules:
    current data. On 200 it refetches the summary and the last export time updates. On 409 it
    shows "Export already running, try again shortly" next to the button. On any other failure it
    shows the error next to the button with a Retry.
-2. **What will I spend?:** `StatTile` for this week and this month (cost, with tokens in the
+2. **What will I spend?:** a note under the heading, "Based on the last 14 days, not affected by
+   the range.", then `StatTile` for this week and this month (cost, with tokens in the
    secondary line and the low/high band), and `PaceStrip` with a Tokens / Cost toggle and about
    six date labels on its axis, the last one today. A `RankedBars` of month forecast by project.
 3. **Where does it go?:** `RankedBars` for projects (with change), `RankedBars` for models, and
@@ -730,3 +731,4 @@ Every panel carries an eyebrow, with a count where the panel is a list, e.g. `PR
 - 2026-10-15 Built Phase 6: the user ran the install checks by hand, all passed (install exit 0, task `LastTaskResult` 0, dashboard on real data, bash cron line, uninstall keeps `usage.db`)
 - 2026-10-15 Status: built
 - 2026-10-18 Design changed: was "`SessionTable` (10 rows, "Show 100")", "tools (top 10)", and a pace axis with only the first and last date, now "5 rows then Show all / Show less on every ranked list and table" and "about six axis dates", because the user asked for both; `bun run test` 30 passed
+- 2026-10-18 Design changed: was "What will I spend?" with no note, now a note under the heading saying it is based on the last 14 days and not affected by the range, because a range switch left the first screen looking unchanged (`product/fixes/range-switch-leaves-first-section-unchanged.md`, user's call); `bun run test` 31 passed

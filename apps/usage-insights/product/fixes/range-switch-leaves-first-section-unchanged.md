@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: fixed
 date: 2026-10-18
 plan: product/plans/usage-insights.md
 ---
@@ -29,3 +29,13 @@ the reader scrolls. The health status chips also use fixed 30-day windows (`HEAL
 7d, 30d, 90d, and all, seen in the script output.
 
 The fix is a design choice (which panels should follow the range), left to the user.
+
+## Fix
+
+The user chose to keep the projection range-independent and say so on screen. The section
+layout gained an optional `note`, and "What will I spend?" shows "Based on the last 14 days,
+not affected by the range." under its heading. "Based on" rather than "Last 14 days" because
+the pace strip in the same section shows 30 days.
+
+**Check:** `defaultLayout.test.tsx` "says the projection section does not follow the range",
+red before the change, green after; `bun run test` 31 passed.

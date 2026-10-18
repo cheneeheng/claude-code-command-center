@@ -71,6 +71,13 @@ body {
   font-size: var(--fs-400);
   margin: 0 0 var(--space-4);
 }
+.section > h2:has(+ .section-note) {
+  margin-bottom: var(--space-1);
+}
+.section-note {
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-100);
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
