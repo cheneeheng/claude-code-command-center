@@ -40,18 +40,34 @@ describe('PaceStrip', () => {
     expect(screen.getByRole('list', { name: 'Daily usage, last 7 days' })).toBeTruthy();
     expect(screen.queryByText('Today')).toBeNull();
   });
+
+  it('labels every fifth day on the axis, ending on the last day', () => {
+    const { container } = render(<PaceStrip days={summary.projection.pace} />);
+    const labels = [...container.querySelectorAll('.pace-axis span')]
+      .map((s) => s.textContent)
+      .filter(Boolean);
+    expect(labels).toHaveLength(6);
+    expect(labels.at(-1)).toBe(new Date().toLocaleDateString('en', { month: 'short', day: 'numeric' }));
+  });
 });
 
 describe('RankedBars', () => {
   const rows = Array.from({ length: 12 }, (_, i) => ({ label: `r${i}`, value: 12 - i, display: `${12 - i}` }));
 
-  it('keeps the given order and caps rows until "Show all"', () => {
+  it('keeps the given order and caps rows at 5 until "Show all", then "Show less"', () => {
     render(<RankedBars rows={rows} emptyText="none" />);
     expect(screen.getAllByRole('listitem').map((li) => li.textContent?.slice(0, 2))).toEqual(
-      rows.slice(0, 10).map((r) => r.label.slice(0, 2)),
+      rows.slice(0, 5).map((r) => r.label.slice(0, 2)),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Show all 12' }));
     expect(screen.getAllByRole('listitem')).toHaveLength(12);
+    fireEvent.click(screen.getByRole('button', { name: 'Show less' }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+  });
+
+  it('has no toggle when every row fits', () => {
+    render(<RankedBars rows={rows.slice(0, 5)} emptyText="none" />);
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('shows the empty text', () => {
@@ -66,6 +82,15 @@ describe('SessionTable', () => {
     const row = screen.getByText('Fix the login flow').closest('tr');
     expect(row?.textContent).toContain('alpha');
     expect(row?.textContent).toContain('$80.00');
+  });
+
+  it('caps rows at 5 until "Show all"', () => {
+    const sessions = Array.from({ length: 7 }, (_, i) => ({ ...summary.sessions[0], id: `s${i}` }));
+    render(<SessionTable sessions={sessions} />);
+    expect(screen.getAllByRole('row')).toHaveLength(6); // header + 5
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 7' }));
+    expect(screen.getAllByRole('row')).toHaveLength(8);
+    expect(screen.getByRole('button', { name: 'Show less' })).toBeTruthy();
   });
 });
 
@@ -105,6 +130,14 @@ describe('HealthTable', () => {
     rerender(<HealthTable rows={calm} noun="skill" />);
     expect(screen.getByRole('button', { name: 'All 2' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getAllByRole('row')).toHaveLength(3);
+  });
+
+  it('caps rows at 5 until "Show all"', () => {
+    const rows = Array.from({ length: 7 }, (_, i) => ({ ...summary.skills[0], name: `skill-${i}` }));
+    render(<HealthTable rows={rows} noun="skill" />);
+    expect(screen.getAllByRole('row')).toHaveLength(6);
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 7' }));
+    expect(screen.getAllByRole('row')).toHaveLength(8);
   });
 });
 

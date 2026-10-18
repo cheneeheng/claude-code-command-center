@@ -11,6 +11,7 @@ export function PaceStrip({ days }: PaceStripProps) {
   const [metric, setMetric] = useState<'cost_usd' | 'tokens'>('cost_usd');
   const fmt = metric === 'cost_usd' ? usd : tokens;
   const peak = Math.max(0, ...days.map((d) => d[metric]));
+  const step = Math.max(1, Math.ceil(days.length / 6));
   return (
     <div className="pace">
       <div className="segmented" role="group" aria-label="Pace metric">
@@ -39,8 +40,10 @@ export function PaceStrip({ days }: PaceStripProps) {
         })}
       </ol>
       <div className="pace-axis subtle" aria-hidden="true">
-        <span>{shortDate(days[0]?.date ?? null)}</span>
-        <span>{shortDate(days.at(-1)?.date ?? null)}</span>
+        {/* One slot per bar; about six labels, counted back from the last day. */}
+        {days.map((d, i) => (
+          <span key={d.date}>{(days.length - 1 - i) % step === 0 ? shortDate(d.date) : ''}</span>
+        ))}
       </div>
     </div>
   );

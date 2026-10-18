@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { FIRST_ROWS, ShowAll } from '../components/ShowAll';
+
 /** One ranked row. `value` sizes the bar; `display` is what the reader sees. */
 export type RankedRow = { label: string; value: number; display: string; secondary?: string };
 
@@ -12,7 +14,7 @@ export type RankedBarsProps = {
 };
 
 /** A ranked list with a proportional bar per row. */
-export function RankedBars({ rows, limit = 10, emptyText }: RankedBarsProps) {
+export function RankedBars({ rows, limit = FIRST_ROWS, emptyText }: RankedBarsProps) {
   const [all, setAll] = useState(false);
   if (rows.length === 0) return <p className="muted empty-line">{emptyText}</p>;
   const peak = Math.max(...rows.map((r) => r.value));
@@ -36,11 +38,7 @@ export function RankedBars({ rows, limit = 10, emptyText }: RankedBarsProps) {
           </li>
         ))}
       </ol>
-      {rows.length > limit && (
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAll(!all)}>
-          {all ? 'Show fewer' : `Show all ${rows.length}`}
-        </button>
-      )}
+      <ShowAll total={rows.length} all={all} onToggle={() => setAll(!all)} limit={limit} />
     </div>
   );
 }

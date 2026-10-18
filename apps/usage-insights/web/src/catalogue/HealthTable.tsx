@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { FIRST_ROWS, ShowAll } from '../components/ShowAll';
 import type { HealthRow, HealthStatus } from '../lib/api';
 import { share, shortDate } from '../lib/format';
 
@@ -32,8 +33,6 @@ function reason(row: HealthRow, noun: string): string {
   }
 }
 
-const FIRST = 15;
-
 /**
  * Skills or subagents with a status pill and the reason behind it, worst first.
  * Status chips above the table give the counts at a glance and filter the rows.
@@ -48,7 +47,7 @@ export function HealthTable({ rows, noun }: HealthTableProps) {
   // A picked status with no rows left (after a range change) falls back to All.
   const status = counts.some(([s]) => s === picked) ? picked : undefined;
   const filtered = status ? rows.filter((r) => r.status === status) : rows;
-  const shown = all ? filtered : filtered.slice(0, FIRST);
+  const shown = all ? filtered : filtered.slice(0, FIRST_ROWS);
   return (
     <div className="table-wrap">
       <div className="chips" role="group" aria-label={`Filter ${noun}s by status`}>
@@ -111,11 +110,7 @@ export function HealthTable({ rows, noun }: HealthTableProps) {
           ))}
         </tbody>
       </table>
-      {filtered.length > FIRST && (
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAll(!all)}>
-          {all ? 'Show fewer' : `Show all ${filtered.length}`}
-        </button>
-      )}
+      <ShowAll total={filtered.length} all={all} onToggle={() => setAll(!all)} />
     </div>
   );
 }

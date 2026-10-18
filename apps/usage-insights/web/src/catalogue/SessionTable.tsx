@@ -1,18 +1,17 @@
 import { useState } from 'react';
 
+import { FIRST_ROWS, ShowAll } from '../components/ShowAll';
 import type { SessionRow } from '../lib/api';
 import { shortDate, tokens, usd } from '../lib/format';
 
 /** Props of {@link SessionTable}. */
 export type SessionTableProps = { sessions: SessionRow[] };
 
-const FIRST = 10;
-
 /** The heaviest sessions in range: title, project, date, tokens, cost. */
 export function SessionTable({ sessions }: SessionTableProps) {
   const [all, setAll] = useState(false);
   if (sessions.length === 0) return <p className="muted empty-line">No sessions in this range.</p>;
-  const shown = all ? sessions : sessions.slice(0, FIRST);
+  const shown = all ? sessions : sessions.slice(0, FIRST_ROWS);
   return (
     <div className="table-wrap">
       <table className="table">
@@ -45,11 +44,7 @@ export function SessionTable({ sessions }: SessionTableProps) {
           ))}
         </tbody>
       </table>
-      {sessions.length > FIRST && (
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAll(!all)}>
-          {all ? 'Show fewer' : `Show ${sessions.length}`}
-        </button>
-      )}
+      <ShowAll total={sessions.length} all={all} onToggle={() => setAll(!all)} />
     </div>
   );
 }
