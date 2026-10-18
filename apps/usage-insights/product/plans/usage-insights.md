@@ -732,3 +732,4 @@ Every panel carries an eyebrow, with a count where the panel is a list, e.g. `PR
 - 2026-10-15 Status: built
 - 2026-10-18 Design changed: was "`SessionTable` (10 rows, "Show 100")", "tools (top 10)", and a pace axis with only the first and last date, now "5 rows then Show all / Show less on every ranked list and table" and "about six axis dates", because the user asked for both; `bun run test` 30 passed
 - 2026-10-18 Design changed: was "What will I spend?" with no note, now a note under the heading saying it is based on the last 14 days and not affected by the range, because a range switch left the first screen looking unchanged (`product/fixes/range-switch-leaves-first-section-unchanged.md`, user's call); `bun run test` 31 passed
+- 2026-10-18 PR: #70 https://github.com/cheneeheng/claude-code-command-center/pull/70
