@@ -15,6 +15,7 @@ member's own setup script and records the outcome in a per-machine **manifest**.
 | `file-sync` | Registers Task Scheduler jobs to keep folder pairs in sync (needs config) |
 | `scheduled-session-digests` | Installs the session-lessons pipeline into the meta repo and registers its hourly task |
 | `agents-workspace-sync` | Registers a daily task that commits and pushes each listed `.agents_workspace` repo (needs config) |
+| `marketplace-updater` | Registers a task that refreshes the listed marketplaces and updates their plugins in the listed repos on an interval (needs config) |
 | `usage-dashboard` (app) | Registers a task that starts the dashboard server at logon and on wake |
 | `usage-insights` (app) | Builds the web frontend, installs the `usage-insights` command (`uv tool`), and registers a task that exports transcripts into its store daily and at logon (needs `bun` and `uv`) |
 
@@ -37,7 +38,7 @@ Other apps, `usage-report`, and libs are **not** managed here — they are run o
 (even an empty `{}`); members absent from the config are **skipped** (with a note), as are members
 present but still missing their required config — the run never fails on a skip. Use
 `install -Member <name>` to install a single member with defaults without adding it to the config.
-`file-sync` (folder pairs) and `agents-workspace-sync` (repo list) require config. Every
+`file-sync` (folder pairs), `agents-workspace-sync` (repo list) and `marketplace-updater` (marketplaces and repos) require config. Every
 member installs as the current user, with no elevated shell.
 
 ## Config

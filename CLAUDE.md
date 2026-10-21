@@ -91,7 +91,9 @@ and setup's README, CLAUDE.md, and `product/ARCHITECTURE.md` wherever they name 
   `C4_PLAN_PRICE_USD` (usage-dashboard monthly plan price for the Plan Value card),
   `C4_ROUNDTABLE_REGISTRY` (multi-repo-workspace registry path override),
   `C4_ROUNDTABLE_HOME` (multi-repo-workspace state dir, default `~/.roundtable`),
-  `C4_USAGE_INSIGHTS_HOME` (usage-insights store dir, default `~/.usage-insights`). OS-provided
+  `C4_USAGE_INSIGHTS_HOME` (usage-insights store dir, default `~/.usage-insights`),
+  `C4_STUB_LIST` / `C4_STUB_LIST_FAIL` / `C4_STUB_LOG` (marketplace-updater test-only: the stub
+  `claude` CLI's plugin list file, forced list failure, and call log). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
 - **History:** relocate/rename with `git mv` to preserve history.
 - **Scheduled tasks:** a member that registers a Windows Task Scheduler task registers it under

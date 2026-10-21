@@ -234,6 +234,31 @@ function Get-CommandCenterRegistry {
         }
     }
 
+    # --- marketplace-updater -------------------------------------------------
+    $muDir = Join-Path $tools 'marketplace-updater'
+    $marketplaceUpdater = [pscustomobject]@{
+        Name           = 'marketplace-updater'
+        DisplayName    = 'Marketplace updater'
+        Category       = 'tools'
+        SetupScript    = Join-Path $muDir 'marketplace-updater-setup.ps1'
+        Version        = Read-MemberVersion $muDir
+        RequiredConfig = @('marketplaces', 'repos')   # no sensible default exists for either
+        Install        = {
+            param($SetupScript, $Config)
+            if (-not $Config -or -not $Config.marketplaces -or -not $Config.repos) {
+                throw "marketplace-updater needs 'marketplaces' and 'repos' arrays in config."
+            }
+            $interval = if ($Config.intervalMinutes) { $Config.intervalMinutes } else { 360 }
+            & $SetupScript -Action install -Marketplaces @($Config.marketplaces) -Repos @($Config.repos) -IntervalMinutes $interval | Out-Null
+            @{ marketplaces = @($Config.marketplaces); repos = @($Config.repos); intervalMinutes = $interval }
+        }
+        Uninstall      = { param($SetupScript, $Entry) & $SetupScript -Action uninstall | Out-Null }
+        Detect         = {
+            param($Entry)
+            [bool](Get-ScheduledTask -TaskName 'marketplace-updater' -TaskPath '\ClaudeAutomation\marketplace-updater\' -ErrorAction SilentlyContinue)
+        }
+    }
+
     # --- usage-dashboard -----------------------------------------------------
     $udDir = Join-Path $apps 'usage-dashboard'
     $usageDashboard = [pscustomobject]@{
@@ -268,5 +293,5 @@ function Get-CommandCenterRegistry {
         }
     }
 
-    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $agentsWorkspaceSync, $usageDashboard, $usageInsights)
+    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $agentsWorkspaceSync, $marketplaceUpdater, $usageDashboard, $usageInsights)
 }

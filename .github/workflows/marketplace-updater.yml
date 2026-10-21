@@ -1,0 +1,30 @@
+name: CI · marketplace-updater
+
+# No path filter: this job is meant to be a required check, and a path-filtered required
+# check never reports on PRs that skip it.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh
+    working-directory: tools/marketplace-updater
+
+jobs:
+  updater:
+    name: marketplace-updater (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - name: updater tests
+        run: pwsh -NoProfile -File tests/updater.ps1

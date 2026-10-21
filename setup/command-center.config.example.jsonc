@@ -51,6 +51,15 @@
   "agents-workspace-sync": {
     "repos": ["C:/Users/you/projects/my-repo/.agents_workspace"],
     "scheduleTime": "04:00"
+  },
+
+  // marketplace-updater: the marketplaces to refresh and the repos whose local/project-scope
+  // plugins from them get updated. REQUIRED for install -All (no sensible default exists for
+  // either). intervalMinutes (1-1439) defaults to 360.
+  "marketplace-updater": {
+    "marketplaces": ["my-marketplace"],
+    "repos": ["C:/Users/you/projects/my-repo"],
+    "intervalMinutes": 360
   }
 
   // session-name-date-prefixer, usage-dashboard, and usage-insights need no config: give each an empty {}
