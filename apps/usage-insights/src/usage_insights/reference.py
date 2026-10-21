@@ -146,6 +146,10 @@ def fetch_agents() -> list[str]:
     if path is None:
         raise OSError("claude CLI not found")
     env = {k: v for k, v in os.environ.items() if k not in _KEY_VARS}
+    flags = 0
+    if sys.platform == "win32":  # an if block, so mypy on Linux skips the Windows-only name
+        # The scheduled export runs under pythonw: no console window may flash.
+        flags = subprocess.CREATE_NO_WINDOW
     proc = run(
         [path, "-p", "--input-format", "stream-json", "--output-format", "stream-json",
          "--verbose", "--no-session-persistence"],
@@ -157,8 +161,7 @@ def fetch_agents() -> list[str]:
         timeout=INIT_TIMEOUT_S,
         cwd=Path.home(),
         env=env,
-        # The scheduled export runs under pythonw: no console window may flash.
-        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        creationflags=flags,
     )
     for line in proc.stdout.splitlines():
         try:
