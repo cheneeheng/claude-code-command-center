@@ -507,3 +507,4 @@ flowchart LR
 
 - 2026-10-21 Planned: status ready
 - 2026-10-21 Reviewed: Revise first, 4 blocking (refresh inside run_export makes the test suite hit the network and the claude CLI; ANTHROPIC_API_KEY collides with Claude Code's own auth; the typed query cannot express the Goal's previous-month and per-model-daily questions; limit cuts day/week series to the 12 oldest buckets)
+- 2026-10-21 PR: #72 https://github.com/cheneeheng/claude-code-command-center/pull/72
