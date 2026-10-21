@@ -400,7 +400,12 @@ flowchart LR
   - `test_query_session_label_is_title`
   - `test_server_query_endpoint` (200 with rows, 400 on a bad spec, 403 on a cross-site POST)
   - Every existing aggregate test, unedited.
-- **Status:** todo
+- **Status:** done. `uv run ruff check . && uv run mypy src && uv run pytest`: clean, clean,
+  67 passed, `tests/test_aggregate.py` unedited. Choices the Design left open: a spec field
+  outside the six is a 400 naming it; `filters.model` on an event metric and `filters.name` on
+  a message metric are 400s, not ignored; the `model` grouping leaves out `unknown` like the
+  summary's model list; `group_by: none` returns one row, key `all`, label `All`; the request
+  body is capped at 16 KB.
 
 ### Phase 3: Serialisable layout and generated panels
 
@@ -519,3 +524,4 @@ flowchart LR
 - 2026-10-21 Reviewed: Revise first, 4 blocking (refresh inside run_export makes the test suite hit the network and the claude CLI; ANTHROPIC_API_KEY collides with Claude Code's own auth; the typed query cannot express the Goal's previous-month and per-model-daily questions; limit cuts day/week series to the 12 oldest buckets)
 - 2026-10-21 PR: #72 https://github.com/cheneeheng/claude-code-command-center/pull/72
 - 2026-10-21 Built Phase 1: fresh prices and built-in lists, checks green
+- 2026-10-21 Built Phase 2: typed query endpoint, checks green

@@ -127,6 +127,39 @@ def test_summary_without_store_is_empty(claude_dir: Path, tmp_path: Path) -> Non
         httpd.server_close()
 
 
+def _post(
+    port: int, path: str, body: object, headers: dict[str, str] | None = None
+) -> tuple[int, bytes]:
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}{path}", data=json.dumps(body).encode(), method="POST"
+    )
+    req.add_header("Host", f"127.0.0.1:{port}")
+    req.add_header("Content-Type", "application/json")
+    for name, value in (headers or {}).items():
+        req.add_header(name, value)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status, resp.read()
+    except urllib.error.HTTPError as err:
+        return err.code, err.read()
+
+
+def test_server_query_endpoint(running: tuple[int, Path]) -> None:
+    port, _ = running
+    spec = {"metric": "tokens", "group_by": "project", "range": "all"}
+    status, body = _post(port, "/api/query?range=7d", spec)
+    data = json.loads(body)
+    assert status == 200 and data["range"] == "all"
+    assert {r["key"] for r in data["rows"]} == {"alpha", "beta"}
+    # Without its own range, a query follows the top bar's.
+    status, body = _post(port, "/api/query?range=90d", {"metric": "sessions"})
+    assert status == 200 and json.loads(body)["range"] == "90d"
+    status, body = _post(port, "/api/query", {"metric": "dollars"})
+    assert status == 400 and "metric" in json.loads(body)["error"]
+    status, body = _post(port, "/api/query", spec, {"Sec-Fetch-Site": "cross-site"})
+    assert (status, json.loads(body)) == (403, {"error": "cross-site request"})
+
+
 def test_cli_exits_1_when_port_held(
     claude_dir: Path, db: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

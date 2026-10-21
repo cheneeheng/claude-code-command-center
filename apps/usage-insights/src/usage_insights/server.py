@@ -16,10 +16,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from usage_insights import aggregate, export, reference, store
-from usage_insights.inventory import load_inventory
+from usage_insights import aggregate, export, query, reference, store
+from usage_insights.inventory import Inventory, load_inventory
 
 STATIC_DIR = Path(__file__).parent / "static"
+QUERY_MAX_BYTES = 16384
 
 
 class Server(ThreadingHTTPServer):
@@ -106,12 +107,49 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self._host_ok():
             return
-        if urlsplit(self.path).path != "/api/refresh":
+        url = urlsplit(self.path)
+        routes = {"/api/refresh": self._refresh, "/api/query": self._query}
+        handler = routes.get(url.path)
+        if handler is None:
             self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
             return
         if not self._same_origin():
             self._json(HTTPStatus.FORBIDDEN, {"error": "cross-site request"})
             return
+        handler(parse_qs(url.query))
+
+    def _read_json(self, max_bytes: int) -> Any:
+        """The request body as JSON. Raises ``ValueError`` when too large or not JSON."""
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > max_bytes:
+            raise ValueError(f"request body is over {max_bytes} bytes")
+        return json.loads(self.rfile.read(length) or b"null")
+
+    def _inventory(self, ref: reference.Reference) -> Inventory:
+        db = self.server.db
+        return load_inventory(self.server.claude_dirs, _project_paths(db), ref.tools, ref.agents)
+
+    def _query(self, qs: dict[str, list[str]]) -> None:
+        try:
+            spec = query.parse(self._read_json(QUERY_MAX_BYTES), qs.get("range", ["30d"])[0])
+        except ValueError as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
+        try:
+            ref = reference.load(self.server.db.parent)
+            skills = (
+                frozenset(i.name for i in self._inventory(ref).skills)
+                if spec.metric == "skill_uses" else frozenset()
+            )
+            data = query.run(
+                self.server.db, spec, datetime.now().astimezone(), None, ref.prices, skills
+            )
+        except Exception as exc:  # noqa: BLE001 - reported to the page, not swallowed
+            self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
+            return
+        self._json(HTTPStatus.OK, data)
+
+    def _refresh(self, _qs: dict[str, list[str]]) -> None:
         try:
             result = export.run_export(self.server.db, self.server.claude_dirs, progress=_quiet)
         except store.ExportBusy:
@@ -127,9 +165,7 @@ class Handler(BaseHTTPRequestHandler):
         now = datetime.now().astimezone()
         try:
             ref = reference.load(db.parent)
-            inventory = load_inventory(
-                self.server.claude_dirs, _project_paths(db), ref.tools, ref.agents
-            )
+            inventory = self._inventory(ref)
             # tz None: local dates follow the system zone's rules at each timestamp, so
             # history from before a DST change keeps that day's offset.
             data = aggregate.summary(
