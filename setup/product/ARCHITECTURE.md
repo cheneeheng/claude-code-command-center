@@ -36,6 +36,7 @@ flowchart TD
         d3["file-sync (RequiredConfig: instances)"]
         d4["scheduled-session-digests"]
         d5["agents-workspace-sync (RequiredConfig: repos)"]
+        d8["marketplace-updater (RequiredConfig: marketplaces, repos)"]
         d6["usage-dashboard"]
         d7["usage-insights"]
     end

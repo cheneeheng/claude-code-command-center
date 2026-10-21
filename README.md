@@ -30,6 +30,7 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 | [`file-sync`](tools/file-sync/) | Keep a named file in sync across two folders (newer wins): `CLAUDE.md` (raw copy) and `settings.json` (JSON merge, excluded keys preserved), via one generic engine. |
 | [`scheduled-session-digests`](tools/scheduled-session-digests/) | Install once and it runs in the background: every night, headless Claude Code turns each of your new sessions into a lessons-learned file, and every week merges the new lessons into one master file, in a local git repo you own. Also keeps a cleaned copy of each session's transcript. |
 | [`agents-workspace-sync`](tools/agents-workspace-sync/) | Daily unattended commit and push of a configured list of `.agents_workspace` repos; each must be a standalone git repo, and each is pushed on the branch it is already on. |
+| [`marketplace-updater`](tools/marketplace-updater/) | On a schedule, refreshes the Claude Code marketplaces you list and updates their plugins in the repos you list. Marketplaces, repos, and interval are all config. |
 | [`usage-report`](tools/usage-report/) | CLI summary of token usage and estimated cost across sessions — the terminal counterpart to `usage-dashboard`. |
 
 > `statusline-hook`, `session-name-date-prefixer`, `claude-md-sync`,
@@ -81,6 +82,7 @@ never collides with Claude Code's or the OS's variables:
 | `C4_STATUSLINE_LIVE_TIMEOUT` | `usage-dashboard` | Seconds a session may be idle before dropping out of the live view (default `1800`). |
 | `C4_PLAN_PRICE_USD` | `usage-dashboard` | Monthly Claude subscription price; lights up the dashboard's Plan Value (ROI) card when set. |
 | `C4_USAGE_INSIGHTS_HOME` | `usage-insights` | Store dir holding `usage.db` (default `~/.usage-insights`). |
+| `C4_STUB_LIST`, `C4_STUB_LIST_FAIL`, `C4_STUB_LOG` | `marketplace-updater` | Test-only: the stub `claude` CLI's plugin list file, a switch that makes the list fail, and its call log. |
 | `C4_ROUNDTABLE_REGISTRY` | `multi-repo-workspace` | Registry file path (overridden by `--registry`, ahead of `./.roundtable.json`). |
 | `C4_ROUNDTABLE_HOME` | `multi-repo-workspace` | App state dir — rounds, session transcripts, run output (default `~/.roundtable`). |
 
