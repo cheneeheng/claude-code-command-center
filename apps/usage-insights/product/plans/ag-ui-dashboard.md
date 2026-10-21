@@ -424,7 +424,12 @@ flowchart LR
     duplicate id are dropped, each kind renders from a mocked `/api/query`, `trend` without a day or week grouping
     fails its schema, `defineComponent` throws on a `style` key, and a generated panel refetches
     when the top bar range changes.
-- **Status:** todo
+- **Status:** done. `uv run pytest`: 70 passed. `bun run typecheck && bun run test && bun run
+  build`: clean, 42 passed, built. `App.test.tsx` assertions are unedited: its fetch stub answers
+  `GET /api/layout` with 204 and sends every other call to the test's own mock. The trend kind
+  draws through `DayBars`, extracted from `PaceStrip` with the same markup. `kinds.tsx` also
+  exports `panelSchema` (the union without `id`), which Phase 5's `add_panel` uses. Reset
+  failures show "Could not reset the layout" in the top bar's message line.
 
 ### Phase 4: Agent endpoint
 
@@ -525,3 +530,4 @@ flowchart LR
 - 2026-10-21 PR: #72 https://github.com/cheneeheng/claude-code-command-center/pull/72
 - 2026-10-21 Built Phase 1: fresh prices and built-in lists, checks green
 - 2026-10-21 Built Phase 2: typed query endpoint, checks green
+- 2026-10-21 Built Phase 3: serialisable layout and generated panels, checks green

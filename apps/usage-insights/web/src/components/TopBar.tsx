@@ -11,6 +11,8 @@ export type TopBarProps = {
   /** The last refresh failed (not "already running"): show a Retry beside the message. */
   refreshFailed: boolean;
   onRefresh: () => void;
+  /** Return to the default layout; the button shows only when a saved layout exists. */
+  onResetLayout?: () => void;
 };
 
 const RANGE_LABEL: Record<Range, string> = { '7d': '7 days', '30d': '30 days', '90d': '90 days', all: 'All' };
@@ -24,6 +26,7 @@ export function TopBar({
   refreshMessage,
   refreshFailed,
   onRefresh,
+  onResetLayout,
 }: TopBarProps) {
   return (
     <header className="topbar">
@@ -43,6 +46,11 @@ export function TopBar({
           ))}
         </div>
         {lastExport && <span className="subtle">Exported {ago(lastExport)}</span>}
+        {onResetLayout && (
+          <button type="button" className="btn btn-ghost" onClick={onResetLayout}>
+            Reset layout
+          </button>
+        )}
         <button type="button" className="btn btn-primary" onClick={onRefresh} disabled={refreshing}>
           {refreshing && <span className="spinner" aria-hidden="true" />}
           {refreshing ? 'Refreshing…' : 'Refresh'}

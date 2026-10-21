@@ -5,9 +5,10 @@ import { EmptyState } from './components/EmptyState';
 import { ErrorState } from './components/ErrorState';
 import { LoadingState } from './components/LoadingState';
 import { TopBar } from './components/TopBar';
+import { useLayout } from './hooks/useLayout';
 import { useRefresh } from './hooks/useRefresh';
 import { useSummary } from './hooks/useSummary';
-import { defaultLayout } from './layout/defaultLayout';
+import { resolve } from './layout/model';
 import type { Range, Summary } from './lib/api';
 
 /** No store yet, or no sessions in the range and no usage in the last 30 days. */
@@ -21,6 +22,8 @@ export function isEmpty(data: Summary): boolean {
 /** The page: top bar, then the dashboard or the state that stands in for it. */
 export function App() {
   const [range, setRange] = useState<Range>('30d');
+  // Before useSummary: the layout request goes out first.
+  const layout = useLayout();
   const { data, error, loading, reload } = useSummary(range);
   const refresh = useRefresh(reload);
   // Figures from another range (or being replaced) are dimmed and marked busy.
@@ -28,6 +31,7 @@ export function App() {
 
   let body;
   if (!data) body = error && !loading ? <ErrorState message={error} onRetry={reload} /> : <LoadingState />;
+  else if (layout.loading) body = <LoadingState />;
   else if (isEmpty(data))
     body = (
       <EmptyState
@@ -36,7 +40,7 @@ export function App() {
         quietRange={data.last_export === null ? null : data.range}
       />
     );
-  else body = <Dashboard layout={defaultLayout} data={data} />;
+  else body = <Dashboard layout={resolve(layout.layout)} data={data} range={range} />;
 
   return (
     <>
@@ -45,9 +49,12 @@ export function App() {
         onRange={setRange}
         lastExport={data?.last_export}
         refreshing={refresh.busy}
-        refreshMessage={refresh.message ?? (error && data ? `Could not reload: ${error}` : undefined)}
+        refreshMessage={
+          refresh.message ?? (error && data ? `Could not reload: ${error}` : undefined) ?? layout.message
+        }
         refreshFailed={refresh.failed}
         onRefresh={() => void refresh.run()}
+        onResetLayout={layout.saved ? () => void layout.reset() : undefined}
       />
       <main className={stale ? 'content stale' : 'content'} aria-busy={stale}>
         {body}

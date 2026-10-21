@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -21,6 +22,7 @@ from usage_insights.inventory import Inventory, load_inventory
 
 STATIC_DIR = Path(__file__).parent / "static"
 QUERY_MAX_BYTES = 16384
+LAYOUT_MAX_BYTES = 262144
 
 
 class Server(ThreadingHTTPServer):
@@ -99,6 +101,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, {"ok": True})
         elif url.path == "/api/summary":
             self._summary(parse_qs(url.query).get("range", ["30d"])[0])
+        elif url.path == "/api/layout":
+            self._get_layout()
         elif url.path == "/" or url.path.startswith("/assets/"):
             self._static(url.path)
         else:
@@ -117,6 +121,61 @@ class Handler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.FORBIDDEN, {"error": "cross-site request"})
             return
         handler(parse_qs(url.query))
+
+    def _layout_write_allowed(self) -> bool:
+        """Host and same-origin checks for PUT and DELETE; ``False`` once answered."""
+        if not self._host_ok():
+            return False
+        if urlsplit(self.path).path != "/api/layout":
+            self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+            return False
+        if not self._same_origin():
+            self._json(HTTPStatus.FORBIDDEN, {"error": "cross-site request"})
+            return False
+        return True
+
+    def _no_content(self) -> None:
+        self._send(HTTPStatus.NO_CONTENT, b"", "text/plain")
+
+    def _layout_path(self) -> Path:
+        return self.server.db.parent / "layout.json"
+
+    def _get_layout(self) -> None:
+        try:
+            layout = json.loads(self._layout_path().read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            layout = None  # none saved, or unreadable: the page uses the default
+        if isinstance(layout, dict):
+            self._json(HTTPStatus.OK, layout)
+        else:
+            self._no_content()
+
+    def do_PUT(self) -> None:
+        if not self._layout_write_allowed():
+            return
+        try:
+            layout = self._read_json(LAYOUT_MAX_BYTES)
+            if not (
+                isinstance(layout, dict)
+                and layout.get("version") == 1
+                and isinstance(layout.get("sections"), list)
+            ):
+                raise ValueError("layout must be an object with version 1 and a sections list")
+        except ValueError as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
+        path = self._layout_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name("layout.json.tmp")
+        tmp.write_text(json.dumps(layout), encoding="utf-8")
+        os.replace(tmp, path)  # a crash never leaves half a file
+        self._no_content()
+
+    def do_DELETE(self) -> None:
+        if not self._layout_write_allowed():
+            return
+        self._layout_path().unlink(missing_ok=True)
+        self._no_content()
 
     def _read_json(self, max_bytes: int) -> Any:
         """The request body as JSON. Raises ``ValueError`` when too large or not JSON."""

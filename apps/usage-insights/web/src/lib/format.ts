@@ -11,6 +11,12 @@ export function tokens(value: number): string {
   return compact.format(value);
 }
 
+/** A query value in its unit: dollars, compact tokens, or a whole count. */
+export function byUnit(value: number, unit: 'usd' | 'tokens' | 'count'): string {
+  if (unit === 'usd') return usd(value);
+  return unit === 'tokens' ? tokens(value) : whole.format(value);
+}
+
 /** A signed percentage change, or an em dash when there is nothing to compare. */
 export function change(value: number | null): string {
   if (value === null) return '—';
