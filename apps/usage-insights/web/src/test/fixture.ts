@@ -85,4 +85,5 @@ export const summary: Summary = {
       { name: 'claude-in-chrome', source: 'unknown', calls: 3 },
     ],
   },
+  chat: { enabled: false },
 };

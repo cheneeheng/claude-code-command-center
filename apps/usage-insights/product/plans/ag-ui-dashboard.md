@@ -487,7 +487,17 @@ flowchart LR
     `compare: previous`, and whose figures match `/api/query` for that spec. The panel is still
     there after a page reload. Then view at 1440 px and 390 px against the `ceh-ui-design`
     review checklist, which no command can judge.
-- **Status:** todo
+- **Status:** todo, waiting on the live check only. `bun run typecheck && bun run test && bun
+  run build`: clean, 51 passed (9 in `ChatDrawer.test.tsx`), built. The tests run the real
+  `HttpAgent` against a stubbed `fetch` that answers `/api/agent` with scripted SSE events, not a
+  mocked `HttpAgent` class, so the client's own event parsing is covered too. The first plan's
+  serve check prints `PASS`. Layout review with a dummy key (no message sent, no API call):
+  at 1440 px the open drawer covered the right column and the Chat button, so the page now pads
+  right while it is open; at 390 px (iframe) the drawer sat 10 px off-screen because `100vw`
+  counts the scrollbar, so it is now anchored with `inset: 0`. Both fixed and rechecked. Found
+  while building: `HttpAgent.runAgent` resolves on `RUN_ERROR`, so `useAgent` reads it through
+  `onRunErrorEvent`. Not run: the live prompt, because `C4_USAGE_INSIGHTS_API_KEY` is not set in
+  this environment and the run spends API credit.
 
 ### Phase 6: Docs
 

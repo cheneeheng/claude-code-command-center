@@ -161,9 +161,18 @@ export const stat = defineComponent({
 /** Every generated panel kind, by `kind`. */
 export const kinds: Record<GeneratedPanel['kind'], PanelKind> = { bars, trend, table, stat };
 
-/** A new panel's fields, as the agent's `add_panel` sends them (no id: the canvas sets it). */
+/** A new panel's fields (no id: the canvas sets it). */
 export const panelSchema = z.discriminatedUnion('kind', [barsSchema, trendSchema, tableSchema, statSchema]);
 export type PanelFields = z.infer<typeof panelSchema>;
+
+const sectionId = { section_id: z.string().min(1) };
+/** The agent's `add_panel` arguments: a panel's fields plus the section to add it to. */
+export const addPanelSchema = z.discriminatedUnion('kind', [
+  barsSchema.extend(sectionId),
+  trendSchema.extend(sectionId),
+  tableSchema.extend(sectionId),
+  statSchema.extend(sectionId),
+]);
 
 const id = { id: z.string().min(1) };
 /** A generated panel as the layout stores it: a kind's fields plus the id the canvas set. */
@@ -174,4 +183,4 @@ export const generatedPanelSchema = z.discriminatedUnion('kind', [
   statSchema.extend(id),
 ]);
 export type GeneratedPanel = z.infer<typeof generatedPanelSchema>;
-assertNoStyleKeys('add_panel', z.toJSONSchema(panelSchema));
+assertNoStyleKeys('add_panel', z.toJSONSchema(addPanelSchema));

@@ -74,6 +74,8 @@ export type Summary = {
     unused_builtin: string[];
     mcp_servers: { name: string; source: string; calls: number }[];
   };
+  /** Whether `C4_USAGE_INSIGHTS_API_KEY` is set, so the chat can run. */
+  chat: { enabled: boolean };
 };
 
 /** One row of a query result; `previous` and `change` only with `compare`. */

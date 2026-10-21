@@ -10,6 +10,7 @@ import { apiClient } from '../lib/api';
 export function useLayout() {
   const [saved, setSaved] = useState<Layout | null | undefined>(undefined);
   const [message, setMessage] = useState<string | undefined>(undefined);
+  const [saveError, setSaveError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let active = true;
@@ -32,5 +33,14 @@ export function useLayout() {
     }
   }, []);
 
-  return { saved, layout: saved ?? toLayout(), loading: saved === undefined, message, reset };
+  /** Show an edited layout and save it. A failed save keeps the edit on screen. */
+  const apply = useCallback((next: Layout) => {
+    setSaved(next);
+    apiClient.putLayout(next).then(
+      () => setSaveError(undefined),
+      () => setSaveError('Could not save the layout'),
+    );
+  }, []);
+
+  return { saved, layout: saved ?? toLayout(), loading: saved === undefined, message, reset, apply, saveError };
 }

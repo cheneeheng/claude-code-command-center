@@ -1,10 +1,12 @@
 import { useState } from 'react';
 
+import { ChatDrawer } from './components/ChatDrawer';
 import { Dashboard } from './components/Dashboard';
 import { EmptyState } from './components/EmptyState';
 import { ErrorState } from './components/ErrorState';
 import { LoadingState } from './components/LoadingState';
 import { TopBar } from './components/TopBar';
+import { useAgent } from './hooks/useAgent';
 import { useLayout } from './hooks/useLayout';
 import { useRefresh } from './hooks/useRefresh';
 import { useSummary } from './hooks/useSummary';
@@ -26,6 +28,9 @@ export function App() {
   const layout = useLayout();
   const { data, error, loading, reload } = useSummary(range);
   const refresh = useRefresh(reload);
+  const chat = useAgent(layout.layout, layout.apply);
+  const [chatOpen, setChatOpen] = useState(false);
+  const chatEnabled = data?.chat?.enabled === true;
   // Figures from another range (or being replaced) are dimmed and marked busy.
   const stale = data !== undefined && (loading || data.range !== range);
 
@@ -42,8 +47,9 @@ export function App() {
     );
   else body = <Dashboard layout={resolve(layout.layout)} data={data} range={range} />;
 
+  const drawerOpen = chatEnabled && chatOpen;
   return (
-    <>
+    <div className={drawerOpen ? 'page with-drawer' : 'page'}>
       <TopBar
         range={range}
         onRange={setRange}
@@ -55,10 +61,13 @@ export function App() {
         refreshFailed={refresh.failed}
         onRefresh={() => void refresh.run()}
         onResetLayout={layout.saved ? () => void layout.reset() : undefined}
+        onChat={chatEnabled ? () => setChatOpen(!chatOpen) : undefined}
+        chatOpen={chatOpen}
       />
       <main className={stale ? 'content stale' : 'content'} aria-busy={stale}>
         {body}
       </main>
-    </>
+      {drawerOpen && <ChatDrawer chat={chat} saveError={layout.saveError} onClose={() => setChatOpen(false)} />}
+    </div>
   );
 }

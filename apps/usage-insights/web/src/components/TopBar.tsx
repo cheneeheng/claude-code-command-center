@@ -13,6 +13,9 @@ export type TopBarProps = {
   onRefresh: () => void;
   /** Return to the default layout; the button shows only when a saved layout exists. */
   onResetLayout?: () => void;
+  /** Open or close the chat; the button shows only when the chat is enabled. */
+  onChat?: () => void;
+  chatOpen?: boolean;
 };
 
 const RANGE_LABEL: Record<Range, string> = { '7d': '7 days', '30d': '30 days', '90d': '90 days', all: 'All' };
@@ -27,6 +30,8 @@ export function TopBar({
   refreshFailed,
   onRefresh,
   onResetLayout,
+  onChat,
+  chatOpen = false,
 }: TopBarProps) {
   return (
     <header className="topbar">
@@ -49,6 +54,11 @@ export function TopBar({
         {onResetLayout && (
           <button type="button" className="btn btn-ghost" onClick={onResetLayout}>
             Reset layout
+          </button>
+        )}
+        {onChat && (
+          <button type="button" className="btn btn-outline" aria-pressed={chatOpen} onClick={onChat}>
+            Chat
           </button>
         )}
         <button type="button" className="btn btn-primary" onClick={onRefresh} disabled={refreshing}>
