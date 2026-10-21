@@ -48,6 +48,8 @@ export type Summary = {
     tokens: { input: number; output: number; cache_write: number; cache_read: number; total: number };
     sessions: number;
     unpriced_models: string[];
+    /** When the LiteLLM prices were fetched; `null` = the built-in table. */
+    prices_as_of: string | null;
   };
   projection: {
     week: PeriodPair;

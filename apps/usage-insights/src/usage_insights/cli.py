@@ -5,11 +5,12 @@ from __future__ import annotations
 import argparse
 import urllib.request
 import webbrowser
+from datetime import datetime
 from pathlib import Path
 
 from claude_usage import claude_dirs
 
-from usage_insights import export, server, store
+from usage_insights import export, reference, server, store
 
 DEFAULT_PORT = 8090
 
@@ -63,6 +64,9 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     dirs: list[Path] = getattr(args, "claude_dir", None) or claude_dirs()
     db = store.store_path()
+    if args.command == "export":
+        # Only the scheduled export touches the network; serving never waits on it.
+        reference.refresh(db.parent, datetime.now().astimezone(), print)
     _export(db, dirs)
     if args.command == "export":
         return 0

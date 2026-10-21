@@ -19,6 +19,15 @@ describe('StatTile', () => {
       screen.getByRole('img', { name: '$40.00 so far, forecast $90.00, likely $85.00 to $95.00' }),
     ).toBeTruthy();
     expect(screen.getByText(/1 unpriced model not counted/)).toBeTruthy();
+    expect(screen.queryByText(/prices/i)).toBeNull();
+  });
+
+  it('says which price source the cost uses', () => {
+    const props = { actual: 1, forecast: 2, low: 1, high: 3, unit: 'usd' } as const;
+    const { rerender } = render(<StatTile {...props} pricesAsOf={null} />);
+    expect(screen.getByText('Built-in prices')).toBeTruthy();
+    rerender(<StatTile {...props} pricesAsOf="2026-10-21T08:00:00+00:00" />);
+    expect(screen.getByText('Prices from LiteLLM, Oct 21')).toBeTruthy();
   });
 });
 

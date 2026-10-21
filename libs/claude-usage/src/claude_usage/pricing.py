@@ -46,7 +46,8 @@ def _price(inp: float, out: float, cache_read: float | None = None) -> ModelPric
 
 
 # Per model-id prefix; the longest matching prefix wins. Rates from the
-# claude-api reference (cached 2026-10-06).
+# claude-api reference (cached 2026-10-06); Sonnet 5.5's cache read from the
+# pricing page (2026-10-21).
 MODEL_PRICES: dict[str, ModelPrice] = {
     "claude-fable-5-1": _price(10.00, 50.00, 0.25),
     "claude-fable-5": _price(10.00, 50.00),
@@ -57,7 +58,7 @@ MODEL_PRICES: dict[str, ModelPrice] = {
     "claude-opus-4-6": _price(5.00, 25.00),
     "claude-opus-4-5": _price(5.00, 25.00),
     "claude-opus-4": _price(15.00, 75.00),
-    "claude-sonnet-5-5": _price(2.00, 10.00, 0.20),
+    "claude-sonnet-5-5": _price(2.00, 10.00, 0.10),
     "claude-sonnet-5": _price(2.00, 10.00),
     "claude-sonnet-4": _price(3.00, 15.00),
     "claude-haiku-5-5": _price(0.10, 0.50),
@@ -85,19 +86,69 @@ def model_family(model_id: str) -> str:
     return model_id
 
 
-def price_for(model_id: str) -> ModelPrice | None:
+def prices_from_litellm(data: dict[str, object]) -> dict[str, ModelPrice]:
+    """Parse LiteLLM's ``model_prices_and_context_window.json`` into a price table.
+
+    Keeps entries whose ``litellm_provider`` is ``anthropic`` and whose key starts
+    with ``claude-``; per-token costs become per-1M rates. An entry missing its
+    input or output cost is skipped; missing cache rates take the standard
+    multipliers.
+
+    Args:
+        data: The decoded LiteLLM price file.
+
+    Returns:
+        Model id to :class:`ModelPrice`, usable as the ``prices`` overlay of
+        :func:`price_for` and :func:`estimated_cost`.
+    """
+    out: dict[str, ModelPrice] = {}
+    for key, entry in data.items():
+        if not (key.startswith("claude-") and isinstance(entry, dict)):
+            continue
+        if entry.get("litellm_provider") != "anthropic":
+            continue
+
+        def rate(field: str, e: dict[str, object] = entry) -> float | None:
+            v = e.get(field)
+            ok = isinstance(v, (int, float)) and not isinstance(v, bool)
+            return round(float(v) * 1e6, 6) if ok else None  # type: ignore[arg-type]
+
+        inp = rate("input_cost_per_token")
+        output = rate("output_cost_per_token")
+        if inp is None or output is None:
+            continue
+        write = rate("cache_creation_input_token_cost")
+        read = rate("cache_read_input_token_cost")
+        write_1h = rate("cache_creation_input_token_cost_above_1hr")
+        out[key] = ModelPrice(
+            inp,
+            output,
+            inp * 1.25 if write is None else write,
+            round(inp * 0.1, 4) if read is None else read,
+            inp * 2 if write_1h is None else write_1h,
+        )
+    return out
+
+
+def price_for(
+    model_id: str, prices: dict[str, ModelPrice] | None = None
+) -> ModelPrice | None:
     """Return a model's prices: longest id prefix, then family fallback.
 
     Args:
         model_id: The raw model identifier from a transcript.
+        prices: Optional overlay (e.g. from :func:`prices_from_litellm`) merged
+            over :data:`MODEL_PRICES`, so a fetched exact id beats a built-in
+            prefix.
 
     Returns:
         The model's :class:`ModelPrice`, or ``None`` when the model is unpriced.
     """
+    table = {**MODEL_PRICES, **prices} if prices else MODEL_PRICES
     m = (model_id or "").lower()
-    matches = [p for p in MODEL_PRICES if m.startswith(p)]
+    matches = [p for p in table if m.startswith(p)]
     if matches:
-        return MODEL_PRICES[max(matches, key=len)]
+        return table[max(matches, key=len)]
     family = MODEL_COSTS.get(model_family(model_id))
     if family is None:
         return None
@@ -110,7 +161,9 @@ def model_costs(model_id: str) -> tuple[float, float, float, float] | None:
     return None if p is None else (p.input, p.output, p.cache_write, p.cache_read)
 
 
-def estimated_cost(per_model: dict[str, TokenCounts]) -> float:
+def estimated_cost(
+    per_model: dict[str, TokenCounts], prices: dict[str, ModelPrice] | None = None
+) -> float:
     """Estimate USD cost from per-model token counts and the pricing tables.
 
     This is an estimate (tokens x list price), not the amount Anthropic billed.
@@ -118,13 +171,14 @@ def estimated_cost(per_model: dict[str, TokenCounts]) -> float:
 
     Args:
         per_model: Mapping of model id to its :data:`TokenCounts`.
+        prices: Optional price overlay, as in :func:`price_for`.
 
     Returns:
         The estimated cost in USD.
     """
     cost = 0.0
     for model_id, tok in per_model.items():
-        p = price_for(model_id)
+        p = price_for(model_id, prices)
         if p is None:
             continue
         cost += tok["input"] * p.input

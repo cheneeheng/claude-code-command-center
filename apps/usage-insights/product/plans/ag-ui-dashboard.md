@@ -1,6 +1,6 @@
 ---
 title: Let usage-insights users generate analysis panels by chatting with an AG-UI agent, on fresh prices and built-in lists
-status: ready
+status: building
 created: 2026-10-21
 ---
 
@@ -367,7 +367,15 @@ flowchart LR
     three `fetched` lines and writes `reference.json` holding at least 20 prices, at least 40
     tools, and at least 4 agents. A second run within the hour prints no `fetched` line, and the
     `prices_fetched` and `lists_fetched` timestamps are unchanged.
-- **Status:** todo
+- **Status:** done. Lib: `uv run pytest` 47 passed, 100% coverage, mypy clean. App: ruff and
+  mypy clean, `uv run pytest` 39 passed. Both smoke scripts print `PASS`. Real data (temp
+  store): first export printed `fetched prices`, `fetched tool list`, `fetched agent list` and
+  wrote 22 prices, 46 tools, 5 agents. The second printed no `fetched` line and kept both
+  timestamps. No new `.jsonl` under `~/.claude/projects`. The pricing page gives Sonnet 5.5
+  cache hits as $0.10 (0.05x input), so `MODEL_PRICES` was corrected from $0.20. The docs site
+  answers 403 to urllib's default User-Agent, so fetches send `User-Agent: usage-insights`.
+  The four existing `cli export` tests now reach `refresh`, so `test_export.py` gained one
+  autouse fixture stubbing it; the tests themselves are unedited.
 
 ### Phase 2: Typed query endpoint
 
@@ -482,9 +490,11 @@ flowchart LR
 
 ## Open
 
-- **Sonnet 5.5 cache-read price:** the built-in table says $0.20 per 1M, and LiteLLM says $0.10
-  (diffed 2026-10-21). Phase 1 settles it against the pricing page. Until then, LiteLLM wins
-  whenever it was fetched.
+- **Sonnet 5.5 cache-read price:** settled in Phase 1: the pricing page says $0.10, and the
+  built-in table now does too.
+- **One timestamp for two lists:** `lists_fetched` covers the tool and agent lists. Assumed: it
+  is set when either list fetched, so a machine without the `claude` CLI doesn't re-fetch the
+  docs page on every export. A failed list then waits a day for its retry.
 - **Saved layouts freeze the defaults:** a saved layout holds refs to the defaults that existed
   when it was saved. A default panel added in a later release does not appear until Reset, which
   also drops generated panels. Accepted for this phase (user's call, 2026-10-21).
@@ -508,3 +518,4 @@ flowchart LR
 - 2026-10-21 Planned: status ready
 - 2026-10-21 Reviewed: Revise first, 4 blocking (refresh inside run_export makes the test suite hit the network and the claude CLI; ANTHROPIC_API_KEY collides with Claude Code's own auth; the typed query cannot express the Goal's previous-month and per-model-daily questions; limit cuts day/week series to the 12 oldest buckets)
 - 2026-10-21 PR: #72 https://github.com/cheneeheng/claude-code-command-center/pull/72
+- 2026-10-21 Built Phase 1: fresh prices and built-in lists, checks green

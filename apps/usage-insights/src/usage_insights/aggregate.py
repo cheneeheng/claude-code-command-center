@@ -14,7 +14,7 @@ from datetime import date, datetime, timedelta, tzinfo
 from pathlib import Path, PurePath
 from typing import Any
 
-from claude_usage import estimated_cost, price_for
+from claude_usage import ModelPrice, estimated_cost, price_for
 
 from usage_insights import store
 from usage_insights.inventory import Inventory, Item
@@ -181,6 +181,8 @@ def summary(
     now: datetime,
     data_dirs: list[Path],
     tz: tzinfo | None,
+    prices: dict[str, ModelPrice] | None = None,
+    prices_as_of: str | None = None,
 ) -> Json:
     """Build the ``/api/summary`` payload.
 
@@ -195,6 +197,10 @@ def summary(
         tz: The zone that turns timestamps into local dates. ``None`` is the
             system zone, applied with the rules in force at each timestamp, so
             dates before a DST change keep that day's offset.
+        prices: Fetched prices overlaying the built-in table, for both the cost
+            and the unpriced-model check.
+        prices_as_of: When ``prices`` was fetched, echoed as
+            ``totals.prices_as_of``; ``None`` means the built-in table.
 
     Raises:
         ValueError: ``range_key`` is not a known range.
@@ -208,7 +214,9 @@ def summary(
         "store_path": str(db),
     }
     if not db.is_file():
-        return {**payload, **_empty()}
+        empty = _empty()
+        empty["totals"]["prices_as_of"] = prices_as_of
+        return {**payload, **empty}
 
     with store.connect_read_only(db) as conn:
         sessions = {r[0]: r[1:] for r in conn.execute(
@@ -250,7 +258,7 @@ def summary(
         counts = {"input": inp, "output": out, "cache_write": cw, "cache_read": cr,
                   "cache_write_1h": cw1h}
         total = inp + out + cw + cr + cw1h
-        cost = estimated_cost({model: counts})
+        cost = estimated_cost({model: counts}, prices)
         proj = label(sid)
         daily_tokens[day] += total
         daily_cost[day] += cost
@@ -263,7 +271,7 @@ def summary(
                        "cache_read": cr, "total": total})
         cost_total += cost
         range_sessions.add(sid)
-        if model != "unknown" and price_for(model) is None:
+        if model != "unknown" and price_for(model, prices) is None:
             unpriced.add(model)
         for bucket in (projects[proj], models[model]):
             bucket["tokens"] += total
@@ -318,6 +326,7 @@ def summary(
                        ("input", "output", "cache_write", "cache_read", "total")},
             "sessions": len(range_sessions),
             "unpriced_models": sorted(unpriced),
+            "prices_as_of": prices_as_of,
         },
         "projection": {
             "week": {"tokens": token_proj["week"], "cost_usd": cost_proj["week"]},

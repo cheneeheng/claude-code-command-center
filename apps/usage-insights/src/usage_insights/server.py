@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from usage_insights import aggregate, export, store
+from usage_insights import aggregate, export, reference, store
 from usage_insights.inventory import load_inventory
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -126,10 +126,16 @@ class Handler(BaseHTTPRequestHandler):
         db = self.server.db
         now = datetime.now().astimezone()
         try:
-            inventory = load_inventory(self.server.claude_dirs, _project_paths(db))
+            ref = reference.load(db.parent)
+            inventory = load_inventory(
+                self.server.claude_dirs, _project_paths(db), ref.tools, ref.agents
+            )
             # tz None: local dates follow the system zone's rules at each timestamp, so
             # history from before a DST change keeps that day's offset.
-            data = aggregate.summary(db, inventory, range_key, now, self.server.claude_dirs, None)
+            data = aggregate.summary(
+                db, inventory, range_key, now, self.server.claude_dirs, None,
+                prices=ref.prices, prices_as_of=ref.prices_fetched,
+            )
         except ValueError as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             return

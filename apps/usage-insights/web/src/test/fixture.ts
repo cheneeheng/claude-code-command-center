@@ -40,6 +40,7 @@ export const summary: Summary = {
     tokens: { input: 10, output: 20, cache_write: 30, cache_read: 40, total: 100 },
     sessions: 3,
     unpriced_models: ['mystery-model'],
+    prices_as_of: null,
   },
   projection: {
     week: { tokens: period(1000, 3000), cost_usd: period(40, 90) },
