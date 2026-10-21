@@ -517,7 +517,16 @@ flowchart LR
 - **Check:** `grep -c "C4_USAGE_INSIGHTS_API_KEY\|C4_USAGE_INSIGHTS_MODEL" README.md CLAUDE.md apps/usage-insights/README.md`
   gives at least 2 for each file. Every check in Phases 1 to 5 reruns green. The web and python CI workflows pass
   on the PR.
-- **Status:** todo
+- **Status:** todo, waiting on the PR's CI only. The grep gives 2, 2, 2. Reruns: lib 47 passed, mypy and ruff
+  clean; app 87 passed six times in a row with no API key, ruff and mypy clean; both smoke
+  scripts `PASS`; web typecheck clean, 51 passed, build clean; serve check `PASS`. The first
+  full rerun failed intermittently with `ConnectionAbortedError`: the server answered some
+  requests (an oversized PUT, a 403, a 503) before reading their bodies, which resets the socket
+  on Windows. The handler now reads the body before any response. `setup/` needs no change:
+  `git diff main -- apps/usage-insights/scripts setup` is empty. Decisions copied to
+  `product/ARCHITECTURE.md`: typed query over agent-written figures, the chat's own API key,
+  fetched reference data with fallback, stdlib SSE over FastAPI. The lib's README and CLAUDE.md
+  were done in Phase 1.
 
 ## Open
 

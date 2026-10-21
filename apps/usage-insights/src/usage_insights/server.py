@@ -27,6 +27,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 QUERY_MAX_BYTES = 16384
 LAYOUT_MAX_BYTES = 262144
 AGENT_MAX_BYTES = 1048576  # a run carries the whole AG-UI message list
+DRAIN_MAX_BYTES = 4 * AGENT_MAX_BYTES  # an oversized body read before refusing it
 
 
 class Server(ThreadingHTTPServer):
@@ -64,11 +65,13 @@ def _project_paths(db: Path) -> list[Path]:
 
 class Handler(BaseHTTPRequestHandler):
     server: Server
+    _raw: bytes | None = None  # the request body once read; one request per handler
 
     def log_message(self, format: str, *args: Any) -> None:
         """Stay quiet: the background task has no console."""
 
     def _send(self, status: int, body: bytes, content_type: str) -> None:
+        self._body()
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
@@ -188,10 +191,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def _read_json(self, max_bytes: int) -> Any:
         """The request body as JSON. Raises ``ValueError`` when too large or not JSON."""
-        length = int(self.headers.get("Content-Length") or 0)
-        if length > max_bytes:
+        if int(self.headers.get("Content-Length") or 0) > max_bytes:
             raise ValueError(f"request body is over {max_bytes} bytes")
-        return json.loads(self.rfile.read(length) or b"null")
+        return json.loads(self._body() or b"null")
+
+    def _body(self) -> bytes:
+        """The request body, read once. ``_send`` reads it before any answer, because
+        closing on an unread body resets the connection on Windows and the client then
+        sees the reset instead of the answer."""
+        if self._raw is None:
+            length = int(self.headers.get("Content-Length") or 0)
+            self._raw = self.rfile.read(min(length, DRAIN_MAX_BYTES))
+        return self._raw
 
     def _inventory(self, ref: reference.Reference) -> Inventory:
         db = self.server.db

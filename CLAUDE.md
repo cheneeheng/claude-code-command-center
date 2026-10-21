@@ -92,6 +92,8 @@ and setup's README, CLAUDE.md, and `product/ARCHITECTURE.md` wherever they name 
   `C4_ROUNDTABLE_REGISTRY` (multi-repo-workspace registry path override),
   `C4_ROUNDTABLE_HOME` (multi-repo-workspace state dir, default `~/.roundtable`),
   `C4_USAGE_INSIGHTS_HOME` (usage-insights store dir, default `~/.usage-insights`),
+  `C4_USAGE_INSIGHTS_API_KEY` (usage-insights chat key; deliberately not `ANTHROPIC_API_KEY`),
+  `C4_USAGE_INSIGHTS_MODEL` (usage-insights chat model, default `claude-sonnet-5-5`),
   `C4_STUB_LIST` / `C4_STUB_LIST_FAIL` / `C4_STUB_LOG` (marketplace-updater test-only: the stub
   `claude` CLI's plugin list file, forced list failure, and call log). OS-provided
   vars (`USERPROFILE`, `LOCALAPPDATA`, `PATH`, …) are not ours and keep their names.
