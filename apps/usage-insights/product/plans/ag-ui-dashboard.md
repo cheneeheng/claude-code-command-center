@@ -15,7 +15,7 @@ agent never writes a figure into a panel. Each generated panel holds a **typed q
 computes the result from the store, and the component draws it. So every number on screen comes
 from the same store as the default panels. The page always starts from the default layout, never a
 blank canvas. The user's edited layout is saved and survives a restart, and Reset restores the
-default. Without a key, the chat is hidden and the dashboard works as it does today. The same phase
+default. Without a key, the chat is off and the dashboard works as it does today. The same phase
 replaces the hand-kept prices, built-in tool list, and built-in agent list with data fetched by
 the `usage-insights export` command, falling back to the hand-kept versions.
 
@@ -321,8 +321,9 @@ flowchart LR
 
 ### Chat drawer (`web/src/components/ChatDrawer.tsx`, `web/src/hooks/useAgent.ts`)
 
-- A "Chat" button in the top bar, shown only when `chat.enabled`, opens a right-side drawer (full
-  width under 768 px) with the transcript, an input, Stop, and New chat. It starts with three
+- A "Chat" button in the top bar opens a right-side drawer (full width under 768 px). Without
+  `chat.enabled` the button is shown disabled (`aria-disabled`, still focusable) with the hint
+  "Set C4_USAGE_INSIGHTS_API_KEY and restart usage-insights to use the chat". The drawer opens with the transcript, an input, Stop, and New chat. It starts with three
   starter prompts: "Which projects cost more than last month?", "Show my daily cost this month",
   and "Which skills do I use most?". While a run is going, the drawer shows "Working…", the input
   and the send button are disabled, and Stop is shown. Stop is hidden otherwise.
@@ -477,7 +478,7 @@ flowchart LR
     Vitest uses a mocked `HttpAgent` that emits AG-UI events, and covers: `add_panel` places a
     panel and PUTs the layout, `add_panel` with a `style` key renders without it, invalid
     arguments return an `error:` tool result and place nothing, `remove_panel` with an unknown id
-    returns an error result, the Chat button is hidden when `chat.enabled` is false, the input is
+    returns an error result, the Chat button is disabled with the key hint when `chat.enabled` is false, the input is
     disabled and Stop shown only while a run is going, Stop leaves placed panels, and a failed
     save shows its message.
   - The Phase 5 serve check from the first plan, rerun: it prints `PASS`.
@@ -566,3 +567,8 @@ flowchart LR
   because a user turn answering tool calls must start with its `tool_result` blocks
 - 2026-10-21 Built Phase 4: agent endpoint, checks green
 - 2026-10-21 PR: #73 https://github.com/cheneeheng/claude-code-command-center/pull/73
+- 2026-10-21 Design changed: Chat drawer line was "A "Chat" button in the top bar, shown only
+  when `chat.enabled`"; now shown disabled with a hint naming the key, because the user ran the
+  install, saw no chat, and had no clue why (user's call)
+- 2026-10-21 Fixed: the first live run failed with a 400 on `add_panel`'s schema (a top-level
+  union with no `type: "object"`); see `product/fixes/add-panel-tool-schema-has-no-object-type.md`

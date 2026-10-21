@@ -229,7 +229,8 @@ new chart kind exists.
 `ANTHROPIC_API_KEY` is read by Claude Code too, so setting it user-wide for the dashboard could
 switch the user's own `claude -p` runs to API billing.
 **Decision:** The key is `C4_USAGE_INSIGHTS_API_KEY`, passed explicitly to `Anthropic(api_key=...)`.
-Without it `/api/agent` answers 503 and the chat is hidden. The model defaults to
+Without it `/api/agent` answers 503 and the Chat button is disabled, with a hint naming the
+variable. The model defaults to
 `claude-sonnet-5-5` for cost per turn, overridable with `C4_USAGE_INSIGHTS_MODEL`.
 **Consequences:** Chat costs land on the user's API key, which the README states. The `claude`
 CLI call used for agent names strips both key variables from its environment.

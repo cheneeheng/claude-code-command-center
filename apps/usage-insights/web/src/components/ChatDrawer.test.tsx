@@ -108,11 +108,15 @@ const lastToolResult = (runs: ReturnType<typeof stubServer>['runs']) =>
   String(runs.at(-1)?.messages.filter((m) => m.role === 'tool').at(-1)?.content);
 
 describe('chat drawer', () => {
-  it('hides the Chat button when the chat is not enabled', async () => {
+  it('shows a disabled Chat button that names the key when the chat is not enabled', async () => {
     stubServer([], { chat: false });
     render(<App />);
     await screen.findByText('What will I spend?');
-    expect(screen.queryByRole('button', { name: 'Chat' })).toBeNull();
+    const button = screen.getByRole('button', { name: 'Chat' });
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.getAttribute('title')).toContain('C4_USAGE_INSIGHTS_API_KEY');
+    fireEvent.click(button);
+    expect(screen.queryByRole('complementary', { name: 'Chat' })).toBeNull();
   });
 
   it('places a panel from add_panel and saves the layout', async () => {
@@ -129,6 +133,20 @@ describe('chat drawer', () => {
     expect(panel).not.toHaveProperty('section_id');
     // The agent sees the layout as state on every run.
     expect(JSON.stringify(runs[0].state)).toContain('"id":"spend-where"');
+  });
+
+  it('sends every tool with an object schema the Claude API accepts', async () => {
+    const { runs } = stubServer([say('Hi.')]);
+    const drawer = await openChat();
+    ask(drawer, 'Hello');
+    await within(drawer).findByText('Hi.');
+    const tools = (runs[0] as unknown as { tools: { name: string; parameters: Record<string, unknown> }[] }).tools;
+    expect(tools.map((t) => t.name)).toEqual(['add_panel', 'add_section', 'move_panel', 'remove_panel']);
+    for (const { name, parameters } of tools) {
+      // The API needs `type: "object"` at the top and refuses a top-level oneOf, anyOf, or allOf.
+      expect({ name, type: parameters.type }).toEqual({ name, type: 'object' });
+      for (const key of ['oneOf', 'anyOf', 'allOf']) expect(parameters).not.toHaveProperty(key);
+    }
   });
 
   it('drops a style key the agent sends', async () => {

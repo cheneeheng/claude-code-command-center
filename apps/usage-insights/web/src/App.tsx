@@ -61,7 +61,8 @@ export function App() {
         refreshFailed={refresh.failed}
         onRefresh={() => void refresh.run()}
         onResetLayout={layout.saved ? () => void layout.reset() : undefined}
-        onChat={chatEnabled ? () => setChatOpen(!chatOpen) : undefined}
+        chatEnabled={data?.chat?.enabled}
+        onChat={() => setChatOpen(!chatOpen)}
         chatOpen={chatOpen}
       />
       <main className={stale ? 'content stale' : 'content'} aria-busy={stale}>

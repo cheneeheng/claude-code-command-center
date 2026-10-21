@@ -13,10 +13,14 @@ export type TopBarProps = {
   onRefresh: () => void;
   /** Return to the default layout; the button shows only when a saved layout exists. */
   onResetLayout?: () => void;
-  /** Open or close the chat; the button shows only when the chat is enabled. */
+  /** Whether the chat key is set; `undefined` (still loading) shows no Chat button. */
+  chatEnabled?: boolean;
   onChat?: () => void;
   chatOpen?: boolean;
 };
+
+/** Why the Chat button is disabled; matches the server's 503 message. */
+export const CHAT_HINT = 'Set C4_USAGE_INSIGHTS_API_KEY and restart usage-insights to use the chat';
 
 const RANGE_LABEL: Record<Range, string> = { '7d': '7 days', '30d': '30 days', '90d': '90 days', all: 'All' };
 
@@ -30,6 +34,7 @@ export function TopBar({
   refreshFailed,
   onRefresh,
   onResetLayout,
+  chatEnabled,
   onChat,
   chatOpen = false,
 }: TopBarProps) {
@@ -56,8 +61,16 @@ export function TopBar({
             Reset layout
           </button>
         )}
-        {onChat && (
-          <button type="button" className="btn btn-outline" aria-pressed={chatOpen} onClick={onChat}>
+        {chatEnabled !== undefined && (
+          // aria-disabled, not disabled: keyboard users can still focus it and hear the hint.
+          <button
+            type="button"
+            className="btn btn-outline"
+            aria-pressed={chatEnabled ? chatOpen : undefined}
+            aria-disabled={chatEnabled ? undefined : true}
+            title={chatEnabled ? undefined : CHAT_HINT}
+            onClick={chatEnabled ? onChat : undefined}
+          >
             Chat
           </button>
         )}

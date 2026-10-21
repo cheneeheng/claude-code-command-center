@@ -183,4 +183,16 @@ export const generatedPanelSchema = z.discriminatedUnion('kind', [
   statSchema.extend(id),
 ]);
 export type GeneratedPanel = z.infer<typeof generatedPanelSchema>;
+/**
+ * `add_panel` as the model sees it: one object, because the Claude API refuses a tool schema
+ * without a top-level `type: "object"` and refuses a top-level union. Each call is still
+ * validated against the stricter {@link addPanelSchema}, whose error names what a kind requires.
+ */
+export const addPanelToolSchema = z.object({
+  ...sectionId,
+  kind: z.enum(['bars', 'trend', 'table', 'stat']),
+  ...base,
+  query: querySchema,
+});
 assertNoStyleKeys('add_panel', z.toJSONSchema(addPanelSchema));
+assertNoStyleKeys('add_panel', z.toJSONSchema(addPanelToolSchema));

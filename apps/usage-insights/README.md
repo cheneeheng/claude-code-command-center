@@ -72,11 +72,13 @@ counts. The forecast always covers the current week (Monday to Sunday) and calen
 With an Anthropic API key set, a **Chat** button opens a drawer beside the dashboard. Ask a
 question such as "Which projects cost more than last month?" or "Show my Opus spend per week",
 and the agent answers by adding panels to the dashboard. It can also add sections, move panels,
-and remove them. Without a key, the button is hidden and the dashboard works as before.
+and remove them. Without a key, the button is greyed out, its tooltip names the variable to set,
+and the dashboard works as before. After setting the key, stop the running `usage-insights` and
+start it again: a server started before the key existed keeps the chat off.
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `C4_USAGE_INSIGHTS_API_KEY` | unset | Anthropic API key for the chat. Unset hides the chat. |
+| `C4_USAGE_INSIGHTS_API_KEY` | unset | Anthropic API key for the chat. Unset turns the chat off. |
 | `C4_USAGE_INSIGHTS_MODEL` | `claude-sonnet-5-5` | Model the chat runs on. |
 
 - **Why not `ANTHROPIC_API_KEY`:** Claude Code reads that variable too. Setting it in your user

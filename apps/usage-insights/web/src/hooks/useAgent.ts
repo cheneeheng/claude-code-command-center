@@ -2,7 +2,7 @@ import { HttpAgent, randomUUID } from '@ag-ui/client';
 import { useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 
-import { addPanelSchema, kinds, type PanelFields } from '../catalogue/kinds';
+import { addPanelSchema, addPanelToolSchema, kinds, type PanelFields } from '../catalogue/kinds';
 import { addPanel, addSection, type EditResult, layoutState, movePanel, removePanel } from '../layout/edits';
 import type { Layout } from '../layout/model';
 
@@ -16,6 +16,8 @@ type Tool = {
   name: string;
   description: string;
   schema: z.ZodType;
+  /** What the model is sent, when it differs from `schema` (which validates each call). */
+  parameters?: z.ZodObject;
   /** Applies validated arguments; a note is shown in the chat. */
   apply: (args: never, layout: Layout) => EditResult & { note?: string };
 };
@@ -31,6 +33,7 @@ const TOOLS: Tool[] = [
       'Add a panel to the end of a section. The panel shows the server-computed result of its ' +
       `query; never put figures in its title or caption. Kinds:\n${kindHelp}`,
     schema: addPanelSchema,
+    parameters: addPanelToolSchema,
     apply: (args: z.infer<typeof addPanelSchema>, layout) => {
       const { section_id, ...fields } = args;
       const result = addPanel(layout, section_id, fields as PanelFields, `g-${randomUUID()}`);
@@ -59,10 +62,10 @@ const TOOLS: Tool[] = [
   },
 ];
 
-const toolDefs = TOOLS.map(({ name, description, schema }) => ({
+const toolDefs = TOOLS.map(({ name, description, schema, parameters }) => ({
   name,
   description,
-  parameters: z.toJSONSchema(schema) as Record<string, unknown>,
+  parameters: z.toJSONSchema(parameters ?? schema) as Record<string, unknown>,
 }));
 
 /**
