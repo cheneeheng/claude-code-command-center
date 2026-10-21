@@ -309,8 +309,9 @@ flowchart LR
   (titles of refs from their eyebrow), so the agent knows what exists. The server validates it
   (ids and titles are strings, at most 50 sections and 200 panels, else it is dropped) and adds it
   as a text block, "Current layout: <json>", to the start of the new user turn. It goes into the
-  user turn, not the system prompt, so the system prompt stays cacheable and browser-written text
-  never enters it. The system prompt says: the
+  user turn, after any tool results the turn carries (the API requires those first), and only
+  when it changed since the last turn. It stays out of the system prompt, so that stays
+  cacheable and browser-written text never enters it. The system prompt says: the
   app fixes how panels look, a panel only ever shows its query's result, captions describe what the
   panel answers and never quote a figure, and figures in chat text come from `run_query` results.
 - **Threads:** in memory, keyed by `threadId`, capped at `MAX_THREADS = 20` (oldest dropped). The
@@ -455,7 +456,17 @@ flowchart LR
   - `test_exception_becomes_run_error`
   - A boot check: the server on a free port answers a scripted run on `/api/agent` with
     `text/event-stream` events ending in `RUN_FINISHED`, read until the connection closes.
-- **Status:** todo
+- **Status:** done. With no API key in the environment: ruff and mypy clean, `uv run pytest`
+  87 passed (17 in `tests/test_agent.py`). `anthropic` resolved to 2.0.0; its
+  `beta.messages.stream` takes the template's parameters unchanged. Request parameters, from the
+  `claude-api` skill: streaming, `max_tokens` 64000, `effort: medium`, `eager_input_streaming`
+  on every tool, `fallbacks: "default"` with the `server-side-fallback-2026-07-01` beta, plus
+  top-level `cache_control` for automatic prompt caching. Departures from the template, needed
+  for Stop: every `tool_use` id stays in `awaiting` until its result is held or sent, so a
+  disconnect at any point leaves the next run able to pair it. The layout block follows the
+  canvas's tool results, not before them (the API wants `tool_result` blocks first in a user
+  turn), and is sent only when it changed. The write loop is `agent.pump`, so the
+  `BrokenPipeError` test needs no socket.
 
 ### Phase 5: Chat drawer
 
@@ -531,3 +542,7 @@ flowchart LR
 - 2026-10-21 Built Phase 1: fresh prices and built-in lists, checks green
 - 2026-10-21 Built Phase 2: typed query endpoint, checks green
 - 2026-10-21 Built Phase 3: serialisable layout and generated panels, checks green
+- 2026-10-21 Design changed: State line was "adds it as a text block, "Current layout: <json>",
+  to the start of the new user turn"; now after the turn's tool results and only when changed,
+  because a user turn answering tool calls must start with its `tool_result` blocks
+- 2026-10-21 Built Phase 4: agent endpoint, checks green

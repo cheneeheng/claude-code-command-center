@@ -17,12 +17,16 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from usage_insights import aggregate, export, query, reference, store
+from ag_ui.core import RunAgentInput
+from ag_ui.encoder import EventEncoder
+
+from usage_insights import agent, aggregate, export, query, reference, store
 from usage_insights.inventory import Inventory, load_inventory
 
 STATIC_DIR = Path(__file__).parent / "static"
 QUERY_MAX_BYTES = 16384
 LAYOUT_MAX_BYTES = 262144
+AGENT_MAX_BYTES = 1048576  # a run carries the whole AG-UI message list
 
 
 class Server(ThreadingHTTPServer):
@@ -112,7 +116,12 @@ class Handler(BaseHTTPRequestHandler):
         if not self._host_ok():
             return
         url = urlsplit(self.path)
-        routes = {"/api/refresh": self._refresh, "/api/query": self._query}
+        routes = {
+            "/api/refresh": self._refresh,
+            "/api/query": self._query,
+            # Same-origin like every POST: each run spends the user's API credit.
+            "/api/agent": self._agent,
+        }
         handler = routes.get(url.path)
         if handler is None:
             self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
@@ -208,6 +217,43 @@ class Handler(BaseHTTPRequestHandler):
             return
         self._json(HTTPStatus.OK, data)
 
+    def _agent(self, _qs: dict[str, list[str]]) -> None:
+        key = agent.api_key()
+        if key is None:
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE,
+                       {"error": f"set {agent.KEY_VAR} to use the chat"})
+            return
+        try:
+            run_input = RunAgentInput.model_validate(self._read_json(AGENT_MAX_BYTES))
+        except ValueError as exc:  # pydantic's ValidationError is a ValueError
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return
+        db = self.server.db
+
+        def skill_names() -> frozenset[str]:
+            return frozenset(i.name for i in self._inventory(reference.load(db.parent)).skills)
+
+        ctx = agent.Context(db, skill_names)
+        encoder = EventEncoder(accept=self.headers.get("Accept", "text/event-stream"))
+        try:
+            with agent.checkout(run_input.thread_id) as thread:
+                # HTTP/1.0 and no Content-Length: the stream ends when the connection closes.
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", encoder.get_content_type())
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                events = agent.run(
+                    thread, run_input, ctx, agent.make_client(key), agent.model_name()
+                )
+
+                def write(chunk: bytes) -> None:
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
+
+                agent.pump(events, encoder.encode, write)
+        except agent.Busy:
+            self._json(HTTPStatus.CONFLICT, {"error": "this chat is already running"})
+
     def _refresh(self, _qs: dict[str, list[str]]) -> None:
         try:
             result = export.run_export(self.server.db, self.server.claude_dirs, progress=_quiet)
@@ -237,6 +283,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:  # noqa: BLE001 - e.g. a store without schema; the page shows it
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
             return
+        data["chat"] = {"enabled": agent.api_key() is not None}
         self._json(HTTPStatus.OK, data)
 
     def _static(self, path: str) -> None:
