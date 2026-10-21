@@ -14,6 +14,7 @@ from claude_usage.pricing import (
     model_costs,
     model_family,
     price_for,
+    prices_from_litellm,
 )
 from claude_usage.sessions import (
     Activity,
@@ -47,5 +48,6 @@ __all__ = [
     "model_family",
     "parse_file",
     "price_for",
+    "prices_from_litellm",
     "transcript_files",
 ]

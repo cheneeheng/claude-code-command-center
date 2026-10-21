@@ -81,7 +81,9 @@ never collides with Claude Code's or the OS's variables:
 | `C4_STATUSLINE_NOW` | `statusline-hook` | Test-only: pins "now" (epoch seconds) for the golden fixtures. |
 | `C4_STATUSLINE_LIVE_TIMEOUT` | `usage-dashboard` | Seconds a session may be idle before dropping out of the live view (default `1800`). |
 | `C4_PLAN_PRICE_USD` | `usage-dashboard` | Monthly Claude subscription price; lights up the dashboard's Plan Value (ROI) card when set. |
-| `C4_USAGE_INSIGHTS_HOME` | `usage-insights` | Store dir holding `usage.db` (default `~/.usage-insights`). |
+| `C4_USAGE_INSIGHTS_HOME` | `usage-insights` | Store dir holding `usage.db`, `reference.json`, and `layout.json` (default `~/.usage-insights`). |
+| `C4_USAGE_INSIGHTS_API_KEY` | `usage-insights` | Anthropic API key for the chat; unset turns it off. Not `ANTHROPIC_API_KEY`, which Claude Code reads too. Each message spends API credit. |
+| `C4_USAGE_INSIGHTS_MODEL` | `usage-insights` | Model the chat runs on (default `claude-sonnet-5-5`). |
 | `C4_STUB_LIST`, `C4_STUB_LIST_FAIL`, `C4_STUB_LOG` | `marketplace-updater` | Test-only: the stub `claude` CLI's plugin list file, a switch that makes the list fail, and its call log. |
 | `C4_ROUNDTABLE_REGISTRY` | `multi-repo-workspace` | Registry file path (overridden by `--registry`, ahead of `./.roundtable.json`). |
 | `C4_ROUNDTABLE_HOME` | `multi-repo-workspace` | App state dir — rounds, session transcripts, run output (default `~/.roundtable`). |

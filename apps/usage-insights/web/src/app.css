@@ -312,6 +312,90 @@ body {
   padding: 0;
 }
 
+/* ── Chat drawer ─────────────────────────────────────────────────────────── */
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.drawer {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  bottom: var(--space-4);
+  width: min(28rem, calc(100vw - var(--space-8)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--surface);
+  z-index: 10;
+}
+.drawer-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.drawer-title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--fs-300);
+}
+.chat-lines {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.chat-line {
+  max-width: 90%;
+}
+.chat-user {
+  align-self: flex-end;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--secondary-wash);
+}
+.chat-note {
+  font-size: var(--fs-75);
+  color: var(--fg-muted);
+}
+.chat-starters {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.chat-starters > p {
+  margin: 0;
+}
+.chat-form {
+  display: flex;
+  gap: var(--space-2);
+}
+.chat-form .input {
+  flex: 1;
+  min-width: 0;
+}
+.drawer > p {
+  margin: 0;
+}
+/* Wide screens: the page makes room for the drawer instead of sitting under it. */
+@media (min-width: 768px) {
+  .with-drawer {
+    padding-right: calc(min(28rem, 100vw) + var(--space-4));
+  }
+}
+@media (max-width: 767px) {
+  .drawer {
+    inset: 0;
+    width: auto; /* not 100vw: that counts the scrollbar and pushes the drawer off-screen */
+    border-radius: 0;
+  }
+}
+
 /* ── States ──────────────────────────────────────────────────────────────── */
 .state-panel {
   max-width: 65ch;

@@ -9,6 +9,8 @@ description = "Decision-focused Claude Code usage dashboard: projection, spend, 
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "ag-ui-protocol>=1.0.0",
+    "anthropic>=1.9",
     "claude-plugins",
     "claude-usage",
 ]

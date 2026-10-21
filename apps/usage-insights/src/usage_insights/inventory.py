@@ -1,7 +1,8 @@
 """What is installed: skills, subagents, MCP servers, and built-in tools.
 
 Used names missing from the inventory still show on the dashboard, with source
-``unknown``. The built-in lists are hand-kept and can drift from Claude Code's.
+``unknown``. The built-in lists come from ``reference.json`` when an export
+fetched them; the hand-kept constants here are the fallback and can drift.
 """
 
 from __future__ import annotations
@@ -66,13 +67,22 @@ def _add(items: dict[str, Item], name: str, source: str) -> None:
     items.setdefault(name, Item(name, source))
 
 
-def load_inventory(claude_dirs: list[Path], project_paths: list[Path]) -> Inventory:
+def load_inventory(
+    claude_dirs: list[Path],
+    project_paths: list[Path],
+    builtin_tools: list[str] | None = None,
+    builtin_agents: list[str] | None = None,
+) -> Inventory:
     """Read what is installed for the given Claude dirs and project roots.
 
     Args:
         claude_dirs: Claude config dirs (``~/.claude`` by default elsewhere).
         project_paths: Project roots whose project/local plugins, ``.claude``
             skills and agents, and MCP servers count as installed.
+        builtin_tools: Fetched built-in tool names; empty or ``None`` uses
+            :data:`BUILTIN_TOOLS`.
+        builtin_agents: Fetched built-in agent names; empty or ``None`` uses
+            :data:`BUILTIN_AGENTS`. One also found as a file keeps the file's source.
 
     Returns:
         The :class:`Inventory`.
@@ -122,8 +132,11 @@ def load_inventory(claude_dirs: list[Path], project_paths: list[Path]) -> Invent
         for name in _server_names(_read_json(root / ".mcp.json")):
             _add(servers, name, "project")
 
-    for name in BUILTIN_AGENTS:
+    for name in builtin_agents or BUILTIN_AGENTS:
         _add(agents, name, "built-in")
     return Inventory(
-        list(skills.values()), list(agents.values()), list(servers.values()), list(BUILTIN_TOOLS)
+        list(skills.values()),
+        list(agents.values()),
+        list(servers.values()),
+        list(builtin_tools or BUILTIN_TOOLS),
     )

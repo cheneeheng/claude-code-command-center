@@ -21,9 +21,11 @@ changed file (`uv run python -m py_compile src/claude_usage/<file>.py`); lint/ty
 - `sessions.py` — transcript discovery and parsing: `parse_file` (one file, deduped within it),
   the global merge behind `load_usage` / `load_sessions`, `transcript_files`, `claude_dirs`, and
   the `Session`, `MessageUsage`, `UsageEvent`, `FileParse` dataclasses.
-- `pricing.py` — the pricing tables and cost math: `price_for` (`MODEL_PRICES` by model-id
-  prefix, then the `MODEL_COSTS` family fallback), `estimated_cost`, `model_family`,
-  `model_costs`.
+- `pricing.py` — the pricing tables and cost math: `price_for` (an optional `prices` overlay
+  merged over `MODEL_PRICES`, by model-id prefix, then the `MODEL_COSTS` family fallback),
+  `estimated_cost`, `model_family`, `model_costs`, and `prices_from_litellm`, which parses
+  LiteLLM's price file into an overlay. Fetching it is the caller's job: the library stays
+  offline.
 
 ## Invariants — do not break these
 

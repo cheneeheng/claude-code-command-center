@@ -5,6 +5,8 @@ over Claude Code usage. An exporter copies transcripts into an upsert-only SQLit
 aggregator turns the store plus an inventory of installed skills, agents, and MCP servers into one
 JSON payload, and a React page renders that payload through a data-driven layout. Parsing and
 pricing live in the in-repo `claude-usage` library, and plugin reading in `claude-plugins`.
+With an API key set, a chat drawer talks to a Claude agent over AG-UI. The agent edits a saved
+layout whose generated panels each hold a typed query that the server computes.
 
 ## System context
 
@@ -15,6 +17,10 @@ flowchart LR
     app <-->|"usage.db"| db[("~/.usage-insights<br/>or $C4_USAGE_INSIGHTS_HOME")]
     you([You]) -->|"usage-insights → browser @ 127.0.0.1:8090"| app
     task["Task Scheduler (Windows)<br/>or cron (printed)"] -->|"usage-insights-bg export"| app
+    app -->|"export only, daily: prices"| ll["LiteLLM price file"]
+    app -->|"export only, daily: tool names"| docs["Claude Code docs"]
+    app -->|"export only, daily: agent names"| cli["local claude CLI<br/>(initialize, no prompt)"]
+    app -->|"chat, with C4_USAGE_INSIGHTS_API_KEY"| api["Anthropic API"]
 ```
 
 ## Components
@@ -29,22 +35,63 @@ flowchart LR
   P --> INV
   DB --> AG["aggregate.py<br/>projection, spend, health"]
   INV --> AG
-  AG --> SV["server.py<br/>GET /api/summary, POST /api/refresh"]
-  SV --> UI["web/ React app<br/>catalogue + defaultLayout"]
   CLI["cli.py"] --> SV
   CLI --> EX
+  CLI -->|"export only"| REF["reference.py<br/>daily fetch, fallback"]
+  REF --> RJ[("reference.json")]
+  RJ --> AG
+  RJ --> INV
+  DB --> Q["query.py<br/>typed query, read-only"]
+  AG --> SV["server.py<br/>/api/summary, /api/refresh,<br/>/api/query, /api/layout, /api/agent"]
+  Q --> SV
+  LJ[("layout.json")] <--> SV
+  AGT["agent.py<br/>Claude loop, AG-UI events"] --> SV
+  AGT --> Q
+  SV --> UI["web/ React app<br/>catalogue, layout model,<br/>chat drawer + useAgent"]
 ```
 
 | Module | Owns |
 |--------|------|
-| `cli.py` | `usage-insights` (export, then serve and open the browser) and `usage-insights export`; the bind-failure handling. |
+| `cli.py` | `usage-insights` (export, then serve and open the browser) and `usage-insights export` (which also refreshes reference data); the bind-failure handling. |
+| `reference.py` | `reference.json`: LiteLLM prices, docs tool names, `claude` CLI agent names, each re-fetched after 24 h, each falling back to the built-in list. |
+| `query.py` | The typed query: `parse` validates a spec into `Spec`, `run` computes rows, total, and the previous-period change read-only. |
+| `agent.py` | The chat loop: per-thread append-only transcript, frontend tool allowlist, `list_values` and `run_query`, one `RUN_FINISHED` or `RUN_ERROR` per run. |
 | `store.py` | Schema, `PRAGMA user_version`, the backup before a rebuild, `BEGIN IMMEDIATE` and `ExportBusy`. |
 | `export.py` | Skip unchanged files by size and mtime, upsert sessions, messages, and events. |
 | `inventory.py` | Installed skills and agents (user, plugin, project), MCP servers, built-in lists. |
 | `aggregate.py` | The `/api/summary` payload. Every tunable number is a constant at its top. |
-| `server.py` | Host check, `/api/health`, `/api/summary`, `/api/refresh`, static files. |
-| `web/src/catalogue/` | Presentational components with exported props types and no fetching. |
+| `server.py` | Host check, `/api/health`, `/api/summary`, `/api/refresh`, `/api/query`, `/api/layout`, the SSE response of `/api/agent`, static files. |
+| `web/src/catalogue/` | Presentational components with exported props types and no fetching; `kinds.tsx` holds the four generated panel kinds and their zod schemas. |
 | `web/src/layout/defaultLayout.ts` | Sections as data: `{ id, title, question, panels: { component, select }[] }`. |
+| `web/src/layout/model.ts`, `edits.ts` | The saved layout (refs to default panels plus generated panels), `resolve` back to renderable panels, and the agent's four edits. |
+| `web/src/hooks/useAgent.ts` | One `HttpAgent` per thread; validates each tool call, applies it, saves the layout, and answers with a tool result. |
+
+## Key flow — a chat question
+
+```mermaid
+sequenceDiagram
+    participant U as Chat drawer
+    participant S as server.py /api/agent
+    participant A as agent.py
+    participant C as Anthropic API
+    participant Q as query.py
+
+    U->>S: run (new user text, layout as state, the four tools)
+    S->>A: checkout thread (409 if a run holds it)
+    A->>C: stream (transcript + new user turn)
+    C-->>A: run_query call
+    A->>Q: parse + run (read-only)
+    A-->>U: TOOL_CALL_RESULT
+    A->>C: stream again
+    C-->>A: add_panel call
+    A-->>U: TOOL_CALL_*, RUN_FINISHED
+    U->>U: zod-validate, apply, PUT /api/layout
+    U->>S: next run with the tool result
+    S->>A: fold in result
+    A->>C: stream
+    C-->>A: short text
+    A-->>U: TEXT_MESSAGE_*, RUN_FINISHED
+```
 
 ## Key flow — refresh
 
@@ -161,6 +208,60 @@ followed by an `interrupt` in the same session within 15 minutes. The numbers ar
 `aggregate.py`.
 **Consequences:** 13 flagged skills on local data dropped to 4. Tool errors stay in the store for a
 later rule.
+
+### 2026-10-21 — Generated panels hold a typed query, never agent-written figures
+
+**Status:** Accepted
+**Context:** A chat agent places panels. A wrong figure is the worst failure for a dashboard used
+to decide things, and a model writing numbers into a component can produce one.
+**Decision:** A generated panel holds a query (metric, one grouping, filters, range including the
+calendar month, optional previous-period comparison, limit). The server validates it once and
+computes it read-only with the same row helpers as the summary. There is no free-form SQL tool,
+and captions never quote a figure. Figures the agent writes in chat come from `run_query`.
+**Consequences:** Every number on screen comes from the same store and code as the default
+panels. Questions needing two groupings at once (cost per model per day) are out of reach until a
+new chart kind exists.
+
+### 2026-10-21 — The chat uses an API key of its own, not a subscription login
+
+**Status:** Accepted
+**Context:** Anthropic's docs reserve subscription tokens for Claude Code and claude.ai.
+`ANTHROPIC_API_KEY` is read by Claude Code too, so setting it user-wide for the dashboard could
+switch the user's own `claude -p` runs to API billing.
+**Decision:** The key is `C4_USAGE_INSIGHTS_API_KEY`, passed explicitly to `Anthropic(api_key=...)`.
+Without it `/api/agent` answers 503 and the Chat button is disabled, with a hint naming the
+variable. The model defaults to
+`claude-sonnet-5-5` for cost per turn, overridable with `C4_USAGE_INSIGHTS_MODEL`.
+**Consequences:** Chat costs land on the user's API key, which the README states. The `claude`
+CLI call used for agent names strips both key variables from its environment.
+
+### 2026-10-21 — Prices and built-in lists are fetched daily, with the hand-kept lists as fallback
+
+**Status:** Accepted
+**Context:** The built-in price table had a wrong rate (Sonnet 5.5 cache reads), and the hand-kept
+tool and agent lists drift from Claude Code's.
+**Decision:** Only `usage-insights export` refreshes `reference.json`, at most once a day per part:
+prices from LiteLLM's price file (overlaying `MODEL_PRICES`, so models LiteLLM lacks still
+price), tool names from the docs tools table (fewer than 10 counts as a failure), and agent names
+from the `claude` CLI's prompt-free `initialize` request. A failed part keeps its previous value,
+and the write is a temp file plus rename. The dashboard's start, `/api/refresh`, and the tests never
+touch the network.
+**Consequences:** Prices and lists follow upstream within a day and fall back silently offline. The
+`initialize` control request is not a documented public interface, so a CLI change falls back to
+the hand-kept agent list.
+
+### 2026-10-21 — Stream AG-UI from the stdlib server instead of adding FastAPI
+
+**Status:** Accepted
+**Context:** The AG-UI agent template runs on FastAPI and uvicorn. This app is one local user on
+`ThreadingHTTPServer`.
+**Decision:** `/api/agent` writes SSE from the existing handler: HTTP/1.0, no `Content-Length`,
+each event written and flushed, the connection closed at the end. A failed write (Stop, a closed
+tab) closes the run before its next model request, and the next run answers every unpaired tool
+call with an error result. One run per thread at a time (409 otherwise), and threads live in
+memory, capped at 20.
+**Consequences:** The only new runtime dependencies are `anthropic` and `ag-ui-protocol`. A restart
+loses chats but never the layout, which lives in `layout.json`.
 
 ### 2026-10-14 — A project is labelled by its launch folder
 

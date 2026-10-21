@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A decision-focused dashboard over Claude Code usage: projection, spend breakdown, and skill and
-tool health. It replaces `apps/usage-dashboard`. The build plan is
-`product/plans/usage-insights.md`. Its Design section is binding.
+tool health, plus a chat whose agent adds panels. It replaces `apps/usage-dashboard`. The build
+plans are `product/plans/usage-insights.md` and `product/plans/ag-ui-dashboard.md` (the chat,
+query, layout, and reference data). Their Design sections are binding.
 
 ## Commands
 
@@ -29,8 +30,11 @@ and detects the install by that task, so a change to the script's parameters or 
 update `setup/` in the same change.
 
 Env: `C4_CLAUDE_DIR` (Claude config dirs, via `claude-usage`), `C4_USAGE_INSIGHTS_HOME` (store
-dir, default `~/.usage-insights`). Point both at temp dirs in any check that runs the CLI, so it
-never writes to the real store.
+dir, default `~/.usage-insights`), `C4_USAGE_INSIGHTS_API_KEY` (the chat's Anthropic key; unset
+turns the chat off), `C4_USAGE_INSIGHTS_MODEL` (default `claude-sonnet-5-5`). Point the first two at
+temp dirs in any check that runs the CLI, so it never writes to the real store. On Windows give
+`C4_USAGE_INSIGHTS_HOME` a Windows path: a Git Bash `/c/...` path reaches Python as `C:\c\...`.
+A run with a real key spends API credit: ask first.
 
 ## Code structure (`src/usage_insights/`)
 
@@ -39,12 +43,23 @@ never writes to the real store.
 - `store.py` — the SQLite schema, its version handling, and the write lock.
 - `inventory.py` — installed skills, agents, MCP servers, and built-in tools.
 - `aggregate.py` — the `/api/summary` payload: projection, spend, and health. Tunable numbers are
-  named constants at its top.
-- `server.py` — the HTTP API, the Host check, and the static frontend.
+  named constants at its top. Its row helpers (`message_cost`, `local_day`, `project_labels`,
+  `session_project`, `range_start`) are shared with `query.py`, so the two never disagree.
+- `query.py` — the typed query behind `POST /api/query` and the agent's `run_query`: `parse`
+  validates a spec once (a `ValueError` naming the field), `run` computes it read-only.
+- `reference.py` — `reference.json`: prices from LiteLLM, built-in tools from the docs, built-in
+  agents from the `claude` CLI's `initialize`, each at most daily, each with a fallback. Only the
+  `export` subcommand calls `refresh`; tests block its `urlopen` and `run` (`tests/conftest.py`).
+- `agent.py` — the chat: a sync port of the `ceh-ag-ui` agent-server loop, streaming AG-UI events.
+  Append-only transcript per thread, frontend tools allowlisted, two read-only backend tools.
+- `server.py` — the HTTP API, the Host check, the static frontend, `/api/layout`, and the SSE
+  response for `/api/agent`.
 
-`web/src/catalogue/` holds one presentational component per file, no data fetching.
-`web/src/layout/defaultLayout.ts` maps the payload to panels as data, so the later AG-UI phase can
-replace the layout at runtime. Keep it data, not JSX.
+`web/src/catalogue/` holds one presentational component per file, no data fetching, plus
+`define.ts` and `kinds.tsx` (the four generated panel kinds and their zod schemas, which refuse
+style-like keys). `web/src/layout/defaultLayout.ts` maps the payload to panels as data; keep it
+data, not JSX. `layout/model.ts` turns it into the saved shape (refs plus generated panels) and
+back; `layout/edits.ts` holds the agent's four edits; `hooks/useAgent.ts` drives the chat.
 
 ## Invariants — do not break these
 
@@ -55,9 +70,17 @@ replace the layout at runtime. Keep it data, not JSX.
   fewer output tokens (a fork's mid-stream snapshot) never replaces it. A folded subagent file
   never blanks a session's `title` or `cwd`.
 - **The server only reads the store** (`store.connect_read_only`, `mode=ro`); only an export
-  writes. `POST /api/refresh` rejects cross-site requests, on top of the Host check.
-- **Cost is computed at query time** from `claude_usage.price_for`, never stored, so a price fix
-  needs no re-export.
+  writes `usage.db`. Request handlers write `layout.json` and nothing else, apart from the export
+  `/api/refresh` runs. The `export` subcommand writes `usage.db` and `reference.json`. Every POST,
+  PUT, and DELETE rejects cross-site requests, on top of the Host check.
+- **Cost is computed at query time** from `claude_usage.price_for` with the fetched prices as the
+  overlay, never stored, so a price fix needs no re-export.
+- **The agent never writes a figure.** A generated panel holds a typed query that the server
+  runs; there is no free-form SQL tool. The browser never writes the prompt: client system,
+  developer, and assistant messages are ignored, and frontend tools outside `FRONTEND_TOOLS` are
+  dropped.
+- **The chat key is `C4_USAGE_INSIGHTS_API_KEY`, never `ANTHROPIC_API_KEY`**, which Claude Code
+  reads too. The `initialize` call strips both from the child's env.
 - **One writer at a time.** An export takes `BEGIN IMMEDIATE` with a short timeout and raises
   `ExportBusy` instead of waiting out a long first export. A store backup must happen before the
   write lock is taken.

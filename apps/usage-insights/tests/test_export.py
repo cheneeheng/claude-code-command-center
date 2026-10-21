@@ -8,7 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from usage_insights import cli, export, store
+from usage_insights import cli, export, reference, store
+
+
+@pytest.fixture(autouse=True)
+def _no_reference_refresh(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The ``export`` subcommand refreshes reference data; these tests cover the export."""
+    monkeypatch.setattr(reference, "refresh", lambda *_a: None)
 
 
 def _rows(db: Path, sql: str) -> list[tuple[object, ...]]:

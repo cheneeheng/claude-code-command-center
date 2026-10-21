@@ -9,10 +9,17 @@ function respond(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
+/** `GET /api/layout` answers 204 (nothing saved); every other call goes to `fn`. */
+function stubFetch(fn: ReturnType<typeof vi.fn<typeof fetch>>) {
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
+    input === '/api/layout' && !init ? Promise.resolve(new Response(null, { status: 204 })) : fn(input, init),
+  );
+}
+
 function mockFetch(...responses: Response[]) {
   const fn = vi.fn<typeof fetch>();
   for (const r of responses) fn.mockResolvedValueOnce(r);
-  vi.stubGlobal('fetch', fn);
+  stubFetch(fn);
   return fn;
 }
 
@@ -107,7 +114,7 @@ describe('App states', () => {
     const first = deferred();
     const second = deferred();
     const fetchMock = vi.fn<typeof fetch>().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
-    vi.stubGlobal('fetch', fetchMock);
+    stubFetch(fetchMock);
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: '7 days' }));
     second.resolve(respond(200, { ...summary, range: '7d', projects: summary.projects.slice(0, 1) }));

@@ -67,6 +67,50 @@ usage-insights export            # export only
 Press Ctrl+C to stop the server. The range buttons (7d, 30d, 90d, all) scope the spend and health
 counts. The forecast always covers the current week (Monday to Sunday) and calendar month.
 
+## Chat
+
+With an Anthropic API key set, a **Chat** button opens a drawer beside the dashboard. Ask a
+question such as "Which projects cost more than last month?" or "Show my Opus spend per week",
+and the agent answers by adding panels to the dashboard. It can also add sections, move panels,
+and remove them. Without a key, the button is greyed out, its tooltip names the variable to set,
+and the dashboard works as before. After setting the key, stop the running `usage-insights` and
+start it again: a server started before the key existed keeps the chat off.
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `C4_USAGE_INSIGHTS_API_KEY` | unset | Anthropic API key for the chat. Unset turns the chat off. |
+| `C4_USAGE_INSIGHTS_MODEL` | `claude-sonnet-5-5` | Model the chat runs on. |
+
+- **Why not `ANTHROPIC_API_KEY`:** Claude Code reads that variable too. Setting it in your user
+  environment for this dashboard could switch your own `claude -p` runs to API billing.
+- **Cost:** every message spends API credit on your key, billed per token at the model's API
+  price, not through a Claude subscription. A question usually takes a few model requests,
+  because the agent checks each query before placing its panel. A run stops after 8 requests.
+- **Figures come from the store, never from the model:** a generated panel holds a typed query,
+  and the server computes what it shows, the same way it computes the default panels. The agent
+  cannot write a figure into a panel.
+- **Your layout is saved** to `layout.json` in the store dir and survives a restart. **Reset
+  layout** in the top bar deletes it and brings back the default panels, which also removes every
+  generated panel. A saved layout keeps the default panels that existed when it was saved, so a
+  default panel added in a later version appears only after Reset.
+- **Chats live in server memory:** a restart loses the conversation, never the layout. New chat
+  starts over.
+
+## Network sources
+
+The scheduled `usage-insights export` (not the dashboard itself) refreshes three lists at most
+once a day and caches them in `reference.json` in the store dir. Each falls back to a list built
+into the app when its fetch fails, and the export prints one line per fetch and per failure.
+
+| Data | Source | Fallback |
+|------|--------|----------|
+| Model prices | LiteLLM's public price file on GitHub (Anthropic entries) | The price table in `claude-usage` |
+| Built-in tool names | The Claude Code docs tools table | A hand-kept list |
+| Built-in agent names | Your local `claude` CLI, asked with a prompt-free `initialize` request, so no model turn runs and no API key is passed to it | A hand-kept list |
+
+The dashboard says under each cost forecast which prices it used: "Prices from LiteLLM" with the
+fetch date, or "Built-in prices".
+
 ## The store
 
 The store is a SQLite file at `~/.usage-insights/usage.db`, or `$C4_USAGE_INSIGHTS_HOME/usage.db`.
@@ -76,8 +120,11 @@ The store is a SQLite file at `~/.usage-insights/usage.db`, or `$C4_USAGE_INSIGH
 - **Incremental:** an export re-reads only transcripts whose size or modification time changed.
 - **Untimed lines:** a transcript line with no timestamp is stored but counts in no dashboard
   figure, because it has no date to place it on. The export's message count includes it.
-- **Cost** is computed when the page loads, from the price table in `claude-usage`, so a price fix
-  needs no re-export. Models missing from the table are listed as unpriced instead of costed at $0.
+- **Cost** is computed when the page loads, from the fetched prices over the price table in
+  `claude-usage`, so a price fix needs no re-export. Models missing from both are listed as
+  unpriced instead of costed at $0.
+- **Beside it** in the same dir: `reference.json` (the fetched lists above) and `layout.json`
+  (your edited layout, when there is one).
 - **Upgrades:** when a new version changes the store's schema, the next export copies the old file
   to `usage.db.bak.v<old version>` and rebuilds from the transcripts still on disk. Rows for
   transcripts Claude Code already deleted are lost from the new store, and the export prints a
@@ -112,4 +159,5 @@ cd web && bun run typecheck && bun run test && bun run build
 
 `bun run build` writes the frontend into `src/usage_insights/static/`, which the server serves.
 The design and its reasons are in [`product/ARCHITECTURE.md`](product/ARCHITECTURE.md) and the
-build plan in [`product/plans/usage-insights.md`](product/plans/usage-insights.md).
+build plans in [`product/plans/`](product/plans/). The tests never reach the network or the
+`claude` CLI, and the chat's tests need no API key.

@@ -14,7 +14,7 @@ from datetime import date, datetime, timedelta, tzinfo
 from pathlib import Path, PurePath
 from typing import Any
 
-from claude_usage import estimated_cost, price_for
+from claude_usage import ModelPrice, estimated_cost, price_for
 
 from usage_insights import store
 from usage_insights.inventory import Inventory, Item
@@ -72,7 +72,38 @@ def _projection(daily: dict[date, float], now: datetime) -> dict[str, Json]:
     return out
 
 
-def _labels(sessions: dict[str, tuple[Any, ...]]) -> dict[str, str]:
+def range_start(today: date, days: int | None) -> date | None:
+    """First local date of an ``Nd`` range: today minus N - 1 days; ``None`` for all."""
+    return today - timedelta(days=days - 1) if days else None
+
+
+def local_day(ts_raw: str, tz: tzinfo | None) -> date:
+    """The local date of a stored ISO timestamp."""
+    return datetime.fromisoformat(ts_raw).astimezone(tz).date()
+
+
+def message_cost(
+    model: str,
+    inp: int,
+    out: int,
+    cw: int,
+    cr: int,
+    cw1h: int,
+    prices: dict[str, ModelPrice] | None,
+) -> tuple[float, int]:
+    """One stored message's estimated cost and total tokens."""
+    counts = {"input": inp, "output": out, "cache_write": cw, "cache_read": cr,
+              "cache_write_1h": cw1h}
+    return estimated_cost({model: counts}, prices), inp + out + cw + cr + cw1h
+
+
+def session_project(sid: str, sessions: dict[str, tuple[Any, ...]],
+                    labels: dict[str, str]) -> str:
+    """The project label a session's rows count under; the id when it is unknown."""
+    return labels.get(sessions[sid][0], sid) if sid in sessions else sid
+
+
+def project_labels(sessions: dict[str, tuple[Any, ...]]) -> dict[str, str]:
     """Project folder -> display label: basename of the folder sessions start in.
 
     Claude Code names the project folder after the launch dir, with every
@@ -181,6 +212,8 @@ def summary(
     now: datetime,
     data_dirs: list[Path],
     tz: tzinfo | None,
+    prices: dict[str, ModelPrice] | None = None,
+    prices_as_of: str | None = None,
 ) -> Json:
     """Build the ``/api/summary`` payload.
 
@@ -195,6 +228,10 @@ def summary(
         tz: The zone that turns timestamps into local dates. ``None`` is the
             system zone, applied with the rules in force at each timestamp, so
             dates before a DST change keep that day's offset.
+        prices: Fetched prices overlaying the built-in table, for both the cost
+            and the unpriced-model check.
+        prices_as_of: When ``prices`` was fetched, echoed as
+            ``totals.prices_as_of``; ``None`` means the built-in table.
 
     Raises:
         ValueError: ``range_key`` is not a known range.
@@ -208,7 +245,9 @@ def summary(
         "store_path": str(db),
     }
     if not db.is_file():
-        return {**payload, **_empty()}
+        empty = _empty()
+        empty["totals"]["prices_as_of"] = prices_as_of
+        return {**payload, **empty}
 
     with store.connect_read_only(db) as conn:
         sessions = {r[0]: r[1:] for r in conn.execute(
@@ -222,16 +261,16 @@ def summary(
 
     today = now.date()
     days = RANGES[range_key]
-    start = today - timedelta(days=days - 1) if days else None
+    start = range_start(today, days)
     prev_start = start - timedelta(days=days) if start and days else None
 
     def in_range(ts: datetime) -> bool:
         return start is None or ts.astimezone(tz).date() >= start
 
-    labels = _labels(sessions)
+    labels = project_labels(sessions)
 
     def label(sid: str) -> str:
-        return labels.get(sessions[sid][0], sid) if sid in sessions else sid
+        return session_project(sid, sessions, labels)
 
     tokens: Counter[str] = Counter()
     cost_total = 0.0
@@ -246,11 +285,8 @@ def summary(
     project_daily: dict[str, dict[date, float]] = defaultdict(lambda: defaultdict(float))
 
     for sid, model, ts_raw, inp, out, cw, cr, cw1h in messages:
-        day = datetime.fromisoformat(ts_raw).astimezone(tz).date()
-        counts = {"input": inp, "output": out, "cache_write": cw, "cache_read": cr,
-                  "cache_write_1h": cw1h}
-        total = inp + out + cw + cr + cw1h
-        cost = estimated_cost({model: counts})
+        day = local_day(ts_raw, tz)
+        cost, total = message_cost(model, inp, out, cw, cr, cw1h, prices)
         proj = label(sid)
         daily_tokens[day] += total
         daily_cost[day] += cost
@@ -263,7 +299,7 @@ def summary(
                        "cache_read": cr, "total": total})
         cost_total += cost
         range_sessions.add(sid)
-        if model != "unknown" and price_for(model) is None:
+        if model != "unknown" and price_for(model, prices) is None:
             unpriced.add(model)
         for bucket in (projects[proj], models[model]):
             bucket["tokens"] += total
@@ -318,6 +354,7 @@ def summary(
                        ("input", "output", "cache_write", "cache_read", "total")},
             "sessions": len(range_sessions),
             "unpriced_models": sorted(unpriced),
+            "prices_as_of": prices_as_of,
         },
         "projection": {
             "week": {"tokens": token_proj["week"], "cost_usd": cost_proj["week"]},

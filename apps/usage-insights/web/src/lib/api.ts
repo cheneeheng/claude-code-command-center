@@ -48,6 +48,8 @@ export type Summary = {
     tokens: { input: number; output: number; cache_write: number; cache_read: number; total: number };
     sessions: number;
     unpriced_models: string[];
+    /** When the LiteLLM prices were fetched; `null` = the built-in table. */
+    prices_as_of: string | null;
   };
   projection: {
     week: PeriodPair;
@@ -72,6 +74,28 @@ export type Summary = {
     unused_builtin: string[];
     mcp_servers: { name: string; source: string; calls: number }[];
   };
+  /** Whether `C4_USAGE_INSIGHTS_API_KEY` is set, so the chat can run. */
+  chat: { enabled: boolean };
+};
+
+/** One row of a query result; `previous` and `change` only with `compare`. */
+export type QueryRow = {
+  key: string;
+  label: string;
+  value: number;
+  previous?: number;
+  change?: number | null;
+};
+
+/** The `/api/query` result; mirrors `usage_insights.query.run`. */
+export type QueryResult = {
+  metric: string;
+  group_by: string;
+  range: string;
+  unit: 'usd' | 'tokens' | 'count';
+  rows: QueryRow[];
+  total: number;
+  truncated: boolean;
 };
 
 /** Counts from one export run (`POST /api/refresh`). */
@@ -93,6 +117,12 @@ export class ApiRequestError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await send(path, init);
+  return (await response.json()) as T;
+}
+
+/** A 2xx response, or {@link ApiRequestError}. */
+async function send(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(path, init);
   if (!response.ok) {
     let message = `${response.status} ${response.statusText}`;
@@ -104,8 +134,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiRequestError(response.status, message);
   }
-  return (await response.json()) as T;
+  return response;
 }
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 /** The one place the frontend talks to the server. */
 export const apiClient = {
@@ -122,5 +154,29 @@ export const apiClient = {
    */
   refresh(): Promise<RefreshResult> {
     return request<RefreshResult>('/api/refresh', { method: 'POST' });
+  },
+  /**
+   * Run a typed query. `range` is the top bar's, used when the spec has none.
+   * @throws {ApiRequestError} 400 on a bad spec.
+   */
+  query(spec: unknown, range: Range): Promise<QueryResult> {
+    return request<QueryResult>(`/api/query?range=${range}`, {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify(spec),
+    });
+  },
+  /** The saved layout, or `null` when none is saved (204). */
+  async getLayout(): Promise<unknown> {
+    const response = await send('/api/layout');
+    return response.status === 204 ? null : ((await response.json()) as unknown);
+  },
+  /** Save the layout. */
+  async putLayout(layout: unknown): Promise<void> {
+    await send('/api/layout', { method: 'PUT', headers: JSON_HEADERS, body: JSON.stringify(layout) });
+  },
+  /** Forget the saved layout (Reset). */
+  async deleteLayout(): Promise<void> {
+    await send('/api/layout', { method: 'DELETE' });
   },
 };

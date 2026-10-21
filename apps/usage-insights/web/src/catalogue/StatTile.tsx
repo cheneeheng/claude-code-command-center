@@ -1,4 +1,4 @@
-import { tokens, usd } from '../lib/format';
+import { shortDate, tokens, usd } from '../lib/format';
 
 /** Props of {@link StatTile}: one period's so-far and forecast. */
 export type StatTileProps = {
@@ -11,6 +11,8 @@ export type StatTileProps = {
   secondary?: string;
   /** Models with no price; their cost is missing from the figures. */
   unpriced?: string[];
+  /** When the fetched prices are from; `null` means the built-in table. Omit to hide. */
+  pricesAsOf?: string | null;
 };
 
 function pct(value: number, max: number): string {
@@ -21,7 +23,16 @@ function pct(value: number, max: number): string {
  * A forecast stat. The scale runs from zero to the high end of the band: the
  * solid fill is spent so far, the wash is the likely range, the tick the forecast.
  */
-export function StatTile({ actual, forecast, low, high, unit, secondary, unpriced }: StatTileProps) {
+export function StatTile({
+  actual,
+  forecast,
+  low,
+  high,
+  unit,
+  secondary,
+  unpriced,
+  pricesAsOf,
+}: StatTileProps) {
   const fmt = unit === 'usd' ? usd : tokens;
   const max = Math.max(high, actual);
   return (
@@ -46,6 +57,11 @@ export function StatTile({ actual, forecast, low, high, unit, secondary, unprice
       {unpriced && unpriced.length > 0 && (
         <p className="badge badge-accent" title={unpriced.join(', ')}>
           {unpriced.length} unpriced model{unpriced.length > 1 ? 's' : ''} not counted
+        </p>
+      )}
+      {pricesAsOf !== undefined && (
+        <p className="subtle stat-caption">
+          {pricesAsOf ? `Prices from LiteLLM, ${shortDate(pricesAsOf)}` : 'Built-in prices'}
         </p>
       )}
     </div>

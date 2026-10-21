@@ -1,6 +1,6 @@
 ---
 title: Let usage-insights users generate analysis panels by chatting with an AG-UI agent, on fresh prices and built-in lists
-status: ready
+status: built
 created: 2026-10-21
 ---
 
@@ -15,7 +15,7 @@ agent never writes a figure into a panel. Each generated panel holds a **typed q
 computes the result from the store, and the component draws it. So every number on screen comes
 from the same store as the default panels. The page always starts from the default layout, never a
 blank canvas. The user's edited layout is saved and survives a restart, and Reset restores the
-default. Without a key, the chat is hidden and the dashboard works as it does today. The same phase
+default. Without a key, the chat is off and the dashboard works as it does today. The same phase
 replaces the hand-kept prices, built-in tool list, and built-in agent list with data fetched by
 the `usage-insights export` command, falling back to the hand-kept versions.
 
@@ -248,8 +248,10 @@ flowchart LR
 
 - Each kind is a `defineComponent({ name, description, schema, example, Component })` entry,
   ported from the `ceh-ag-ui` template's `define.ts`, so a style-like key in a schema throws at
-  startup. Unlike the template, a kind is not a tool of its own. The `add_panel` tool's schema is
-  a zod discriminated union on `kind`, built from the four kind schemas and checked by the same
+  startup. Unlike the template, a kind is not a tool of its own. The `add_panel` tool sends the
+  model one flat object schema (`addPanelToolSchema`: `kind` as an enum), because the Claude API
+  refuses a tool schema without a top-level `type: "object"`. Each call is validated against a
+  zod discriminated union on `kind`, built from the four kind schemas. Both pass the same
   style-key guard. Each kind's `description` and `example` go into `add_panel`'s tool description.
   `QueryPanel` fetches `/api/query` for its spec and the current range, and then renders:
   - `bars`: `RankedBars` from `rows` (`label`, `value`, and the change as secondary text when
@@ -309,8 +311,9 @@ flowchart LR
   (titles of refs from their eyebrow), so the agent knows what exists. The server validates it
   (ids and titles are strings, at most 50 sections and 200 panels, else it is dropped) and adds it
   as a text block, "Current layout: <json>", to the start of the new user turn. It goes into the
-  user turn, not the system prompt, so the system prompt stays cacheable and browser-written text
-  never enters it. The system prompt says: the
+  user turn, after any tool results the turn carries (the API requires those first), and only
+  when it changed since the last turn. It stays out of the system prompt, so that stays
+  cacheable and browser-written text never enters it. The system prompt says: the
   app fixes how panels look, a panel only ever shows its query's result, captions describe what the
   panel answers and never quote a figure, and figures in chat text come from `run_query` results.
 - **Threads:** in memory, keyed by `threadId`, capped at `MAX_THREADS = 20` (oldest dropped). The
@@ -320,8 +323,9 @@ flowchart LR
 
 ### Chat drawer (`web/src/components/ChatDrawer.tsx`, `web/src/hooks/useAgent.ts`)
 
-- A "Chat" button in the top bar, shown only when `chat.enabled`, opens a right-side drawer (full
-  width under 768 px) with the transcript, an input, Stop, and New chat. It starts with three
+- A "Chat" button in the top bar opens a right-side drawer (full width under 768 px). Without
+  `chat.enabled` the button is shown disabled (`aria-disabled`, still focusable) with the hint
+  "Set C4_USAGE_INSIGHTS_API_KEY and restart usage-insights to use the chat". The drawer opens with the transcript, an input, Stop, and New chat. It starts with three
   starter prompts: "Which projects cost more than last month?", "Show my daily cost this month",
   and "Which skills do I use most?". While a run is going, the drawer shows "Working…", the input
   and the send button are disabled, and Stop is shown. Stop is hidden otherwise.
@@ -367,7 +371,15 @@ flowchart LR
     three `fetched` lines and writes `reference.json` holding at least 20 prices, at least 40
     tools, and at least 4 agents. A second run within the hour prints no `fetched` line, and the
     `prices_fetched` and `lists_fetched` timestamps are unchanged.
-- **Status:** todo
+- **Status:** done. Lib: `uv run pytest` 47 passed, 100% coverage, mypy clean. App: ruff and
+  mypy clean, `uv run pytest` 39 passed. Both smoke scripts print `PASS`. Real data (temp
+  store): first export printed `fetched prices`, `fetched tool list`, `fetched agent list` and
+  wrote 22 prices, 46 tools, 5 agents. The second printed no `fetched` line and kept both
+  timestamps. No new `.jsonl` under `~/.claude/projects`. The pricing page gives Sonnet 5.5
+  cache hits as $0.10 (0.05x input), so `MODEL_PRICES` was corrected from $0.20. The docs site
+  answers 403 to urllib's default User-Agent, so fetches send `User-Agent: usage-insights`.
+  The four existing `cli export` tests now reach `refresh`, so `test_export.py` gained one
+  autouse fixture stubbing it; the tests themselves are unedited.
 
 ### Phase 2: Typed query endpoint
 
@@ -392,7 +404,12 @@ flowchart LR
   - `test_query_session_label_is_title`
   - `test_server_query_endpoint` (200 with rows, 400 on a bad spec, 403 on a cross-site POST)
   - Every existing aggregate test, unedited.
-- **Status:** todo
+- **Status:** done. `uv run ruff check . && uv run mypy src && uv run pytest`: clean, clean,
+  67 passed, `tests/test_aggregate.py` unedited. Choices the Design left open: a spec field
+  outside the six is a 400 naming it; `filters.model` on an event metric and `filters.name` on
+  a message metric are 400s, not ignored; the `model` grouping leaves out `unknown` like the
+  summary's model list; `group_by: none` returns one row, key `all`, label `All`; the request
+  body is capped at 16 KB.
 
 ### Phase 3: Serialisable layout and generated panels
 
@@ -411,7 +428,12 @@ flowchart LR
     duplicate id are dropped, each kind renders from a mocked `/api/query`, `trend` without a day or week grouping
     fails its schema, `defineComponent` throws on a `style` key, and a generated panel refetches
     when the top bar range changes.
-- **Status:** todo
+- **Status:** done. `uv run pytest`: 70 passed. `bun run typecheck && bun run test && bun run
+  build`: clean, 42 passed, built. `App.test.tsx` assertions are unedited: its fetch stub answers
+  `GET /api/layout` with 204 and sends every other call to the test's own mock. The trend kind
+  draws through `DayBars`, extracted from `PaceStrip` with the same markup. `kinds.tsx` also
+  exports `panelSchema` (the union without `id`), which Phase 5's `add_panel` uses. Reset
+  failures show "Could not reset the layout" in the top bar's message line.
 
 ### Phase 4: Agent endpoint
 
@@ -437,7 +459,17 @@ flowchart LR
   - `test_exception_becomes_run_error`
   - A boot check: the server on a free port answers a scripted run on `/api/agent` with
     `text/event-stream` events ending in `RUN_FINISHED`, read until the connection closes.
-- **Status:** todo
+- **Status:** done. With no API key in the environment: ruff and mypy clean, `uv run pytest`
+  87 passed (17 in `tests/test_agent.py`). `anthropic` resolved to 2.0.0; its
+  `beta.messages.stream` takes the template's parameters unchanged. Request parameters, from the
+  `claude-api` skill: streaming, `max_tokens` 64000, `effort: medium`, `eager_input_streaming`
+  on every tool, `fallbacks: "default"` with the `server-side-fallback-2026-07-01` beta, plus
+  top-level `cache_control` for automatic prompt caching. Departures from the template, needed
+  for Stop: every `tool_use` id stays in `awaiting` until its result is held or sent, so a
+  disconnect at any point leaves the next run able to pair it. The layout block follows the
+  canvas's tool results, not before them (the API wants `tool_result` blocks first in a user
+  turn), and is sent only when it changed. The write loop is `agent.pump`, so the
+  `BrokenPipeError` test needs no socket.
 
 ### Phase 5: Chat drawer
 
@@ -448,7 +480,7 @@ flowchart LR
     Vitest uses a mocked `HttpAgent` that emits AG-UI events, and covers: `add_panel` places a
     panel and PUTs the layout, `add_panel` with a `style` key renders without it, invalid
     arguments return an `error:` tool result and place nothing, `remove_panel` with an unknown id
-    returns an error result, the Chat button is hidden when `chat.enabled` is false, the input is
+    returns an error result, the Chat button is disabled with the key hint when `chat.enabled` is false, the input is
     disabled and Stop shown only while a run is going, Stop leaves placed panels, and a failed
     save shows its message.
   - The Phase 5 serve check from the first plan, rerun: it prints `PASS`.
@@ -458,7 +490,20 @@ flowchart LR
     `compare: previous`, and whose figures match `/api/query` for that spec. The panel is still
     there after a page reload. Then view at 1440 px and 390 px against the `ceh-ui-design`
     review checklist, which no command can judge.
-- **Status:** todo
+- **Status:** done. Live check (run by the user, 2026-10-21): the first try failed with a 400 on
+  `add_panel`'s schema, fixed per `product/fixes/add-panel-tool-schema-has-no-object-type.md`.
+  After the fix, "Which projects cost more than last month?" placed a project panel against last
+  month, and it survived a page reload. Earlier evidence: `bun run typecheck && bun run test && bun
+  run build`: clean, 51 passed (9 in `ChatDrawer.test.tsx`), built. The tests run the real
+  `HttpAgent` against a stubbed `fetch` that answers `/api/agent` with scripted SSE events, not a
+  mocked `HttpAgent` class, so the client's own event parsing is covered too. The first plan's
+  serve check prints `PASS`. Layout review with a dummy key (no message sent, no API call):
+  at 1440 px the open drawer covered the right column and the Chat button, so the page now pads
+  right while it is open; at 390 px (iframe) the drawer sat 10 px off-screen because `100vw`
+  counts the scrollbar, so it is now anchored with `inset: 0`. Both fixed and rechecked. Found
+  while building: `HttpAgent.runAgent` resolves on `RUN_ERROR`, so `useAgent` reads it through
+  `onRunErrorEvent`. Not run: the live prompt, because `C4_USAGE_INSIGHTS_API_KEY` is not set in
+  this environment and the run spends API credit.
 
 ### Phase 6: Docs
 
@@ -478,13 +523,26 @@ flowchart LR
 - **Check:** `grep -c "C4_USAGE_INSIGHTS_API_KEY\|C4_USAGE_INSIGHTS_MODEL" README.md CLAUDE.md apps/usage-insights/README.md`
   gives at least 2 for each file. Every check in Phases 1 to 5 reruns green. The web and python CI workflows pass
   on the PR.
-- **Status:** todo
+- **Status:** done. CI on PR #73: Python and usage-insights web workflows green at `dbdbbe9`,
+  after a fix for Linux mypy (`subprocess.CREATE_NO_WINDOW` in a conditional expression). The grep
+  gives 2, 2, 2. Reruns: lib 47 passed, mypy and ruff
+  clean; app 87 passed six times in a row with no API key, ruff and mypy clean; both smoke
+  scripts `PASS`; web typecheck clean, 51 passed, build clean; serve check `PASS`. The first
+  full rerun failed intermittently with `ConnectionAbortedError`: the server answered some
+  requests (an oversized PUT, a 403, a 503) before reading their bodies, which resets the socket
+  on Windows. The handler now reads the body before any response. `setup/` needs no change:
+  `git diff main -- apps/usage-insights/scripts setup` is empty. Decisions copied to
+  `product/ARCHITECTURE.md`: typed query over agent-written figures, the chat's own API key,
+  fetched reference data with fallback, stdlib SSE over FastAPI. The lib's README and CLAUDE.md
+  were done in Phase 1.
 
 ## Open
 
-- **Sonnet 5.5 cache-read price:** the built-in table says $0.20 per 1M, and LiteLLM says $0.10
-  (diffed 2026-10-21). Phase 1 settles it against the pricing page. Until then, LiteLLM wins
-  whenever it was fetched.
+- **Sonnet 5.5 cache-read price:** settled in Phase 1: the pricing page says $0.10, and the
+  built-in table now does too.
+- **One timestamp for two lists:** `lists_fetched` covers the tool and agent lists. Assumed: it
+  is set when either list fetched, so a machine without the `claude` CLI doesn't re-fetch the
+  docs page on every export. A failed list then waits a day for its retry.
 - **Saved layouts freeze the defaults:** a saved layout holds refs to the defaults that existed
   when it was saved. A default panel added in a later release does not appear until Reset, which
   also drops generated panels. Accepted for this phase (user's call, 2026-10-21).
@@ -508,3 +566,26 @@ flowchart LR
 - 2026-10-21 Planned: status ready
 - 2026-10-21 Reviewed: Revise first, 4 blocking (refresh inside run_export makes the test suite hit the network and the claude CLI; ANTHROPIC_API_KEY collides with Claude Code's own auth; the typed query cannot express the Goal's previous-month and per-model-daily questions; limit cuts day/week series to the 12 oldest buckets)
 - 2026-10-21 PR: #72 https://github.com/cheneeheng/claude-code-command-center/pull/72
+- 2026-10-21 Built Phase 1: fresh prices and built-in lists, checks green
+- 2026-10-21 Built Phase 2: typed query endpoint, checks green
+- 2026-10-21 Built Phase 3: serialisable layout and generated panels, checks green
+- 2026-10-21 Design changed: State line was "adds it as a text block, "Current layout: <json>",
+  to the start of the new user turn"; now after the turn's tool results and only when changed,
+  because a user turn answering tool calls must start with its `tool_result` blocks
+- 2026-10-21 Built Phase 4: agent endpoint, checks green
+- 2026-10-21 PR: #73 https://github.com/cheneeheng/claude-code-command-center/pull/73
+- 2026-10-21 Design changed: Chat drawer line was "A "Chat" button in the top bar, shown only
+  when `chat.enabled`"; now shown disabled with a hint naming the key, because the user ran the
+  install, saw no chat, and had no clue why (user's call)
+- 2026-10-21 Fixed: the first live run failed with a 400 on `add_panel`'s schema (a top-level
+  union with no `type: "object"`); see `product/fixes/add-panel-tool-schema-has-no-object-type.md`
+- 2026-10-21 Design changed: Generated panels line was "The `add_panel` tool's schema is a zod
+  discriminated union on `kind`"; now the model gets a flat object schema and the union validates
+  each call, because the API rejected the union (the 400 above)
+- 2026-10-21 Built Phase 5: chat drawer, checks green, live check passed (user)
+- 2026-10-21 Built Phase 6: docs, checks green, CI green on PR #73
+- 2026-10-21 Checked: all Scope In items, Design decisions, Scope Out items, and the six phase
+  Checks Built (lib 47, app 87, web 52 passed; mypy clean on Windows and Linux); 0 Gap, 0
+  Failing, 0 Extra. Deviations: none open; three Design departures (layout block position,
+  disabled Chat button, flat `add_panel` schema) are recorded as Design changed lines above
+- 2026-10-21 Status: built

@@ -51,6 +51,7 @@ export const defaultLayout: Section[] = [
           unit: 'usd',
           secondary: `${tokens(s.projection.week.tokens.forecast)} tokens forecast`,
           unpriced: s.totals.unpriced_models,
+          pricesAsOf: s.totals.prices_as_of,
         }),
       },
       {
@@ -63,6 +64,7 @@ export const defaultLayout: Section[] = [
           unit: 'usd',
           secondary: `${tokens(s.projection.month.tokens.forecast)} tokens forecast`,
           unpriced: s.totals.unpriced_models,
+          pricesAsOf: s.totals.prices_as_of,
         }),
       },
       {

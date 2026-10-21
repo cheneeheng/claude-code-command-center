@@ -1,11 +1,19 @@
 import type { ComponentType } from 'react';
 
 import { catalogue } from '../catalogue';
-import type { Panel, Section } from '../layout/defaultLayout';
-import type { Summary } from '../lib/api';
+import type { GeneratedPanel } from '../catalogue/kinds';
+import type { Panel } from '../layout/defaultLayout';
+import type { ResolvedSection } from '../layout/model';
+import type { Range, Summary } from '../lib/api';
+import { QueryPanel } from './QueryPanel';
 
 /** Props of {@link Dashboard}. */
-export type DashboardProps = { layout: Section[]; data: Summary };
+export type DashboardProps = {
+  layout: ResolvedSection[];
+  data: Summary;
+  /** The top bar's range, which generated panels without their own follow. Default: the data's. */
+  range?: Range;
+};
 
 function PanelBlock({ panel, data }: { panel: Panel; data: Summary }) {
   // Each panel's select() returns exactly its component's props (see Panel).
@@ -25,8 +33,20 @@ function PanelBlock({ panel, data }: { panel: Panel; data: Summary }) {
   );
 }
 
+function GeneratedBlock({ panel, range }: { panel: GeneratedPanel; range: Range }) {
+  return (
+    <div className={panel.wide ? 'panel panel-wide' : 'panel'}>
+      <p className="eyebrow">{panel.title}</p>
+      <p className="panel-caption muted">{panel.caption}</p>
+      <div className="card">
+        <QueryPanel panel={panel} range={range} />
+      </div>
+    </div>
+  );
+}
+
 /** Renders a layout: one titled section per question, its panels in a grid. */
-export function Dashboard({ layout, data }: DashboardProps) {
+export function Dashboard({ layout, data, range = data.range }: DashboardProps) {
   return (
     <>
       {layout.map((section) => (
@@ -34,9 +54,13 @@ export function Dashboard({ layout, data }: DashboardProps) {
           <h2 id={`q-${section.id}`}>{section.question}</h2>
           {section.note && <p className="section-note muted">{section.note}</p>}
           <div className="grid">
-            {section.panels.map((panel) => (
-              <PanelBlock key={panel.id} panel={panel} data={data} />
-            ))}
+            {section.panels.map((panel) =>
+              'kind' in panel ? (
+                <GeneratedBlock key={panel.id} panel={panel} range={range} />
+              ) : (
+                <PanelBlock key={panel.id} panel={panel} data={data} />
+              ),
+            )}
           </div>
         </section>
       ))}
