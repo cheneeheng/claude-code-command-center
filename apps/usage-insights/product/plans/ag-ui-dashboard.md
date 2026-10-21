@@ -1,6 +1,6 @@
 ---
 title: Let usage-insights users generate analysis panels by chatting with an AG-UI agent, on fresh prices and built-in lists
-status: building
+status: built
 created: 2026-10-21
 ---
 
@@ -248,8 +248,10 @@ flowchart LR
 
 - Each kind is a `defineComponent({ name, description, schema, example, Component })` entry,
   ported from the `ceh-ag-ui` template's `define.ts`, so a style-like key in a schema throws at
-  startup. Unlike the template, a kind is not a tool of its own. The `add_panel` tool's schema is
-  a zod discriminated union on `kind`, built from the four kind schemas and checked by the same
+  startup. Unlike the template, a kind is not a tool of its own. The `add_panel` tool sends the
+  model one flat object schema (`addPanelToolSchema`: `kind` as an enum), because the Claude API
+  refuses a tool schema without a top-level `type: "object"`. Each call is validated against a
+  zod discriminated union on `kind`, built from the four kind schemas. Both pass the same
   style-key guard. Each kind's `description` and `example` go into `add_panel`'s tool description.
   `QueryPanel` fetches `/api/query` for its spec and the current range, and then renders:
   - `bars`: `RankedBars` from `rows` (`label`, `value`, and the change as secondary text when
@@ -488,7 +490,10 @@ flowchart LR
     `compare: previous`, and whose figures match `/api/query` for that spec. The panel is still
     there after a page reload. Then view at 1440 px and 390 px against the `ceh-ui-design`
     review checklist, which no command can judge.
-- **Status:** todo, waiting on the live check only. `bun run typecheck && bun run test && bun
+- **Status:** done. Live check (run by the user, 2026-10-21): the first try failed with a 400 on
+  `add_panel`'s schema, fixed per `product/fixes/add-panel-tool-schema-has-no-object-type.md`.
+  After the fix, "Which projects cost more than last month?" placed a project panel against last
+  month, and it survived a page reload. Earlier evidence: `bun run typecheck && bun run test && bun
   run build`: clean, 51 passed (9 in `ChatDrawer.test.tsx`), built. The tests run the real
   `HttpAgent` against a stubbed `fetch` that answers `/api/agent` with scripted SSE events, not a
   mocked `HttpAgent` class, so the client's own event parsing is covered too. The first plan's
@@ -518,7 +523,9 @@ flowchart LR
 - **Check:** `grep -c "C4_USAGE_INSIGHTS_API_KEY\|C4_USAGE_INSIGHTS_MODEL" README.md CLAUDE.md apps/usage-insights/README.md`
   gives at least 2 for each file. Every check in Phases 1 to 5 reruns green. The web and python CI workflows pass
   on the PR.
-- **Status:** todo, waiting on the PR's CI only. The grep gives 2, 2, 2. Reruns: lib 47 passed, mypy and ruff
+- **Status:** done. CI on PR #73: Python and usage-insights web workflows green at `dbdbbe9`,
+  after a fix for Linux mypy (`subprocess.CREATE_NO_WINDOW` in a conditional expression). The grep
+  gives 2, 2, 2. Reruns: lib 47 passed, mypy and ruff
   clean; app 87 passed six times in a row with no API key, ruff and mypy clean; both smoke
   scripts `PASS`; web typecheck clean, 51 passed, build clean; serve check `PASS`. The first
   full rerun failed intermittently with `ConnectionAbortedError`: the server answered some
@@ -572,3 +579,13 @@ flowchart LR
   install, saw no chat, and had no clue why (user's call)
 - 2026-10-21 Fixed: the first live run failed with a 400 on `add_panel`'s schema (a top-level
   union with no `type: "object"`); see `product/fixes/add-panel-tool-schema-has-no-object-type.md`
+- 2026-10-21 Design changed: Generated panels line was "The `add_panel` tool's schema is a zod
+  discriminated union on `kind`"; now the model gets a flat object schema and the union validates
+  each call, because the API rejected the union (the 400 above)
+- 2026-10-21 Built Phase 5: chat drawer, checks green, live check passed (user)
+- 2026-10-21 Built Phase 6: docs, checks green, CI green on PR #73
+- 2026-10-21 Checked: all Scope In items, Design decisions, Scope Out items, and the six phase
+  Checks Built (lib 47, app 87, web 52 passed; mypy clean on Windows and Linux); 0 Gap, 0
+  Failing, 0 Extra. Deviations: none open; three Design departures (layout block position,
+  disabled Chat button, flat `add_panel` schema) are recorded as Design changed lines above
+- 2026-10-21 Status: built
