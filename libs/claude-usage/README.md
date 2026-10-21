@@ -29,8 +29,9 @@ for s in load_sessions():          # newest first; honours $C4_CLAUDE_DIR
 | `DayBucket` | Dataclass: one local day's `date`, `tokens`, estimated `cost`, distinct `sessions`, `per_family` tokens. |
 | `claude_dirs()` | Resolve the Claude config dirs (honours pathsep-separated `$C4_CLAUDE_DIR`). |
 | `transcript_files(dirs=None)` | The raw transcript paths, deduped and sorted. |
-| `estimated_cost(per_model)` | USD estimate from per-model token counts, priced through `price_for`. |
-| `price_for(model)` / `ModelPrice` / `MODEL_PRICES` | Per-version prices (longest model-id prefix wins), falling back to the family table. `None` means unpriced. |
+| `estimated_cost(per_model, prices=None)` | USD estimate from per-model token counts, priced through `price_for`. |
+| `price_for(model, prices=None)` / `ModelPrice` / `MODEL_PRICES` | Per-version prices (longest model-id prefix wins), falling back to the family table. `None` means unpriced. An optional `prices` overlay is merged over `MODEL_PRICES`, so a fetched exact id beats a built-in prefix. |
+| `prices_from_litellm(data)` | Parse LiteLLM's `model_prices_and_context_window.json` (Anthropic entries only) into a `prices` overlay. The library never fetches it: the caller does. |
 | `model_family` / `model_costs` / `MODEL_COSTS` | Family collapsing and the family fallback table. |
 
 **Cost is estimated** (token counts × list price), not the amount Anthropic billed. Cache writes
