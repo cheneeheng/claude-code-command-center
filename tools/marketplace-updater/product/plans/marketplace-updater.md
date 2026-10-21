@@ -145,3 +145,4 @@ stay current without them running `claude plugin update` by hand.
 - 2026-10-21 Built Phase 1: `pwsh -NoProfile -File tests/updater.ps1` (run by the user, since the worktree guard refuses `pwsh`), 12 ok lines and no FAIL
 - 2026-10-21 Built Phase 2: install, `Get-ScheduledTask` (Ready), installed worker `-DryRun` exit 0, uninstall (run by the user), all passing
 - 2026-10-21 Built Phase 3: `command-center.ps1 status` shows marketplace-updater v0.1.0 and the grep counts are above 0 in every named file, CI job pending on the PR
+- 2026-10-21 PR: #71 https://github.com/cheneeheng/claude-code-command-center/pull/71
