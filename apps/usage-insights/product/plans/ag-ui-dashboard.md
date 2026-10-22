@@ -590,3 +590,4 @@ flowchart LR
   disabled Chat button, flat `add_panel` schema) are recorded as Design changed lines above
 - 2026-10-21 Status: built
 - 2026-10-22 Design changed: was "Four generated panel kinds: bars, trend, table, and stat", now five, adding `share` (each group's share of the total as one split bar with a legend, grouped by project, model, skill, agent, or tool), because the user asked for more analysis components, including the generated ones; `bun run test` 59 passed
+- 2026-10-22 PR: #75 https://github.com/cheneeheng/claude-code-command-center/pull/75
