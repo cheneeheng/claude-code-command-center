@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
+
 import { RANGES, type Range } from '../lib/api';
 import { ago } from '../lib/format';
+import { sectionAnchor } from './Dashboard';
 
 /** Props of {@link TopBar}. */
 export type TopBarProps = {
@@ -17,7 +20,36 @@ export type TopBarProps = {
   chatEnabled?: boolean;
   onChat?: () => void;
   chatOpen?: boolean;
+  /** The dashboard's sections, linked from the bar; empty while a state stands in. */
+  sections?: { id: string; label: string }[];
 };
+
+/** The id of the section nearest the top of the viewport, by IntersectionObserver. */
+function useActiveSection(ids: string[]): string | undefined {
+  const [active, setActive] = useState<string | undefined>(undefined);
+  const key = ids.join('|');
+  useEffect(() => {
+    // jsdom has no IntersectionObserver; there the links simply stay unmarked.
+    if (typeof IntersectionObserver === 'undefined') return;
+    const visible = new Set<string>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) visible.add(e.target.id);
+          else visible.delete(e.target.id);
+        }
+        setActive(key.split('|').find((id) => visible.has(sectionAnchor(id))));
+      },
+      { rootMargin: '-80px 0px -55% 0px' },
+    );
+    for (const id of key.split('|')) {
+      const el = document.getElementById(sectionAnchor(id));
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [key]);
+  return active;
+}
 
 /** Why the Chat button is disabled; matches the server's 503 message. */
 export const CHAT_HINT = 'Set C4_USAGE_INSIGHTS_API_KEY and restart usage-insights to use the chat';
@@ -37,10 +69,30 @@ export function TopBar({
   chatEnabled,
   onChat,
   chatOpen = false,
+  sections = [],
 }: TopBarProps) {
+  const active = useActiveSection(sections.map((s) => s.id));
   return (
     <header className="topbar">
-      <h1 className="brand">usage-insights</h1>
+      <div className="topbar-inner">
+      <h1 className="brand">
+        <span className="brand-mark" aria-hidden="true">ui</span>
+        Usage insights
+      </h1>
+      {sections.length > 0 && (
+        <nav className="section-nav" aria-label="Sections">
+          {sections.map((s) => (
+            <a
+              key={s.id}
+              href={`#${sectionAnchor(s.id)}`}
+              className={s.id === active ? 'is-current' : undefined}
+              aria-current={s.id === active ? 'location' : undefined}
+            >
+              {s.label}
+            </a>
+          ))}
+        </nav>
+      )}
       <div className="topbar-controls">
         <div className="segmented" role="group" aria-label="Range">
           {RANGES.map((r) => (
@@ -90,6 +142,7 @@ export function TopBar({
           </>
         )}
       </p>
+      </div>
     </header>
   );
 }

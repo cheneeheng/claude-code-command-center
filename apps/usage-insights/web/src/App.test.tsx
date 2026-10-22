@@ -42,7 +42,7 @@ describe('App states', () => {
     mockFetch(respond(200, summary));
     render(<App />);
     expect(screen.getByLabelText('Loading usage')).toBeTruthy();
-    expect(await screen.findByText('What will I spend?')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'What will I spend?' })).toBeTruthy();
   });
 
   it('shows the error in place and retries', async () => {
@@ -50,7 +50,7 @@ describe('App states', () => {
     render(<App />);
     expect((await screen.findByRole('alert')).textContent).toContain('store unreadable');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('What will I spend?')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'What will I spend?' })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -70,7 +70,7 @@ describe('App states', () => {
       respond(200, summary),
     );
     render(<App />);
-    await screen.findByText('What will I spend?');
+    await screen.findByRole('heading', { name: 'What will I spend?' });
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(await screen.findByText('Export already running, try again shortly.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
@@ -81,7 +81,7 @@ describe('App states', () => {
   it('refetches when the range changes', async () => {
     const fetchMock = mockFetch(respond(200, summary), respond(200, { ...summary, range: '7d' }));
     render(<App />);
-    await screen.findByText('What will I spend?');
+    await screen.findByRole('heading', { name: 'What will I spend?' });
     fireEvent.click(screen.getByRole('button', { name: '7 days' }));
     await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith('/api/summary?range=7d', undefined));
   });
@@ -103,7 +103,7 @@ describe('App states', () => {
     const fetchMock = mockFetch(respond(200, summary));
     fetchMock.mockReturnValueOnce(next.promise);
     render(<App />);
-    await screen.findByText('What will I spend?');
+    await screen.findByRole('heading', { name: 'What will I spend?' });
     fireEvent.click(screen.getByRole('button', { name: '7 days' }));
     await waitFor(() => expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('true'));
     next.resolve(respond(200, { ...summary, range: '7d' }));
@@ -133,7 +133,7 @@ describe('App states', () => {
       respond(200, summary),
     );
     render(<App />);
-    await screen.findByText('What will I spend?');
+    await screen.findByRole('heading', { name: 'What will I spend?' });
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(await screen.findByText(/Refresh failed: .*disk full/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
@@ -145,10 +145,10 @@ describe('App states', () => {
   it('keeps the data and says so when a reload fails', async () => {
     mockFetch(respond(200, summary), respond(500, { error: 'store unreadable' }));
     render(<App />);
-    await screen.findByText('What will I spend?');
+    await screen.findByRole('heading', { name: 'What will I spend?' });
     fireEvent.click(screen.getByRole('button', { name: '7 days' }));
     expect(await screen.findByText(/Could not reload: .*store unreadable/)).toBeTruthy();
-    expect(screen.getByText('What will I spend?')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'What will I spend?' })).toBeTruthy();
   });
 
   it('shows the skeleton again while a retry from the error state runs', async () => {
@@ -160,6 +160,6 @@ describe('App states', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('status', { name: 'Loading usage' })).toBeTruthy();
     retry.resolve(respond(200, summary));
-    expect(await screen.findByText('What will I spend?')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'What will I spend?' })).toBeTruthy();
   });
 });

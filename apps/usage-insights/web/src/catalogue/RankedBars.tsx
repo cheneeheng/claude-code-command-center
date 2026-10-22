@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { Label } from '../components/Label';
 import { FIRST_ROWS, ShowAll } from '../components/ShowAll';
 
 /** One ranked row. `value` sizes the bar; `display` is what the reader sees. */
@@ -24,9 +25,7 @@ export function RankedBars({ rows, limit = FIRST_ROWS, emptyText }: RankedBarsPr
       <ol className="ranked">
         {shown.map((r) => (
           <li key={r.label} className="ranked-row">
-            <span className="ranked-label" title={r.label}>
-              {r.label}
-            </span>
+            <Label text={r.label} className="ranked-label" />
             <span className="ranked-value numeric">{r.display}</span>
             <span className="bar-track ranked-bar">
               <span
@@ -34,7 +33,7 @@ export function RankedBars({ rows, limit = FIRST_ROWS, emptyText }: RankedBarsPr
                 style={{ width: `${peak > 0 ? Math.max(1, (r.value / peak) * 100) : 0}%` }}
               />
             </span>
-            {r.secondary && <span className="ranked-secondary subtle numeric">{r.secondary}</span>}
+            {r.secondary && <span className="ranked-secondary muted numeric">{r.secondary}</span>}
           </li>
         ))}
       </ol>

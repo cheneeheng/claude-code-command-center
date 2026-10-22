@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { Label } from '../components/Label';
 import { FIRST_ROWS, ShowAll } from '../components/ShowAll';
 import type { SessionRow } from '../lib/api';
 import { shortDate, tokens, usd } from '../lib/format';
@@ -34,8 +35,8 @@ export function SessionTable({ sessions }: SessionTableProps) {
               <td className="truncate" title={s.title}>
                 {s.title}
               </td>
-              <td className="truncate" title={s.project}>
-                {s.project}
+              <td className="truncate">
+                <Label text={s.project} />
               </td>
               <td className="numeric">{shortDate(s.ended)}</td>
               <td className="num numeric">{tokens(s.tokens)}</td>

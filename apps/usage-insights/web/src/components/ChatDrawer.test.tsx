@@ -111,7 +111,7 @@ describe('chat drawer', () => {
   it('shows a disabled Chat button that names the key when the chat is not enabled', async () => {
     stubServer([], { chat: false });
     render(<App />);
-    await screen.findByText('What will I spend?');
+    await screen.findByRole('heading', { name: 'What will I spend?' });
     const button = screen.getByRole('button', { name: 'Chat' });
     expect(button.getAttribute('aria-disabled')).toBe('true');
     expect(button.getAttribute('title')).toContain('C4_USAGE_INSIGHTS_API_KEY');

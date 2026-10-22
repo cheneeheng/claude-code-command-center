@@ -1,11 +1,14 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { splitLabel } from '../lib/format';
 import { summary } from '../test/fixture';
 import { HealthTable } from './HealthTable';
+import { burnPoints } from './MonthBurn';
 import { PaceStrip } from './PaceStrip';
 import { RankedBars } from './RankedBars';
 import { SessionTable } from './SessionTable';
+import { ShareBar } from './ShareBar';
 import { StatTile } from './StatTile';
 import { UnusedList } from './UnusedList';
 
@@ -147,6 +150,54 @@ describe('HealthTable', () => {
     expect(screen.getAllByRole('row')).toHaveLength(6);
     fireEvent.click(screen.getByRole('button', { name: 'Show all 7' }));
     expect(screen.getAllByRole('row')).toHaveLength(8);
+  });
+});
+
+describe('ShareBar', () => {
+  const parts = Array.from({ length: 7 }, (_, i) => ({ label: `m${i}`, value: 7 - i, display: `$${7 - i}` }));
+
+  it('colours the five largest parts and folds the rest into one', () => {
+    render(<ShareBar parts={parts} emptyText="none" />);
+    const rows = screen.getAllByRole('listitem').map((li) => li.textContent);
+    expect(rows).toHaveLength(6);
+    expect(rows[0]).toBe('m0$725%'); // 7 of 28
+    expect(rows[5]).toBe('2 others11%'); // 2 + 1 of 28
+  });
+
+  it('shows the empty text when nothing is above zero', () => {
+    render(<ShareBar parts={[{ label: 'a', value: 0, display: '$0' }]} emptyText="Nothing here." />);
+    expect(screen.getByText('Nothing here.')).toBeTruthy();
+  });
+});
+
+describe('MonthBurn', () => {
+  it('builds the month so far and ends on the actual figure', () => {
+    const days = [
+      { date: '2026-09-30', tokens: 0, cost_usd: 50 },
+      { date: '2026-10-01', tokens: 0, cost_usd: 10 },
+      { date: '2026-10-02', tokens: 0, cost_usd: 5 },
+    ];
+    expect(burnPoints(days, 15)).toEqual({ points: [[0, 0], [1, 10], [2, 15]], monthDays: 31 });
+  });
+
+  it('folds a month day older than the pace window into the start', () => {
+    const days = [{ date: '2026-10-31', tokens: 0, cost_usd: 4 }];
+    expect(burnPoints(days, 100).points).toEqual([[30, 96], [31, 100]]);
+  });
+});
+
+describe('DayBars', () => {
+  it('states the average and the peak day', () => {
+    render(<PaceStrip days={summary.projection.pace} />);
+    const today = new Date().toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    expect(screen.getByText(/^Average/).textContent).toBe(`Average $15.50 · peak $30.00 on ${today}`);
+  });
+});
+
+describe('splitLabel', () => {
+  it('splits a disambiguated project name from its detail', () => {
+    expect(splitLabel('app (C--Users-x-app)')).toEqual(['app', 'C--Users-x-app']);
+    expect(splitLabel('claude-opus-5-5')).toEqual(['claude-opus-5-5', undefined]);
   });
 });
 

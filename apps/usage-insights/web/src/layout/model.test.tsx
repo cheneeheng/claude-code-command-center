@@ -147,6 +147,14 @@ describe('generated panel kinds', () => {
     expect(screen.getByText('+50% vs previous period')).toBeTruthy();
   });
 
+  it('draws a share with the total, and refuses one over time', async () => {
+    expect(kinds.share.schema.safeParse(panel({ kind: 'share', query: { metric: 'cost_usd', group_by: 'day' } })).success).toBe(false);
+    stubQuery(result());
+    render(<Dashboard layout={resolve(layoutWith(panel({ kind: 'share' })))} data={summary} />);
+    expect(await screen.findByText('$15.00 in total')).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'alpha 80%, beta 20%' })).toBeTruthy();
+  });
+
   it('says when a query has no data, and retries after an error', async () => {
     stubQuery(result({ rows: [], total: 0, range: '7d' })); // the server echoes the range it ran
     render(<Dashboard layout={resolve(layoutWith(panel()))} data={summary} range="7d" />);
@@ -182,7 +190,7 @@ describe('App with a saved layout', () => {
   it('refetches a generated panel when the top bar range changes', async () => {
     const calls = stubApp(layoutWith(panel()));
     render(<App />);
-    expect(await screen.findByText('My questions')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'My questions' })).toBeTruthy();
     expect(screen.queryByText('What will I spend?')).toBeNull();
     await screen.findByText('$12.00');
     fireEvent.click(screen.getByRole('button', { name: '7 days' }));
@@ -193,7 +201,7 @@ describe('App with a saved layout', () => {
     const calls = stubApp(layoutWith(panel()));
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'Reset layout' }));
-    expect(await screen.findByText('What will I spend?')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'What will I spend?' })).toBeTruthy();
     expect(calls).toContainEqual(['DELETE', '/api/layout']);
     expect(screen.queryByRole('button', { name: 'Reset layout' })).toBeNull();
   });

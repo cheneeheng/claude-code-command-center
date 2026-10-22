@@ -9,24 +9,37 @@ export type PaceStripProps = { days: PaceDay[] };
 /** One bar of {@link DayBars}: a `YYYY-MM-DD` key and its value. */
 export type DayBar = { date: string; value: number };
 
-/** Bars per day (or week), oldest first, the last one highlighted, with about six date labels. */
+/**
+ * Bars per day (or week), oldest first, the last one highlighted, with about six date labels,
+ * a dashed line at the average, and the average and peak in words above.
+ */
 export function DayBars({ bars, fmt, label }: { bars: DayBar[]; fmt: (n: number) => string; label: string }) {
   const peak = Math.max(0, ...bars.map((d) => d.value));
+  const avg = bars.length > 0 ? bars.reduce((sum, d) => sum + d.value, 0) / bars.length : 0;
+  const top = bars.find((d) => d.value === peak);
   const step = Math.max(1, Math.ceil(bars.length / 6));
   return (
     <>
-      <ol className="pace-bars" aria-label={label}>
-        {bars.map((d) => {
-          const text = `${shortDate(d.date)}: ${fmt(d.value)}`;
-          const height = peak > 0 ? Math.max(2, Math.round((d.value / peak) * 100)) : 2;
-          return (
-            <li key={d.date} className="pace-day" title={text}>
-              <span className="pace-bar" style={{ height: `${height}%` }} />
-              <span className="sr-only">{text}</span>
-            </li>
-          );
-        })}
-      </ol>
+      {peak > 0 && top && (
+        <p className="pace-summary muted numeric">
+          Average <strong>{fmt(avg)}</strong> · peak <strong>{fmt(peak)}</strong> on {shortDate(top.date)}
+        </p>
+      )}
+      <div className="pace-plot">
+        <ol className="pace-bars" aria-label={label}>
+          {bars.map((d) => {
+            const text = `${shortDate(d.date)}: ${fmt(d.value)}`;
+            const height = peak > 0 ? Math.max(2, Math.round((d.value / peak) * 100)) : 2;
+            return (
+              <li key={d.date} className="pace-day" title={text}>
+                <span className="pace-bar" style={{ height: `${height}%` }} />
+                <span className="sr-only">{text}</span>
+              </li>
+            );
+          })}
+        </ol>
+        {peak > 0 && <span className="pace-avg" style={{ bottom: `${(avg / peak) * 100}%` }} aria-hidden="true" />}
+      </div>
       <div className="pace-axis subtle" aria-hidden="true">
         {/* One slot per bar; about six labels, counted back from the last day. */}
         {bars.map((d, i) => (

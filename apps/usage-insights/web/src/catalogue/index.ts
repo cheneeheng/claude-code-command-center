@@ -1,7 +1,10 @@
 import { HealthTable } from './HealthTable';
+import { KpiStrip } from './KpiStrip';
+import { MonthBurn } from './MonthBurn';
 import { PaceStrip } from './PaceStrip';
 import { RankedBars } from './RankedBars';
 import { SessionTable } from './SessionTable';
+import { ShareBar } from './ShareBar';
 import { StatTile } from './StatTile';
 import { UnusedList } from './UnusedList';
 
@@ -9,7 +12,17 @@ import { UnusedList } from './UnusedList';
  * Every component a layout can place, by name. A layout refers to components by
  * these keys, so the AG-UI phase can place them from data it receives at runtime.
  */
-export const catalogue = { StatTile, PaceStrip, RankedBars, SessionTable, HealthTable, UnusedList };
+export const catalogue = {
+  StatTile,
+  PaceStrip,
+  MonthBurn,
+  KpiStrip,
+  RankedBars,
+  ShareBar,
+  SessionTable,
+  HealthTable,
+  UnusedList,
+};
 
 /** A key of {@link catalogue}. */
 export type CatalogueName = keyof typeof catalogue;

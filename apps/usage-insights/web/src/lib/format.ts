@@ -29,6 +29,15 @@ export function share(value: number): string {
   return value > 0 && value < 0.01 ? '<1%' : `${Math.round(value * 100)}%`;
 }
 
+/**
+ * A label's name and the detail in its trailing parentheses, which the server adds to tell
+ * two projects of the same name apart: `a (C--x-a)` gives `['a', 'C--x-a']`.
+ */
+export function splitLabel(label: string): [string, string | undefined] {
+  const m = /^(.+?) \((.+)\)$/.exec(label);
+  return m ? [m[1], m[2]] : [label, undefined];
+}
+
 /** A short local date (`Oct 3`) for an ISO timestamp or `YYYY-MM-DD`. */
 export function shortDate(iso: string | null): string {
   if (!iso) return '—';
