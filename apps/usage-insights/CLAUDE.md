@@ -56,7 +56,7 @@ A run with a real key spends API credit: ask first.
   response for `/api/agent`.
 
 `web/src/catalogue/` holds one presentational component per file, no data fetching, plus
-`define.ts` and `kinds.tsx` (the four generated panel kinds and their zod schemas, which refuse
+`define.ts` and `kinds.tsx` (the five generated panel kinds and their zod schemas, which refuse
 style-like keys). `web/src/layout/defaultLayout.ts` maps the payload to panels as data; keep it
 data, not JSX. `layout/model.ts` turns it into the saved shape (refs plus generated panels) and
 back; `layout/edits.ts` holds the agent's four edits; `hooks/useAgent.ts` drives the chat.

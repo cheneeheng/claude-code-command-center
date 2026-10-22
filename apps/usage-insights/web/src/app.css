@@ -1,35 +1,86 @@
-/* App layout on top of brand.css. Tokens only: no hex, px sizes, or shadows. */
+/* App layout on top of brand.css. Tokens only: no hex or shadows; px only for fixed
+   component dimensions no token covers. */
 
 html {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+  /* A jumped-to section lands below the sticky top bar. */
+  scroll-padding-top: calc(var(--space-16) + var(--space-4));
 }
 
 body {
   background: var(--bg);
 }
 
-/* ── Top bar: chrome on --bg ─────────────────────────────────────────────── */
+/* ── Top bar: sticky chrome on --bg ──────────────────────────────────────── */
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-inner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3) var(--space-6);
   max-width: 1320px;
   margin: 0 auto;
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-3) var(--space-6);
 }
 .brand {
-  font-size: var(--fs-300);
-  font-weight: var(--weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-200);
+  font-weight: var(--weight-semibold);
+  letter-spacing: normal;
+}
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--secondary);
+  color: var(--on-text);
+  font-size: var(--fs-75);
+  font-weight: var(--weight-bold);
+}
+.section-nav {
+  display: flex;
+  gap: var(--space-1);
+  margin-right: auto;
+}
+.section-nav a {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-100);
+  color: var(--fg-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
+}
+.section-nav a:hover {
+  color: var(--fg);
+  background: var(--surface-2);
+}
+.section-nav a.is-current {
+  color: var(--fg);
+  box-shadow: inset 0 -2px 0 var(--secondary);
 }
 .topbar-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  margin-left: auto;
+}
+.topbar-controls > .subtle {
+  font-size: var(--fs-75);
 }
 .refresh-message {
   flex-basis: 100%;
@@ -50,38 +101,60 @@ body {
   gap: var(--space-1);
   padding: var(--space-1);
   border-radius: var(--radius-md);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--surface-2);
 }
 .segmented .btn[aria-pressed='true'] {
-  background: var(--secondary-wash);
-  color: var(--secondary);
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--shadow-sm);
 }
 
-/* ── Content ─────────────────────────────────────────────────────────────── */
+/* ── Content and grid ────────────────────────────────────────────────────── */
 .content {
   max-width: 1320px;
   margin: 0 auto;
   padding: 0 var(--space-6) var(--space-16);
 }
+.content.stale {
+  opacity: 0.55;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
 .section {
-  margin-top: var(--space-10);
+  margin-top: var(--space-12);
+}
+.section:first-child {
+  margin-top: var(--space-8);
 }
 .section > h2 {
-  font-size: var(--fs-400);
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-5);
 }
 .section > h2:has(+ .section-note) {
   margin-bottom: var(--space-1);
 }
 .section-note {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-5);
   font-size: var(--fs-100);
 }
+/* Six columns: a panel takes a third, half, two thirds, or the whole row. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-6);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-8) var(--space-5);
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.panel-third {
+  grid-column: span 2;
+}
+.panel-half,
+.grid > .skeleton-card {
+  grid-column: span 3;
+}
+.panel-two-thirds {
+  grid-column: span 4;
 }
 .panel-wide {
   grid-column: 1 / -1;
@@ -90,25 +163,81 @@ body {
   margin: 0;
 }
 .panel-caption {
-  margin: var(--space-1) 0 var(--space-2);
+  margin: var(--space-1) 0 var(--space-3);
   font-size: var(--fs-75);
 }
+/* Cards in a row share its height. */
 .panel > .card {
-  background: var(--surface);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5);
 }
 .empty-line {
   margin: 0;
 }
 
-@media (max-width: 760px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 1180px) {
+  .section-nav {
+    display: none;
   }
-  .topbar,
+  .panel-third {
+    grid-column: span 3;
+  }
+  .panel-two-thirds {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 760px) {
+  .grid > * {
+    grid-column: 1 / -1;
+  }
+  .topbar-inner,
   .content {
     padding-left: var(--space-4);
     padding-right: var(--space-4);
   }
+}
+
+/* ── Labels: a name, then its detail quieter, one line ───────────────────── */
+.label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.label-detail {
+  font-size: var(--fs-75);
+}
+
+/* ── KpiStrip ────────────────────────────────────────────────────────────── */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  row-gap: var(--space-5);
+  margin: 0;
+}
+.kpi {
+  padding: 0 var(--space-5);
+  border-left: 1px solid var(--border);
+}
+.kpi:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+.kpi dd {
+  margin: 0;
+}
+.kpi-value {
+  margin-top: var(--space-1);
+  font-size: var(--fs-500);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+}
+.kpi-caption {
+  margin-top: var(--space-1);
+  font-size: var(--fs-75);
 }
 
 /* ── StatTile ────────────────────────────────────────────────────────────── */
@@ -118,7 +247,8 @@ body {
 .stat-value {
   font-size: var(--fs-500);
   font-weight: var(--weight-semibold);
-  margin: var(--space-1) 0 var(--space-3);
+  line-height: var(--lh-tight);
+  margin: 0 0 var(--space-4);
 }
 .stat-unit {
   font-size: var(--fs-100);
@@ -129,7 +259,7 @@ body {
   height: var(--space-2);
   border-radius: var(--radius-full);
   background: var(--surface-2);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 .scale > span {
   position: absolute;
@@ -154,23 +284,47 @@ body {
 }
 .stat-caption {
   font-size: var(--fs-75);
+  margin-top: var(--space-1);
 }
 .stat-tile .badge {
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
 }
 
-/* ── PaceStrip ───────────────────────────────────────────────────────────── */
-.pace .segmented {
-  margin-bottom: var(--space-3);
+/* ── Day bars (PaceStrip and the trend kind) ─────────────────────────────── */
+/* The plot grows to fill a card stretched by its row. */
+.pace {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.pace > .segmented {
+  position: absolute;
+  top: calc(var(--space-1) * -1);
+  right: 0;
+}
+.pace-summary {
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-100);
+}
+.pace-summary strong {
+  color: var(--fg);
+  font-weight: var(--weight-semibold);
+}
+.pace-plot {
+  position: relative;
+  flex: 1;
+  min-height: calc(var(--space-16) * 2.5);
 }
 .pace-bars {
   display: flex;
   align-items: flex-end;
   gap: var(--space-1);
-  height: calc(var(--space-16) * 2);
+  height: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
+  border-bottom: 1px solid var(--border);
 }
 .pace-day {
   flex: 1;
@@ -182,9 +336,22 @@ body {
   width: 100%;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: var(--data-1);
+  opacity: 0.8;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+.pace-day:hover .pace-bar {
+  opacity: 1;
 }
 .pace-day:last-child .pace-bar {
   background: var(--accent);
+  opacity: 1;
+}
+.pace-avg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--fg-muted);
+  pointer-events: none;
 }
 .pace-axis {
   display: flex;
@@ -200,6 +367,54 @@ body {
   overflow: visible;
 }
 
+/* ── MonthBurn ───────────────────────────────────────────────────────────── */
+.burn-chart {
+  display: block;
+  width: 100%;
+  height: calc(var(--space-16) * 1.75);
+  overflow: visible;
+  border-bottom: 1px solid var(--border);
+}
+.burn-chart polyline {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.burn-actual {
+  stroke: var(--data-1);
+}
+.burn-forecast {
+  stroke: var(--fg-muted);
+  stroke-dasharray: 4 3;
+}
+.burn-band {
+  fill: var(--secondary-wash);
+}
+.burn-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+  font-size: var(--fs-50);
+}
+.burn-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-75);
+}
+.burn-key {
+  display: inline-block;
+  width: var(--space-4);
+  border-top: 2px solid var(--data-1);
+}
+.burn-key-forecast {
+  margin-left: var(--space-2);
+  border-top: 2px dashed var(--fg-muted);
+}
+
 /* ── RankedBars ──────────────────────────────────────────────────────────── */
 .ranked {
   list-style: none;
@@ -209,29 +424,91 @@ body {
 .ranked-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
   column-gap: var(--space-3);
   row-gap: var(--space-1);
   padding: var(--space-2) 0;
+  font-size: var(--fs-100);
 }
-.ranked-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.ranked-row:first-child {
+  padding-top: 0;
+}
+.ranked-value {
+  font-weight: var(--weight-medium);
 }
 .ranked-bar {
   grid-column: 1 / -1;
+  height: 6px;
 }
 .ranked-secondary {
   grid-column: 1 / -1;
   font-size: var(--fs-75);
 }
+/* brand.css draws the fill on a span; a span needs a box for its width to apply. */
+.bar-fill {
+  display: block;
+}
+
+/* ── ShareBar ────────────────────────────────────────────────────────────── */
+.share-total {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-300);
+  font-weight: var(--weight-semibold);
+}
+.share-bar {
+  display: flex;
+  gap: 2px;
+  height: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.share-seg {
+  flex-basis: 0;
+  min-width: 2px;
+}
+.share-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.share-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto 4ch;
+  align-items: center;
+  column-gap: var(--space-2);
+  padding: var(--space-2) 0;
+  font-size: var(--fs-100);
+  border-top: 1px solid var(--border);
+}
+.share-row:first-child {
+  border-top: none;
+}
+.share-pct {
+  text-align: right;
+  font-weight: var(--weight-medium);
+}
+/* One colour per position, shared by the segment and its legend dot. */
+.share-seg.is-1, .legend-dot.is-1 { background: var(--data-1); }
+.share-seg.is-2, .legend-dot.is-2 { background: var(--data-2); }
+.share-seg.is-3, .legend-dot.is-3 { background: var(--data-3); }
+.share-seg.is-4, .legend-dot.is-4 { background: var(--data-4); }
+.share-seg.is-5, .legend-dot.is-5 { background: var(--data-5); }
+.share-seg.is-other, .legend-dot.is-other { background: var(--border-strong); }
 
 /* ── Tables ──────────────────────────────────────────────────────────────── */
 .table-wrap {
   overflow-x: auto;
 }
+.table td {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+}
 .table .num {
   text-align: right;
+}
+.table tbody tr {
+  transition: background var(--dur-fast) var(--ease-standard);
 }
 .table tbody tr:hover {
   background: var(--surface-2);
@@ -244,10 +521,6 @@ body {
 }
 .health .reason {
   min-width: 30ch;
-}
-.content.stale {
-  opacity: 0.55;
-  transition: opacity 150ms;
 }
 .nowrap {
   white-space: nowrap;
@@ -291,12 +564,13 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 .chip {
   cursor: pointer;
   font: inherit;
   font-size: var(--fs-75);
+  padding: var(--space-1) var(--space-2);
 }
 .chip[aria-pressed='true'] {
   box-shadow: inset 0 0 0 1px currentColor;
@@ -310,6 +584,9 @@ body {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+.unused .badge {
+  font-size: var(--fs-75);
 }
 
 /* ── Chat drawer ─────────────────────────────────────────────────────────── */
@@ -327,6 +604,7 @@ body {
   flex-direction: column;
   gap: var(--space-3);
   background: var(--surface);
+  box-shadow: var(--shadow-md);
   z-index: 10;
 }
 .drawer-head {
@@ -387,6 +665,9 @@ body {
   .with-drawer {
     padding-right: calc(min(28rem, 100vw) + var(--space-4));
   }
+  .with-drawer .section-nav {
+    display: none;
+  }
 }
 @media (max-width: 767px) {
   .drawer {
@@ -402,14 +683,14 @@ body {
   margin-top: var(--space-10);
 }
 .skeleton {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface-2);
 }
 .skeleton-title {
   width: 30%;
   height: var(--space-6);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 .skeleton-card {
-  height: calc(var(--space-16) * 2);
+  height: calc(var(--space-16) * 2.5);
 }

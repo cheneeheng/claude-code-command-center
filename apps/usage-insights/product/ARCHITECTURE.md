@@ -61,8 +61,8 @@ flowchart LR
 | `inventory.py` | Installed skills and agents (user, plugin, project), MCP servers, built-in lists. |
 | `aggregate.py` | The `/api/summary` payload. Every tunable number is a constant at its top. |
 | `server.py` | Host check, `/api/health`, `/api/summary`, `/api/refresh`, `/api/query`, `/api/layout`, the SSE response of `/api/agent`, static files. |
-| `web/src/catalogue/` | Presentational components with exported props types and no fetching; `kinds.tsx` holds the four generated panel kinds and their zod schemas. |
-| `web/src/layout/defaultLayout.ts` | Sections as data: `{ id, title, question, panels: { component, select }[] }`. |
+| `web/src/catalogue/` | Presentational components with exported props types and no fetching; `kinds.tsx` holds the five generated panel kinds and their zod schemas. |
+| `web/src/layout/defaultLayout.ts` | Sections as data: `{ id, question, note?, panels: { id, component, select, size? }[] }`, each panel a third, half, two thirds, or the whole of a six-column row. |
 | `web/src/layout/model.ts`, `edits.ts` | The saved layout (refs to default panels plus generated panels), `resolve` back to renderable panels, and the agent's four edits. |
 | `web/src/hooks/useAgent.ts` | One `HttpAgent` per thread; validates each tool call, applies it, saves the layout, and answers with a tool result. |
 

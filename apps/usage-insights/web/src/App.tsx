@@ -10,7 +10,7 @@ import { useAgent } from './hooks/useAgent';
 import { useLayout } from './hooks/useLayout';
 import { useRefresh } from './hooks/useRefresh';
 import { useSummary } from './hooks/useSummary';
-import { resolve } from './layout/model';
+import { type ResolvedSection, resolve } from './layout/model';
 import type { Range, Summary } from './lib/api';
 
 /** No store yet, or no sessions in the range and no usage in the last 30 days. */
@@ -35,6 +35,7 @@ export function App() {
   const stale = data !== undefined && (loading || data.range !== range);
 
   let body;
+  let sections: ResolvedSection[] = [];
   if (!data) body = error && !loading ? <ErrorState message={error} onRetry={reload} /> : <LoadingState />;
   else if (layout.loading) body = <LoadingState />;
   else if (isEmpty(data))
@@ -45,7 +46,10 @@ export function App() {
         quietRange={data.last_export === null ? null : data.range}
       />
     );
-  else body = <Dashboard layout={resolve(layout.layout)} data={data} range={range} />;
+  else {
+    sections = resolve(layout.layout);
+    body = <Dashboard layout={sections} data={data} range={range} />;
+  }
 
   const drawerOpen = chatEnabled && chatOpen;
   return (
@@ -64,6 +68,7 @@ export function App() {
         chatEnabled={data?.chat?.enabled}
         onChat={() => setChatOpen(!chatOpen)}
         chatOpen={chatOpen}
+        sections={sections.map((s) => ({ id: s.id, label: s.question }))}
       />
       <main className={stale ? 'content stale' : 'content'} aria-busy={stale}>
         {body}

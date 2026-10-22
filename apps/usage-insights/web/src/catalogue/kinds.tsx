@@ -4,6 +4,7 @@ import { byUnit, change } from '../lib/format';
 import { assertNoStyleKeys, defineComponent, type KindProps, type PanelKind } from './define';
 import { DayBars } from './PaceStrip';
 import { RankedBars } from './RankedBars';
+import { ShareBar } from './ShareBar';
 
 const names = z.array(z.string()).max(50);
 
@@ -31,6 +32,11 @@ const trendSchema = z.object({
   query: querySchema.extend({ group_by: z.enum(['day', 'week']) }),
 });
 const tableSchema = z.object({ kind: z.literal('table'), ...base, query: querySchema });
+const shareSchema = z.object({
+  kind: z.literal('share'),
+  ...base,
+  query: querySchema.extend({ group_by: z.enum(['project', 'model', 'skill', 'agent', 'tool']) }),
+});
 const statSchema = z.object({
   kind: z.literal('stat'),
   ...base,
@@ -158,11 +164,38 @@ export const stat = defineComponent({
   ),
 });
 
+export const shareKind = defineComponent({
+  name: 'share',
+  description:
+    'One bar split into each group\'s share of the total, with a legend. For "what is the mix" questions; ' +
+    'the five largest groups get a colour, the rest fold into one.',
+  schema: shareSchema,
+  example: {
+    kind: 'share',
+    title: 'Model mix this month',
+    caption: 'Each model\'s share of this month\'s cost.',
+    query: { metric: 'cost_usd', group_by: 'model', range: 'month' },
+  },
+  Component: ({ result }) => (
+    <ShareBar
+      parts={result.rows.map((r) => ({ label: r.label, value: r.value, display: byUnit(r.value, result.unit) }))}
+      totalDisplay={`${byUnit(result.total, result.unit)} in total`}
+      emptyText=""
+    />
+  ),
+});
+
 /** Every generated panel kind, by `kind`. */
-export const kinds: Record<GeneratedPanel['kind'], PanelKind> = { bars, trend, table, stat };
+export const kinds: Record<GeneratedPanel['kind'], PanelKind> = { bars, trend, table, stat, share: shareKind };
 
 /** A new panel's fields (no id: the canvas sets it). */
-export const panelSchema = z.discriminatedUnion('kind', [barsSchema, trendSchema, tableSchema, statSchema]);
+export const panelSchema = z.discriminatedUnion('kind', [
+  barsSchema,
+  trendSchema,
+  tableSchema,
+  statSchema,
+  shareSchema,
+]);
 export type PanelFields = z.infer<typeof panelSchema>;
 
 const sectionId = { section_id: z.string().min(1) };
@@ -172,6 +205,7 @@ export const addPanelSchema = z.discriminatedUnion('kind', [
   trendSchema.extend(sectionId),
   tableSchema.extend(sectionId),
   statSchema.extend(sectionId),
+  shareSchema.extend(sectionId),
 ]);
 
 const id = { id: z.string().min(1) };
@@ -181,6 +215,7 @@ export const generatedPanelSchema = z.discriminatedUnion('kind', [
   trendSchema.extend(id),
   tableSchema.extend(id),
   statSchema.extend(id),
+  shareSchema.extend(id),
 ]);
 export type GeneratedPanel = z.infer<typeof generatedPanelSchema>;
 /**
@@ -190,7 +225,7 @@ export type GeneratedPanel = z.infer<typeof generatedPanelSchema>;
  */
 export const addPanelToolSchema = z.object({
   ...sectionId,
-  kind: z.enum(['bars', 'trend', 'table', 'stat']),
+  kind: z.enum(['bars', 'trend', 'table', 'stat', 'share']),
   ...base,
   query: querySchema,
 });

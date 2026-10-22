@@ -4,9 +4,11 @@ A local dashboard over your Claude Code usage that helps you decide what to chan
 answers three questions:
 
 - **What will I spend?** Tokens and cost so far this week and month, the forecast with a low/high
-  band, a 30-day pace strip, and the month forecast per project.
-- **Where does it go?** Projects ranked by cost with their change against the previous period,
-  models ranked by cost, and the top sessions.
+  band, the month so far drawn against its forecast, a 30-day pace strip with its average and
+  peak, and the month forecast per project.
+- **Where does it go?** Totals for the range (cost, tokens, sessions, cost per session, and how
+  much input came from cache), projects ranked by cost with their change against the previous
+  period, each model's share of cost, the token mix, and the top sessions.
 - **What should I fix?** Every skill and subagent with a health status, tool calls ranked by count,
   and the built-in tools and MCP servers you never call.
 

@@ -4,7 +4,16 @@ import { catalogue, type CatalogueName } from '../catalogue';
 import type { Summary } from '../lib/api';
 import { change, share, tokens, usd } from '../lib/format';
 
+/** Share of input-side tokens read from cache rather than sent fresh or written. */
+function cacheShare(t: Summary['totals']['tokens']): number {
+  const inputSide = t.input + t.cache_write + t.cache_read;
+  return inputSide > 0 ? t.cache_read / inputSide : 0;
+}
+
 type Catalogue = typeof catalogue;
+
+/** How much of a row a panel takes. */
+export type PanelSize = 'third' | 'half' | 'two-thirds' | 'wide';
 
 /** One placed component: which one, its header, and how it reads the payload. */
 export type Panel = {
@@ -16,8 +25,8 @@ export type Panel = {
     caption: string;
     /** Shown after the eyebrow, e.g. `PROJECTS · 7`. */
     count?: (s: Summary) => number;
-    /** Spans the full row instead of one column. */
-    wide?: boolean;
+    /** Share of the row, by importance. Default: half. */
+    size?: PanelSize;
     select: (s: Summary) => ComponentProps<Catalogue[K]>;
   };
 }[CatalogueName];
@@ -46,6 +55,7 @@ export const defaultLayout: Section[] = [
         component: 'StatTile',
         eyebrow: 'This week',
         caption: 'Monday to Sunday, at the pace of the last 14 days.',
+        size: 'third',
         select: (s) => ({
           ...s.projection.week.cost_usd,
           unit: 'usd',
@@ -59,6 +69,7 @@ export const defaultLayout: Section[] = [
         component: 'StatTile',
         eyebrow: 'This month',
         caption: 'Calendar month, at the pace of the last 14 days.',
+        size: 'third',
         select: (s) => ({
           ...s.projection.month.cost_usd,
           unit: 'usd',
@@ -68,11 +79,19 @@ export const defaultLayout: Section[] = [
         }),
       },
       {
+        id: 'month-burn',
+        component: 'MonthBurn',
+        eyebrow: 'Month so far',
+        caption: 'Cost building up this month, then the forecast to its end.',
+        size: 'third',
+        select: (s) => ({ days: s.projection.pace, month: s.projection.month.cost_usd }),
+      },
+      {
         id: 'pace',
         component: 'PaceStrip',
         eyebrow: 'Pace',
         caption: 'Daily usage over the last 30 days: the pace behind the forecast.',
-        wide: true,
+        size: 'two-thirds',
         select: (s) => ({ days: s.projection.pace }),
       },
       {
@@ -81,7 +100,7 @@ export const defaultLayout: Section[] = [
         eyebrow: 'Month forecast by project',
         caption: 'Where this month is heading, per project.',
         count: (s) => s.projection.by_project.length,
-        wide: true,
+        size: 'third',
         select: (s) => ({
           rows: s.projection.by_project.map((p) => ({
             label: p.project,
@@ -99,11 +118,32 @@ export const defaultLayout: Section[] = [
     question: 'Where does it go?',
     panels: [
       {
+        id: 'totals',
+        component: 'KpiStrip',
+        eyebrow: 'In this range',
+        caption: 'Totals for the selected range.',
+        size: 'wide',
+        select: (s) => ({
+          items: [
+            { label: 'Cost', value: usd(s.totals.cost_usd), caption: 'estimated at list price' },
+            { label: 'Tokens', value: tokens(s.totals.tokens.total), caption: `${tokens(s.totals.tokens.output)} output` },
+            { label: 'Sessions', value: String(s.totals.sessions), caption: `in ${s.projects.length} projects` },
+            {
+              label: 'Per session',
+              value: s.totals.sessions > 0 ? usd(s.totals.cost_usd / s.totals.sessions) : '—',
+              caption: 'average cost',
+            },
+            { label: 'Cache reads', value: share(cacheShare(s.totals.tokens)), caption: 'of input from cache' },
+          ],
+        }),
+      },
+      {
         id: 'projects',
         component: 'RankedBars',
         eyebrow: 'Projects',
         caption: 'Cost in the selected range, with the change against the period before.',
         count: (s) => s.projects.length,
+        size: 'third',
         select: (s) => ({
           rows: s.projects.map((p) => ({
             label: p.project,
@@ -122,17 +162,29 @@ export const defaultLayout: Section[] = [
       },
       {
         id: 'models',
-        component: 'RankedBars',
+        component: 'ShareBar',
         eyebrow: 'Models',
-        caption: 'Cost per model in the selected range.',
+        caption: 'Share of cost per model in the selected range.',
         count: (s) => s.models.length,
+        size: 'third',
         select: (s) => ({
-          rows: s.models.map((m) => ({
-            label: m.model,
-            value: m.cost_usd,
-            display: usd(m.cost_usd),
-            secondary: `${tokens(m.tokens)} tokens · ${m.sessions} sessions`,
-          })),
+          parts: s.models.map((m) => ({ label: m.model, value: m.cost_usd, display: usd(m.cost_usd) })),
+          emptyText: 'No usage in this range.',
+        }),
+      },
+      {
+        id: 'token-mix',
+        component: 'ShareBar',
+        eyebrow: 'Token mix',
+        caption: 'Where the tokens went. Cache reads are the cheapest kind.',
+        size: 'third',
+        select: (s) => ({
+          parts: [
+            { label: 'Cache read', value: s.totals.tokens.cache_read },
+            { label: 'Cache write', value: s.totals.tokens.cache_write },
+            { label: 'Input', value: s.totals.tokens.input },
+            { label: 'Output', value: s.totals.tokens.output },
+          ].map((p) => ({ ...p, display: tokens(p.value) })),
           emptyText: 'No usage in this range.',
         }),
       },
@@ -142,7 +194,7 @@ export const defaultLayout: Section[] = [
         eyebrow: 'Top sessions',
         caption: 'The heaviest sessions in the selected range.',
         count: (s) => s.sessions.length,
-        wide: true,
+        size: 'wide',
         select: (s) => ({ sessions: s.sessions }),
       },
     ],
@@ -157,7 +209,7 @@ export const defaultLayout: Section[] = [
         eyebrow: 'Skills',
         caption: 'Worst first. Never-used skills usually need a better description.',
         count: (s) => s.skills.length,
-        wide: true,
+        size: 'wide',
         select: (s) => ({ rows: s.skills, noun: 'skill' }),
       },
       {
@@ -166,7 +218,7 @@ export const defaultLayout: Section[] = [
         eyebrow: 'Subagents',
         caption: 'Worst first, by the same rules as skills.',
         count: (s) => s.agents.length,
-        wide: true,
+        size: 'wide',
         select: (s) => ({ rows: s.agents, noun: 'subagent' }),
       },
       {

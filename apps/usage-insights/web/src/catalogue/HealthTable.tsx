@@ -103,7 +103,9 @@ export function HealthTable({ rows, noun }: HealthTableProps) {
               <td className="muted reason">{reason(r, noun)}</td>
               <td className="num numeric">{r.uses > 0 ? r.uses : '—'}</td>
               <td className="nowrap">{shortDate(r.last_used)}</td>
-              <td className="num numeric nowrap">{`${r.trend[0]} → ${r.trend[1]}`}</td>
+              <td className="num numeric nowrap">
+                {r.trend[0] + r.trend[1] > 0 ? `${r.trend[0]} → ${r.trend[1]}` : '—'}
+              </td>
               <td className="num numeric">{share(r.trouble_rate)}</td>
               <td>{r.invoked ? INVOKED_LABEL[r.invoked] : '—'}</td>
             </tr>
