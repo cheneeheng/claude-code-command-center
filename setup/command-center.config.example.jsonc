@@ -62,6 +62,6 @@
     "intervalMinutes": 360
   }
 
-  // session-name-date-prefixer, usage-dashboard, and usage-insights need no config: give each an empty {}
+  // session-name-date-prefixer and usage-insights need no config: give each an empty {}
   // to opt it into install -All.
 }

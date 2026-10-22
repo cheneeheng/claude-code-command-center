@@ -43,7 +43,7 @@ See README.md for full usage. `./setup/command-center.ps1 <list|status|install|u
 ## Conventions
 
 - PowerShell; Windows Task Scheduler for the members that schedule jobs.
-- `usage-dashboard` (a logon task) and `usage-insights` (a daily and logon export task) are the
-  apps managed here, because each registers a scheduled task. Other apps,
+- `usage-insights` (a daily and logon export task) is the one app managed here, because it
+  registers a scheduled task. Other apps,
   `usage-report`, and libs are intentionally **not** managed here (run on demand, not installed).
 - New decisions go in the repo-root `.agents_workspace/DECISION_LOG.md`.

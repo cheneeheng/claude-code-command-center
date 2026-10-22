@@ -5,8 +5,7 @@ A small, dependency-free library for reading **Claude Code's local session data*
 It models one well-defined external contract — the `~/.claude/projects/**/*.jsonl`
 transcript layout that Claude Code writes — and turns it into per-session token/cost
 summaries. It exists because more than one member needs this exact parsing: the
-[`usage-dashboard`](../../apps/usage-dashboard/) and
-[`usage-insights`](../../apps/usage-insights/) apps and the
+[`usage-insights`](../../apps/usage-insights/) app and the
 [`usage-report`](../../tools/usage-report/) CLI all consume it.
 
 ## API

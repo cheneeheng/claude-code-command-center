@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A CLI that prints a cross-session summary of Claude Code token usage and estimated cost — the
-terminal counterpart to the `usage-dashboard` app. Both read the same data through the in-repo
+terminal counterpart to the `usage-insights` app. Both read the same data through the in-repo
 `claude-usage` library.
 
 ## Commands

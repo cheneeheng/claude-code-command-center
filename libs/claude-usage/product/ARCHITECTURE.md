@@ -2,7 +2,7 @@
 
 A dependency-free library that reads Claude Code's local session transcripts
 (`~/.claude/projects/**/*.jsonl`) and rolls them up into per-session token/cost summaries. One
-external contract (Claude Code's transcript layout) modelled once, consumed by `usage-dashboard`
+external contract (Claude Code's transcript layout) modelled once, consumed by `usage-insights`
 and `usage-report`.
 
 ## System context
@@ -13,7 +13,7 @@ The library sits between Claude Code's on-disk transcripts and the two members t
 flowchart LR
     cc["Claude Code<br/>(writes transcripts)"] -->|"~/.claude/projects/**/*.jsonl"| lib((claude-usage))
     env["$C4_CLAUDE_DIR<br/>(pathsep-separated dir override)"] -. resolves .-> lib
-    lib -->|load_sessions → list[Session]| dash["usage-dashboard<br/>(app)"]
+    lib -->|parse_file · price_for| insights["usage-insights<br/>(app)"]
     lib -->|load_sessions → list[Session]| report["usage-report<br/>(tool)"]
 ```
 

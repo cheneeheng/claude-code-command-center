@@ -9,7 +9,7 @@ A monorepo of independent projects centered on Claude Code, grouped by category:
 
 ```
 apps/      full applications you run (cross-repo-file-diff, multi-repo-plan-runner,
-           multi-repo-workspace, per-project-plugin-toggler, usage-dashboard,
+           multi-repo-workspace, per-project-plugin-toggler,
            usage-insights, claude-component-browser)
 tools/     single-purpose utilities & scripts (statusline-hook,
            session-name-date-prefixer, file-sync,
@@ -28,7 +28,7 @@ surface. When a member bundles both (e.g. the statusline hook + its dashboard), 
 **when something belongs in `libs/`:** only with a **cohesive domain** *and* **≥2 real
 consumers** — never a utilities junk drawer, and never a single-consumer extraction. Extract on
 the second consumer, not the first. `claude-usage` (Claude Code local-data access, used by
-`usage-dashboard`, `usage-insights`, and `usage-report`) is the worked example.
+`usage-insights` and `usage-report`) is the worked example.
 
 **intentional duplication:** sometimes a library doesn't fit (e.g. a consumer is deliberately
 zero-dependency, or has a parallel non-Python implementation). When logic is copied across
@@ -87,8 +87,6 @@ and setup's README, CLAUDE.md, and `product/ARCHITECTURE.md` wherever they name 
   (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
   Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir;
   scheduled-session-digests reads it only as its default meta dir), `C4_STATUSLINE_NOW` (statusline-hook test-only clock override),
-  `C4_STATUSLINE_LIVE_TIMEOUT` (usage-dashboard live-session timeout),
-  `C4_PLAN_PRICE_USD` (usage-dashboard monthly plan price for the Plan Value card),
   `C4_ROUNDTABLE_REGISTRY` (multi-repo-workspace registry path override),
   `C4_ROUNDTABLE_HOME` (multi-repo-workspace state dir, default `~/.roundtable`),
   `C4_USAGE_INSIGHTS_HOME` (usage-insights store dir, default `~/.usage-insights`),
@@ -100,7 +98,7 @@ and setup's README, CLAUDE.md, and `product/ARCHITECTURE.md` wherever they name 
 - **History:** relocate/rename with `git mv` to preserve history.
 - **Scheduled tasks:** a member that registers a Windows Task Scheduler task registers it under
   its own folder name nested in the shared task folder: `\ClaudeAutomation\<member>\<taskname>`
-  (e.g. `\ClaudeAutomation\usage-dashboard\usage-dashboard`,
+  (e.g. `\ClaudeAutomation\usage-insights\export`,
   `\ClaudeAutomation\file-sync\<per-pair name>`). This keeps task names collision-free and
   groups every task of a member together.
 - **Docs:** **one `README.md` per member** (apps/tools/libs/setup) plus the root README,
