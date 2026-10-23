@@ -1,54 +1,171 @@
+---
+schema: architecture/v1
+---
+
 # usage-insights — Architecture
 
-A local dashboard that answers "what will I spend?", "where does it go?", and "what should I fix?"
-over Claude Code usage. An exporter copies transcripts into an upsert-only SQLite store, an
-aggregator turns the store plus an inventory of installed skills, agents, and MCP servers into one
-JSON payload, and a React page renders that payload through a data-driven layout. Parsing and
-pricing live in the in-repo `claude-usage` library, and plugin reading in `claude-plugins`.
-With an API key set, a chat drawer talks to a Claude agent over AG-UI. The agent edits a saved
-layout whose generated panels each hold a typed query that the server computes.
+## Contents
 
-## System context
+- [01. Overview](#01-overview)
+- [02. System context](#02-system-context)
+- [03. Components](#03-components)
+  - [03.01 Export: transcripts into the store](#0301-export-transcripts-into-the-store)
+  - [03.02 Server: the store into the API](#0302-server-the-store-into-the-api)
+  - [03.03 Browser: the API onto the page](#0303-browser-the-api-onto-the-page)
+  - [03.04 Modules](#0304-modules)
+- [04. Key flow: a chat question](#04-key-flow-a-chat-question)
+- [05. Key flow: refresh](#05-key-flow-refresh)
+- [06. Key Decisions](#06-key-decisions)
+
+## 01. Overview
+
+- **What it is:** a local dashboard that answers "what will I spend?", "where does it go?", and
+  "what should I fix?" over your Claude Code usage.
+- **Export:** an exporter copies Claude Code transcripts into an upsert-only SQLite store, so the
+  history outlives Claude Code's own transcript cleanup.
+- **Aggregate:** an aggregator turns the store, plus an inventory of installed skills, agents, and
+  MCP servers, into one JSON payload: projection, spend, and health.
+- **Render:** a React page draws that payload through a layout that is data, not code.
+- **Chat (optional):** with an API key set, a chat drawer talks to a Claude agent over AG-UI. The
+  agent edits the saved layout, and each panel it adds holds a typed query that the server
+  computes, never a figure the agent wrote.
+- **Shared libraries:** transcript parsing and pricing live in the in-repo `claude-usage` library,
+  and plugin reading in `claude-plugins`.
 
 ```mermaid
 flowchart LR
-    cc["Claude Code"] -->|"~/.claude/projects/**/*.jsonl"| app((usage-insights))
-    cfg["plugins, skills, agents,<br/>MCP config"] --> app
-    app <-->|"usage.db"| db[("~/.usage-insights<br/>or $C4_USAGE_INSIGHTS_HOME")]
-    you([You]) -->|"usage-insights → browser @ 127.0.0.1:8090"| app
-    task["Task Scheduler (Windows)<br/>or cron (printed)"] -->|"usage-insights-bg export"| app
-    app -->|"export only, daily: prices"| ll["LiteLLM price file"]
-    app -->|"export only, daily: tool names"| docs["Claude Code docs"]
-    app -->|"export only, daily: agent names"| cli["local claude CLI<br/>(initialize, no prompt)"]
-    app -->|"chat, with C4_USAGE_INSIGHTS_API_KEY"| api["Anthropic API"]
+    cc([Claude Code sessions]) --> store[Usage history] --> analysis[Projection, spend, health] --> dash[Dashboard and chat] --> you([You])
 ```
 
-## Components
+## 02. System context
+
+Everything outside the app that it touches, in four groups: what starts it, what it reads on this
+machine, where it keeps its own files, and what it calls over the network.
+
+- **Two triggers.** You run `usage-insights` and open the page, or the scheduled task runs a
+  headless `export` once a day and at logon.
+- **Network calls are rare.** Only the `export` subcommand fetches reference data, at most once a
+  day per source, and falls back to built-in lists offline. Serving the dashboard never touches
+  the network, except the chat, which runs only when its own API key is set.
+- **One folder of state.** The store dir holds `usage.db`, `reference.json`, and `layout.json`.
+  Deleting it loses history that Claude Code may already have cleaned up.
 
 ```mermaid
 flowchart LR
-  T["transcripts"] --> CU["libs/claude-usage<br/>parse_file, dedup, price, events"]
-  CU --> EX["export.py<br/>incremental upsert"]
-  EX --> DB[("usage.db")]
-  P["plugins, skills, agents,<br/>MCP config"] --> CP["libs/claude-plugins"]
-  CP --> INV["inventory.py"]
-  P --> INV
-  DB --> AG["aggregate.py<br/>projection, spend, health"]
-  INV --> AG
-  CLI["cli.py"] --> SV
-  CLI --> EX
-  CLI -->|"export only"| REF["reference.py<br/>daily fetch, fallback"]
-  REF --> RJ[("reference.json")]
-  RJ --> AG
-  RJ --> INV
-  DB --> Q["query.py<br/>typed query, read-only"]
-  AG --> SV["server.py<br/>/api/summary, /api/refresh,<br/>/api/query, /api/layout, /api/agent"]
-  Q --> SV
-  LJ[("layout.json")] <--> SV
-  AGT["agent.py<br/>Claude loop, AG-UI events"] --> SV
-  AGT --> Q
-  SV --> UI["web/ React app<br/>catalogue, layout model,<br/>chat drawer + useAgent"]
+    you([You]) -->|"usage-insights, then browser<br/>at 127.0.0.1:8090"| app((usage-insights))
+    task["Task Scheduler or cron"] -->|"usage-insights-bg export"| app
+
+    subgraph disk [Read from this machine]
+        cc["Claude Code transcripts<br/>~/.claude/projects/**/*.jsonl"]
+        cfg["Installed plugins, skills,<br/>agents, MCP config"]
+    end
+    disk -->|read| app
+
+    app -->|"read, write"| home[("Store dir<br/>~/.usage-insights or<br/>$C4_USAGE_INSIGHTS_HOME")]
+
+    subgraph net [Fetched by export, at most daily]
+        ll["LiteLLM price file"]
+        docs["Claude Code docs<br/>tool names"]
+        cli["local claude CLI<br/>agent names"]
+    end
+    app -->|"HTTPS, initialize"| net
+
+    app -->|"chat only, with<br/>C4_USAGE_INSIGHTS_API_KEY"| api([Anthropic API])
 ```
+
+## 03. Components
+
+The app splits into three stages that meet at files on disk and at HTTP endpoints, so each
+diagram below covers one stage and can be read on its own. A box shared between two diagrams,
+such as `usage.db` or `server.py`, is where they join.
+
+### 03.01 Export: transcripts into the store
+
+The only stage that writes `usage.db` and `reference.json`. Start at `cli.py` on the left.
+
+- **Store lane (top).** `export.py` hands each transcript whose size or mtime changed to
+  `claude-usage` for parsing, then upserts the rows under one `BEGIN IMMEDIATE` lock that
+  `store.py` owns. A second export that finds the lock taken gives up with `ExportBusy`.
+- **Reference lane (bottom).** Only the `export` subcommand runs `reference.py`, which refreshes
+  prices and built-in names, each at most daily and each with a fallback.
+- **The Refresh button** reaches the same `run_export` through `server.py`, but never the
+  reference lane.
+
+```mermaid
+flowchart LR
+    CLI["cli.py<br/>usage-insights [export]"] -->|run_export| EX["export.py<br/>incremental export"]
+    SV["server.py<br/>POST /api/refresh"] -->|run_export| EX
+    EX -->|"changed files"| CU["libs/claude-usage<br/>parse_file"]
+    CU -->|"sessions, messages, events"| EX
+    EX -->|"upsert rows"| ST["store.py<br/>schema, write lock"]
+    ST -->|"BEGIN IMMEDIATE"| DB[("usage.db")]
+
+    CLI -->|"export subcommand only"| REF["reference.py<br/>daily fetch, fallback"]
+    REF -->|"temp file, rename"| RJ[("reference.json")]
+```
+
+### 03.02 Server: the store into the API
+
+`server.py` is the hub: every request enters there, and it reads but never writes the store. Read
+this diagram from the stores on the left to the browser on the right.
+
+- **Summary path.** `aggregate.py` builds the `/api/summary` payload from `usage.db` and the
+  `inventory.py` list of installed skills, agents, and MCP servers.
+- **Query path.** `query.py` computes one typed query, for a generated panel (`/api/query`) or for
+  the agent's `run_query` tool. It shares its row helpers with `aggregate.py`, so the same figure
+  never comes out two ways.
+- **Chat path.** `agent.py` runs the Claude loop and streams AG-UI events back through `server.py`
+  as SSE. `layout.json` is the only file a request handler writes.
+
+```mermaid
+flowchart LR
+    DB[("usage.db")] -->|"read-only"| AG["aggregate.py<br/>projection, spend, health"]
+    DB -->|"read-only"| Q["query.py<br/>typed query"]
+    CFG["plugins, skills,<br/>agents, MCP config"] --> CP["libs/claude-plugins"] --> INV["inventory.py"]
+    RJ[("reference.json")] -->|"prices, built-in lists"| SV
+
+    INV -->|inventory| AG
+    AG -->|summary| SV["server.py<br/>Host and same-origin checks"]
+    Q -->|"rows, total, change"| SV
+    Q -->|"run_query, list_values results"| AGT
+    SV <-->|"run, AG-UI events"| AGT["agent.py<br/>Claude loop"]
+    AGT <-->|"messages stream"| API([Anthropic API])
+    SV <-->|"GET, PUT, DELETE"| LJ[("layout.json")]
+    SV -->|"/api/*"| B([Browser])
+```
+
+### 03.03 Browser: the API onto the page
+
+The React app in `web/src`. Two lanes feed one page: the dashboard (bottom) and the chat (top).
+
+- **Dashboard lane.** `layout/model.ts` resolves the saved layout, or the default when none is
+  saved, into sections of panels. `Dashboard.tsx` draws each panel from the summary payload: a
+  default panel is a `catalogue/` component, and a generated panel is a `QueryPanel` that fetches
+  its own query.
+- **Chat lane.** `useAgent.ts` receives the agent's tool calls, validates each with zod, applies
+  it through `layout/edits.ts`, and hands the new layout to `useLayout.ts`, which saves it.
+- **Only the boxes that name an endpoint call the server.** The `catalogue/` components never
+  fetch. `useRefresh.ts` runs an export, then makes `useSummary.ts` fetch again.
+
+```mermaid
+flowchart LR
+    CHAT["ChatDrawer.tsx"] --> UA["hooks/useAgent.ts<br/>POST /api/agent (SSE)"]
+    UA -->|"validated tool call"| ED["layout/edits.ts"]
+    ED -->|"new layout"| LAY["hooks/useLayout.ts<br/>GET, PUT, DELETE /api/layout"]
+
+    LAY -->|"saved layout"| MOD["layout/model.ts<br/>resolve"]
+    DEF["layout/defaultLayout.ts"] --> MOD
+    MOD -->|sections| DASH["Dashboard.tsx"]
+    REF["hooks/useRefresh.ts<br/>POST /api/refresh"] -->|"then reload"| SUM["hooks/useSummary.ts<br/>GET /api/summary"]
+    SUM -->|payload| DASH
+    DASH -->|"default panel"| CAT["catalogue/"]
+    DASH -->|"generated panel"| QP["QueryPanel.tsx<br/>POST /api/query"]
+```
+
+### 03.04 Modules
+
+What each module owns, for finding where a change belongs. The diagrams above show how the
+modules connect, and this table names the one job each is responsible for.
 
 | Module | Owns |
 |--------|------|
@@ -66,7 +183,16 @@ flowchart LR
 | `web/src/layout/model.ts`, `edits.ts` | The saved layout (refs to default panels plus generated panels), `resolve` back to renderable panels, and the agent's four edits. |
 | `web/src/hooks/useAgent.ts` | One `HttpAgent` per thread; validates each tool call, applies it, saves the layout, and answers with a tool result. |
 
-## Key flow — a chat question
+## 04. Key flow: a chat question
+
+How one question becomes a panel on the page. The run spans two HTTP requests, because the agent
+cannot change the layout itself: it asks the browser to.
+
+- **First request.** The agent may call `run_query` on the server to see real figures, then calls
+  a frontend tool such as `add_panel`. The run ends there, waiting on the browser.
+- **In the browser.** `useAgent.ts` validates the call, applies it, and saves the layout.
+- **Second request.** It carries the tool result back, and the agent closes with a short reply.
+  A thread holds one run at a time, so a second run on the same thread gets 409.
 
 ```mermaid
 sequenceDiagram
@@ -93,7 +219,15 @@ sequenceDiagram
     A-->>U: TEXT_MESSAGE_*, RUN_FINISHED
 ```
 
-## Key flow — refresh
+## 05. Key flow: refresh
+
+What the Refresh button does. The export and the page read share one SQLite file, and the
+`alt` block is the case to understand.
+
+- **One writer.** The export takes the write lock with a 5 s timeout. If the scheduled task or the
+  CLI already holds it, the button gets 409 at once instead of hanging through a long export.
+- **Readers never wait.** The store runs in WAL mode, so the summary read after the export (or
+  during someone else's) goes ahead on a read-only connection.
 
 ```mermaid
 sequenceDiagram
@@ -120,7 +254,7 @@ sequenceDiagram
     end
 ```
 
-## Key Decisions
+## 06. Key Decisions
 
 ### 2026-10-14 — Own an upsert-only store instead of reading transcripts live
 
