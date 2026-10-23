@@ -259,23 +259,6 @@ function Get-CommandCenterRegistry {
         }
     }
 
-    # --- usage-dashboard -----------------------------------------------------
-    $udDir = Join-Path $apps 'usage-dashboard'
-    $usageDashboard = [pscustomobject]@{
-        Name           = 'usage-dashboard'
-        DisplayName    = 'Usage dashboard'
-        Category       = 'apps'
-        SetupScript    = Join-Path (Join-Path $udDir 'scripts') 'usage-dashboard-setup.ps1'
-        Version        = Read-MemberVersion $udDir
-        RequiredConfig = @()
-        Install        = { param($SetupScript, $Config) & $SetupScript -Action install | Out-Null; @{} }
-        Uninstall      = { param($SetupScript, $Entry)  & $SetupScript -Action uninstall | Out-Null }
-        Detect         = {
-            param($Entry)
-            [bool](Get-ScheduledTask -TaskName 'usage-dashboard' -TaskPath '\ClaudeAutomation\usage-dashboard\'-ErrorAction SilentlyContinue)
-        }
-    }
-
     # --- usage-insights ------------------------------------------------------
     $uiDir = Join-Path $apps 'usage-insights'
     $usageInsights = [pscustomobject]@{
@@ -293,5 +276,5 @@ function Get-CommandCenterRegistry {
         }
     }
 
-    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $agentsWorkspaceSync, $marketplaceUpdater, $usageDashboard, $usageInsights)
+    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $agentsWorkspaceSync, $marketplaceUpdater, $usageInsights)
 }

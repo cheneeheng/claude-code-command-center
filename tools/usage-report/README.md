@@ -1,7 +1,7 @@
 # usage-report
 
 A CLI that prints a cross-session summary of Claude Code **token usage and estimated cost** —
-the terminal counterpart to the [`usage-dashboard`](../../apps/usage-dashboard/) app. Both read
+the terminal counterpart to the [`usage-insights`](../../apps/usage-insights/) app. Both read
 the same data through the [`claude-usage`](../../libs/claude-usage/) library.
 
 ```console

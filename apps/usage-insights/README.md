@@ -12,7 +12,7 @@ answers three questions:
 - **What should I fix?** Every skill and subagent with a health status, tool calls ranked by count,
   and the built-in tools and MCP servers you never call.
 
-It replaces [`usage-dashboard`](../usage-dashboard/). Data comes from Claude Code's transcripts
+It replaces `usage-dashboard`, now retired (last version at the `usage-dashboard-final` tag). Data comes from Claude Code's transcripts
 (`~/.claude/projects/**/*.jsonl`), copied into a local store, so your history outlives Claude
 Code's transcript cleanup.
 

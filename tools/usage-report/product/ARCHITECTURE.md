@@ -1,7 +1,7 @@
 # usage-report — Architecture
 
 A thin CLI that prints a cross-session summary of Claude Code token usage and estimated cost — the
-terminal counterpart to the `usage-dashboard` app. All parsing and pricing live in the shared
+terminal counterpart to the `usage-insights` app. All parsing and pricing live in the shared
 `claude-usage` library; this member is presentation only.
 
 ## System context

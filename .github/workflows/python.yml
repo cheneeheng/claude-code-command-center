@@ -20,7 +20,6 @@ jobs:
           - apps/multi-repo-plan-runner
           - apps/multi-repo-workspace
           - apps/per-project-plugin-toggler
-          - apps/usage-dashboard
           - apps/usage-insights
           - apps/claude-component-browser
           - tools/usage-report
@@ -126,7 +125,6 @@ jobs:
       matrix:
         member:
           - apps/claude-component-browser
-          - apps/usage-dashboard
           - tools/usage-report
     defaults:
       run:
