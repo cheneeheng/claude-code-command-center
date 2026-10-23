@@ -35,6 +35,8 @@ installs from a clone at that tag.
   API error such as `529 Overloaded`), instead of `claude exited 1: ` with nothing after it.
 - A failed `gh` call in the question queue now ends its `questionsWarning` with gh's own first
   error line, such as a token that may not create issues.
+- The hourly Windows task no longer flashes a terminal window: it now starts `pwsh` through
+  `conhost.exe --headless`. Run `install` again to update an existing task.
 
 ## [0.2.0] - 2026-10-13
 

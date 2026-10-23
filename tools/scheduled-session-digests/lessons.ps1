@@ -223,8 +223,9 @@ function Invoke-Install {
     if ($giNew.Count) { [IO.File]::AppendAllText($gi, (($giNew -join "`n") + "`n"), $script:Utf8) }
     if ($addTask) {
         $pwsh = (Get-Command pwsh).Source
-        $action = New-ScheduledTaskAction -Execute $pwsh -WorkingDirectory $meta `
-            -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$(Join-Path $h 'src\run.ps1')`" -Scheduled"
+        # conhost --headless gives pwsh a console that is never shown, so no window flashes on each run.
+        $action = New-ScheduledTaskAction -Execute 'conhost.exe' -WorkingDirectory $meta `
+            -Argument "--headless `"$pwsh`" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$(Join-Path $h 'src\run.ps1')`" -Scheduled"
         $trigger = New-ScheduledTaskTrigger -Daily -At '00:00'
         $trigger.Repetition = (New-ScheduledTaskTrigger -Once -At '00:00' -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 1)).Repetition
         $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `

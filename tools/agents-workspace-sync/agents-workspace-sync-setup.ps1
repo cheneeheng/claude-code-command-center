@@ -204,9 +204,10 @@ Write-Host "      $ConfigFile ($($Repos.Count) repo(s))" -ForegroundColor Green
 Step "Registering Task Scheduler task..."
 
 $TaskTrigger  = New-ScheduledTaskTrigger -Daily -At $ScheduleTime
+# conhost --headless gives powershell a console that is never shown, so no window flashes on each run.
 $TaskAction   = New-ScheduledTaskAction `
-    -Execute "powershell.exe" `
-    -Argument "-NonInteractive -ExecutionPolicy Bypass -File `"$Installed`""
+    -Execute "conhost.exe" `
+    -Argument "--headless powershell.exe -NonInteractive -ExecutionPolicy Bypass -File `"$Installed`""
 # 15 minutes is generous for N git pushes; a hung credential prompt dies rather than
 # lingering until the next day's run.
 $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15)
