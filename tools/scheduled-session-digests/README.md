@@ -118,8 +118,9 @@ which mistakes to avoid. It is off by default.
   guessing when no rule covers a decision.
 - **What the records cannot settle** (a rule with no stated reason, two choices that
   contradict each other) becomes a question. With the question queue on, each question is a
-  GitHub issue on your meta repo, labelled `decision-question`. Answer it in a comment, from
-  any device, and close it. The next weekly run reads your comment back as a decision with
+  GitHub issue on your meta repo, labelled `decision-question`, with numbered options. Answer it
+  in a comment with an option's number (and a reason if you have one), from any device, and
+  close it. The next weekly run reads your comment back as a decision with
   your stated reason.
 
 To turn it on, set `"enabled": true` under `extractions.decisions` in

@@ -16,7 +16,8 @@ installs from a clone at that tag.
   section, for the user to import from `~/.claude/CLAUDE.md`.
 - A question queue on GitHub issues (`decision-question`): the weekly merge's open questions
   are opened as issues on a private meta repo only, and closed issues the repo owner answered
-  are read back before the next merge. Its failures are a `questionsWarning`, never the run's
+  are read back before the next merge. Each issue is formatted Markdown with numbered options,
+  so the user can answer with a number. Its failures are a `questionsWarning`, never the run's
   error.
 - `install` and `status` print the `@` import line while `decisions` is enabled, and `status`
   shows SOUL.md's size and the open question count.
