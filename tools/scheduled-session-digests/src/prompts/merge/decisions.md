@@ -10,7 +10,8 @@ It starts with a `Run date: YYYY-MM-DD` line, then has three sections:
 - `# New session files`: one `## Source: <file name>` section per file. A per-session file
   holds that session's decisions, each with Situation, Options, Chosen, Reason, Reason source
   (`stated`, `inferred`, or `none` when the user gave no reason), Override, and Domain. A file named `issue-<n>.md` is the user's
-  answer to an earlier question: its Reason is the user's own words.
+  answer to an earlier question: its Reason is the user's own words, and a bare number there
+  picks that numbered option from its Situation.
 
 Do not use any tools.
 
@@ -57,12 +58,26 @@ The whole new SOUL.md, in this shape:
 Do not write a `## When to ask` section: the script adds it.
 
 <<<extraction:questions>>>
-Each new question for the user, as:
+Each new question for the user, as below. Everything under the `### ` line becomes the body of
+a GitHub issue, so write it as Markdown that reads at a glance, and never start a body line
+with `### `. Number the options from 1, the recommended one first and marked "(recommended)",
+so the user can answer with a number.
 
 ```markdown
 ### <the question, one line, ending with "?">
 
-<the situation, the options, and the source file names>
+**Situation**
+
+<what happened and why it needs the user's call, in two or three sentences>
+
+**Options**
+
+1. <option> (recommended): <why>
+2. <option>: <trade-off>
+
+**Answer** with the option's number, plus a reason if you have one.
+
+<sub>Sources: <the source file names, comma-separated></sub>
 ```
 
 or, when there is nothing to ask, exactly:
