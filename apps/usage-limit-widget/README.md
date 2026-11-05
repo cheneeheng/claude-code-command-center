@@ -1,13 +1,17 @@
 # usage-limit-widget
 
 A small Windows widget for your Claude usage limits. It hides at the top edge of the primary
-monitor, leaving a 2px handle. Hover that spot to reveal two rows, the 5-hour session limit and
-the 7-day weekly limit, each with a bar, the percentage used, and when it resets.
+monitor, leaving a 2px handle. Hover that spot to reveal your plan and two rows, the 5-hour
+session limit and the 7-day weekly limit. Each row has a bar, the percentage used, the reset
+time, and the time left until the reset.
 
 ```
-5h  ██████░░░░░░░░░░░░░░░  42%  ·  18:32 (2h10m)
-7d  ██░░░░░░░░░░░░░░░░░░░  11%  ·  Tue 09:00 (4d3h)
+     5h  ███████░░│░░░░░  42%      12:21   2h9m
+Pro  7d  █████│█████████  86%  Mon 13:11   4d2h
 ```
+
+The tick (`│`) on each bar marks how far through the window you are. A fill past the tick
+means you are using the limit faster than an even pace would. A bar turns red at 80%.
 
 ## Install
 

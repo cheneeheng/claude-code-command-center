@@ -27,7 +27,8 @@ parameters, or task name must update `setup/` in the same change.
   and the battery flags off, or the task kills the widget on its own.
 - **The task runs a base interpreter's `pythonw.exe`** (`uv python find --system`), never the
   `.venv` one, which is git-ignored and is a redirector that spawns a second process.
-- **Keep the panel tight vertically:** one row per limit, no title row.
+- **Keep the panel tight vertically:** one row per limit, no title row. The plan
+  (`subscriptionType` from `.credentials.json`) is a column spanning both rows.
 
 ## Conventions
 

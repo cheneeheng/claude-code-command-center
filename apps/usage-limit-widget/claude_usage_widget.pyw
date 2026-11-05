@@ -28,6 +28,7 @@ import shutil
 import subprocess
 import threading
 import tkinter as tk
+import tkinter.font as tkfont
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
@@ -38,11 +39,13 @@ EDGE_TRIGGER_PX = 3  # trigger-zone height at the very top edge
 KEEP_PAD_X = 15  # extra width each side once visible (hysteresis)
 HIDE_MARGIN_PX = 10  # extra height below panel once visible (hysteresis)
 REFRESH_SECS = 300  # how often to re-fetch usage from Anthropic ("r" fetches now)
-PAD, ROW_H = 6, 17  # one row per limit: label, bar, figures
-PANEL_W, PANEL_H = 330, 2 * PAD + 2 * ROW_H
-# The bar fills the width between them. FIGURES_W fits the widest figures,
-# "100%  ·  Tue 09:00 (6d23h)" (136px in Segoe UI 9), plus a gap.
-LABEL_W, FIGURES_W = 26, 150
+PAD, GAP, ROW_H = 6, 8, 17  # one row per limit, columns GAP apart
+PANEL_W, PANEL_H = 340, 2 * PAD + 2 * ROW_H
+# Grid: plan (spans both rows) | label | bar | % | reset at | time left.
+# Fixed widths fit the widest value in Segoe UI 9: "5h" 14, "100%" 28,
+# "Tue 09:00" 50 (+6 so it doesn't crowd the %), "23h59m" 42. The plan
+# column is measured, the bar takes whatever width is left.
+LABEL_W, PCT_W, RESET_W, LEFT_W = 14, 28, 56, 44
 
 # ---- look ----
 BG, BORDER, FG, MUTED, TRACK = "#1f1f1f", "#3a3a3a", "#e8e8e8", "#9a9a9a", "#363636"
@@ -52,7 +55,7 @@ FONT, FONT_BOLD = ("Segoe UI", 9), ("Segoe UI Semibold", 9)
 # five_hour = rolling session limit, seven_day = rolling weekly limit --
 # these are the two caps a Claude subscription (Pro/Max) usage is tracked
 # against; each resets independently on its own rolling window.
-LABELS = {"five_hour": "5h", "seven_day": "7d"}
+LIMITS = {"five_hour": ("5h", 5 * 3600), "seven_day": ("7d", 7 * 86400)}
 
 
 def claude_dir():
@@ -69,10 +72,9 @@ def claude_dir():
 CREDS_PATH = os.path.join(claude_dir(), ".credentials.json")
 
 
-def load_token():
+def load_oauth():
     with open(CREDS_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return data["claudeAiOauth"]["accessToken"]
+        return json.load(f)["claudeAiOauth"]
 
 
 @functools.cache
@@ -95,7 +97,10 @@ def user_agent():
 
 
 def fetch_usage():
-    token = load_token()
+    """The usage response, plus the plan Claude Code stored at login (e.g.
+    "pro") under "plan"."""
+    oauth = load_oauth()
+    token = oauth["accessToken"]
     req = urllib.request.Request(
         "https://api.anthropic.com/api/oauth/usage",
         headers={
@@ -106,7 +111,9 @@ def fetch_usage():
         },
     )
     with urllib.request.urlopen(req, timeout=10) as resp:
-        return json.loads(resp.read().decode())
+        usage = json.loads(resp.read().decode())
+    usage["plan"] = str(oauth.get("subscriptionType") or "?").capitalize()
+    return usage
 
 
 def pct(block):
@@ -246,28 +253,43 @@ class Widget:
                 width=PANEL_W - 2 * PAD,
             )
             return
-        bar_x0 = PAD + LABEL_W
-        bar_x1 = PANEL_W - PAD - FIGURES_W
-        for i, (key, label) in enumerate(LABELS.items()):
+        plan = data.get("plan", "?")
+        plan_w = tkfont.Font(font=FONT_BOLD).measure(plan)
+        c.create_text(
+            PAD, PANEL_H // 2, text=plan, fill=ACCENT, font=FONT_BOLD, anchor="w"
+        )
+        label_x = PAD + plan_w + GAP
+        bar_x0 = label_x + LABEL_W + GAP
+        # Right-aligned columns, laid out from the right edge inwards.
+        left_x = PANEL_W - PAD
+        reset_x = left_x - LEFT_W - GAP
+        pct_x = reset_x - RESET_W - GAP
+        bar_x1 = pct_x - PCT_W - GAP
+        now = datetime.now(UTC)
+        for i, (key, (label, window_secs)) in enumerate(LIMITS.items()):
             block = data.get(key) or {}
             p = pct(block)
             dt = parse_reset(resets_at(block))
             y = PAD + i * ROW_H + ROW_H // 2  # vertical center of the row
-            c.create_text(PAD, y, text=label, fill=FG, font=FONT_BOLD, anchor="w")
+            c.create_text(label_x, y, text=label, fill=FG, font=FONT_BOLD, anchor="w")
             c.create_rectangle(bar_x0, y - 2, bar_x1, y + 2, fill=TRACK, width=0)
             if p:
                 fill_x = bar_x0 + (bar_x1 - bar_x0) * min(p, 100) / 100
                 color = WARN if p >= 80 else ACCENT
                 c.create_rectangle(bar_x0, y - 2, fill_x, y + 2, fill=color, width=0)
+            if dt is not None:
+                # Pace tick: how far through the window we are. A fill past
+                # the tick means usage is running ahead of an even pace.
+                left = (dt - now).total_seconds() / window_secs
+                tick_x = bar_x0 + (bar_x1 - bar_x0) * min(max(1 - left, 0), 1)
+                c.create_line(tick_x, y - 5, tick_x, y + 5, fill=FG)
             shown = f"{p}%" if p is not None else "?%"
-            c.create_text(
-                PANEL_W - PAD,
-                y,
-                anchor="e",
-                fill=MUTED,
-                font=FONT,
-                text=f"{shown}  ·  {format_abs(dt)} ({format_delta(dt)})",
-            )
+            for x, text in (
+                (pct_x, shown),
+                (reset_x, format_abs(dt)),
+                (left_x, format_delta(dt)),
+            ):
+                c.create_text(x, y, text=text, fill=MUTED, font=FONT, anchor="e")
 
     def in_trigger_zone(self, x, y):
         # Small hot strip exactly over where the panel sits -- only
