@@ -19,10 +19,11 @@ $settingsPath = Join-Path $ClaudeDir 'settings.json'
 $marker       = 'session-name-date-prefixer'
 
 # Runs through "shell": "powershell", which is not documented as pwsh or powershell.exe, so it
-# stays valid in both. Prints nothing when the session already has a title (--name, /rename).
-# The leading no-op names the tool, so install and uninstall can find this hook.
+# stays valid in both. Prints nothing when the session already has a title the user gave
+# (--name, /rename). A title in this hook's own <folder>-<10 digits> form, which /clear
+# inherits, is replaced. The leading no-op names the tool, so install and uninstall can find it.
 $command = @'
-$null = 'session-name-date-prefixer'; if (-not ([Console]::In.ReadToEnd() | ConvertFrom-Json).session_title) { '{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"' + ((Split-Path -Leaf (Get-Location)) -replace '[^A-Za-z0-9_-]', '-') + '-' + (Get-Date -Format yyMMddHHmm) + '"}}' }
+$null = 'session-name-date-prefixer'; $n = (Split-Path -Leaf (Get-Location)) -replace '[^A-Za-z0-9_-]', '-'; $t = ([Console]::In.ReadToEnd() | ConvertFrom-Json).session_title; if (-not $t -or $t -cmatch "^$n-\d{10}$") { '{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"' + $n + '-' + (Get-Date -Format yyMMddHHmm) + '"}}' }
 '@
 
 # The retired PATH wrapper this hook replaces (Windows only, hence the LOCALAPPDATA guard).

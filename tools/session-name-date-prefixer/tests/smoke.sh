@@ -73,6 +73,10 @@ for s in $scripts; do
       [[ "$title" =~ ^my-proj-[0-9]{10}$ ]] || fail "$s/$r/$src: unexpected title '$title'"
       out="$(run_hook "$s" "$r" "$cmd" "{\"source\":\"$src\",\"session_title\":\"mine\"}")" || fail "$s/$r/$src: hook exited non-zero"
       [ -z "$out" ] || fail "$s/$r/$src: hook overrode an existing title: $out"
+      # /clear inherits the hook's own earlier title: that one is replaced, not kept.
+      out="$(run_hook "$s" "$r" "$cmd" "{\"source\":\"$src\",\"session_title\":\"my-proj-0001010000\"}")" || fail "$s/$r/$src: hook exited non-zero"
+      new="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.sessionTitle')" || fail "$s/$r/$src: output is not JSON: $out"
+      [[ "$new" =~ ^my-proj-[0-9]{10}$ && "$new" != my-proj-0001010000 ]] || fail "$s/$r/$src: kept its own old title: '$new'"
       echo "pass  $s/$r/$src  $title"
     done
   done
