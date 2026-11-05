@@ -155,3 +155,4 @@ session started with `--name` keeps the name the user gave.
   new title was dropped. PR #90 (replace the hook's own inherited title) did not help and is
   reverted. At the user's request the matcher is back to `startup`, and `/clear` keeping the old
   title is documented as a limitation (Key Decision "Back to `startup` only").
+- 2026-11-05 PR: #91 https://github.com/cheneeheng/claude-code-command-center/pull/91
