@@ -146,3 +146,4 @@ session started with `--name` keeps the name the user gave.
 - 2026-11-05: Phases 1 and 2 built. `bash tests/smoke.sh` on Windows passes for sh/bash,
   ps1/pwsh and ps1/powershell. With `$groups[0]` swapped in for the array, the smoke test fails
   with "uninstall damaged other settings", so it catches the blocking finding's bug.
+- 2026-11-05 PR: #83 https://github.com/cheneeheng/claude-code-command-center/pull/83
