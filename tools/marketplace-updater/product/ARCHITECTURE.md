@@ -44,3 +44,8 @@ sequenceDiagram
 - **The interval lives in the task, the rest in `config.json`.** Marketplaces and repos change
   often and are re-read every run. The interval needs a task re-registration.
 - **Windows only.** Matches `file-sync`; a cron twin was left out because nobody asked for it.
+- **2026-11-05: the install dir is `~/.claude-command-center/marketplace-updater/`, not
+  `%LOCALAPPDATA%\claude-automation\`.** The user wants every file a command-center tool installs
+  or writes in its own folder next to the manifest. Install keeps a 0.1.x `run.log` and deletes the
+  old dir, only after the task is re-registered, so a failed registration never points the task at
+  a deleted worker. A run holding the old dir open makes install warn rather than fail.

@@ -16,7 +16,8 @@ See `README.md`. Install via `marketplace-updater-setup.ps1`, or through `setup/
 ## Architecture
 
 - `marketplace-updater.ps1` — the worker. Reads `config.json` next to it, refreshes each
-  marketplace, then updates matching installs. Copied into the install dir by setup.
+  marketplace, then updates matching installs. Copied into the install dir by setup
+  (`~/.claude-command-center/marketplace-updater/`, setup's `-InstallDir`).
 - `marketplace-updater-setup.ps1` — install/uninstall. Copies the worker, writes `config.json`,
   registers `\ClaudeAutomation\marketplace-updater\marketplace-updater` (every `IntervalMinutes`,
   through `conhost.exe --headless pwsh`).

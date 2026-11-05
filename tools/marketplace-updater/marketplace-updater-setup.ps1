@@ -2,7 +2,9 @@
 #
 # Install copies marketplace-updater.ps1 into <InstallDir>, writes <InstallDir>\config.json,
 # and registers \ClaudeAutomation\marketplace-updater\marketplace-updater, which runs the
-# copy every -IntervalMinutes. Uninstall removes the task and <InstallDir>.
+# copy every -IntervalMinutes. Uninstall removes the task and <InstallDir>. <InstallDir>
+# defaults to ~\.claude-command-center\marketplace-updater. Both also remove a 0.1.x install
+# from %LOCALAPPDATA%\claude-automation\marketplace-updater, keeping its run.log.
 #
 # The marketplaces and repos are re-read from config.json on every run, so editing that file
 # needs no reinstall. Changing the interval does: re-run install with the new -IntervalMinutes.
@@ -25,12 +27,33 @@ param(
     [ValidateRange(1, 1439)]
     [int]$IntervalMinutes = 360,
 
-    [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'claude-automation\marketplace-updater')
+    [string]$InstallDir = (Join-Path $HOME '.claude-command-center\marketplace-updater')
 )
 
 $ErrorActionPreference = 'Stop'
 $TaskName   = 'marketplace-updater'
 $TaskFolder = "\ClaudeAutomation\$TaskName\"
+
+# Where versions up to 0.1.x installed.
+$OldDir = Join-Path $env:LOCALAPPDATA 'claude-automation\marketplace-updater'
+
+# Keep the old run.log unless the new dir has one, then delete the old dir. A run in
+# progress can hold run.log open, so a failure warns instead of failing the install.
+function Remove-OldInstall {
+    if (-not (Test-Path $OldDir) -or $OldDir -eq $InstallDir) { return }
+    try {
+        $oldLog = Join-Path $OldDir 'run.log'
+        $newLog = Join-Path $InstallDir 'run.log'
+        if ((Test-Path $oldLog) -and (Test-Path $InstallDir) -and -not (Test-Path $newLog)) {
+            Move-Item $oldLog $newLog
+            Write-Host "Moved $oldLog to $newLog"
+        }
+        Remove-Item $OldDir -Recurse -Force
+        Write-Host "Removed the old install dir $OldDir"
+    } catch {
+        Write-Warning "Could not remove the old install dir ${OldDir}: $($_.Exception.Message). Delete it by hand."
+    }
+}
 
 if ($Action -eq 'uninstall') {
     if (Get-ScheduledTask -TaskName $TaskName -TaskPath $TaskFolder -ErrorAction SilentlyContinue) {
@@ -40,6 +63,7 @@ if ($Action -eq 'uninstall') {
         Write-Host "Task $TaskFolder$TaskName not registered, skipped."
     }
     if (Test-Path $InstallDir) { Remove-Item $InstallDir -Recurse -Force; Write-Host "Removed $InstallDir" }
+    Remove-OldInstall
     return
 }
 
@@ -70,6 +94,9 @@ $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minu
 
 Register-ScheduledTask -TaskName $TaskName -TaskPath $TaskFolder -Action $taskAction `
     -Trigger $trigger -Settings $settings -Force | Out-Null
+
+# Only now that the task runs the new worker, so a failed registration leaves the old one working.
+Remove-OldInstall
 
 Write-Host "Registered $TaskFolder$TaskName (every $IntervalMinutes minute(s))."
 Write-Host "Config : $(Join-Path $InstallDir 'config.json')"
