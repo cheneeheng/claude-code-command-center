@@ -61,7 +61,7 @@ flowchart LR
     end
     disk -->|read| app
 
-    app -->|"read, write"| home[("Store dir<br/>~/.usage-insights or<br/>$C4_USAGE_INSIGHTS_HOME")]
+    app -->|"read, write"| home[("Store dir<br/>~/.claude-command-center/usage-insights or<br/>$C4_USAGE_INSIGHTS_HOME")]
 
     subgraph net [Fetched by export, at most daily]
         ll["LiteLLM price file"]
@@ -420,3 +420,19 @@ migration fails.
 **Consequences:** Deleting exported transcripts is safe across upgrades. Old rows show no value for
 a field added later, and the dashboard must handle that null. No schema change has shipped yet
 (version 1), so no code changes until one does.
+
+### 2026-11-05 — The store lives under `~/.claude-command-center/usage-insights`
+
+**Status:** Accepted
+**Context:** The user wants every file a command-center app or tool writes in its own folder next
+to the command-center manifest. The store is history that outlives Claude Code's transcript
+cleanup, so it must move, not be rebuilt. The editable `uv tool` install picks up a new default
+on `git pull`, before anyone re-runs setup.
+**Decision:** The default store dir is `~/.claude-command-center/usage-insights`.
+`store_path()` returns the old `~/.usage-insights` while it exists and the new dir does not, a
+read-only fallback with no side effect. Setup moves the whole old dir (`usage.db`, its WAL files
+and backups, `reference.json`, `layout.json`) after stopping and disabling the export task, and
+never moves it over an existing store.
+**Consequences:** No export or dashboard start between the pull and setup can start an empty
+store beside the real one. A move that fails because the dashboard holds `usage.db` stops setup
+with the export task disabled, until setup is re-run.

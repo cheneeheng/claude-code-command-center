@@ -84,7 +84,7 @@ never collides with Claude Code's or the OS's variables:
 | `C4_CLAUDE_DIR` | `usage-report`, `usage-insights`, `usage-limit-widget`, `scheduled-session-digests`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. `scheduled-session-digests` reads every entry, at install time. |
 | `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `agents-workspace-sync`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). `scheduled-session-digests` reads it only as the default for `-MetaDir` and never sets it. `agents-workspace-sync` setup reads it only to find and delete a 0.1.x install. |
 | `C4_STATUSLINE_NOW` | `statusline-hook` | Test-only: pins "now" (epoch seconds) for the golden fixtures. |
-| `C4_USAGE_INSIGHTS_HOME` | `usage-insights` | Store dir holding `usage.db`, `reference.json`, and `layout.json` (default `~/.usage-insights`). |
+| `C4_USAGE_INSIGHTS_HOME` | `usage-insights` | Store dir holding `usage.db`, `reference.json`, and `layout.json` (default `~/.claude-command-center/usage-insights`). |
 | `C4_USAGE_INSIGHTS_API_KEY` | `usage-insights` | Anthropic API key for the chat; unset turns it off. Not `ANTHROPIC_API_KEY`, which Claude Code reads too. Each message spends API credit. |
 | `C4_USAGE_INSIGHTS_MODEL` | `usage-insights` | Model the chat runs on (default `claude-sonnet-5-5`). |
 | `C4_STUB_LIST`, `C4_STUB_LIST_FAIL`, `C4_STUB_LOG` | `marketplace-updater` | Test-only: the stub `claude` CLI's plugin list file, a switch that makes the list fail, and its call log. |
