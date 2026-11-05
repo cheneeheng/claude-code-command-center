@@ -1,8 +1,10 @@
 # Install / uninstall the usage-limit-widget logon task (Windows).
 #
-# install:   registers \ClaudeAutomation\usage-limit-widget\widget, which starts the widget
-#            with pythonw at logon and restarts it every hour after, then starts it now.
-# uninstall: stops and removes the task.
+# install:   copies the widget into ~\.claude-command-center\usage-limit-widget\ and registers
+#            \ClaudeAutomation\usage-limit-widget\widget, which starts that copy with pythonw
+#            at logon and restarts it every hour after, then starts it now. Re-run install to
+#            pick up a newer widget from the checkout.
+# uninstall: stops and removes the task and deletes the copy's folder.
 #
 # Usage:
 #   .\usage-limit-widget-setup.ps1                     # install (default)
@@ -15,7 +17,9 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $AppDir     = $PSScriptRoot
-$Widget     = Join-Path $AppDir 'claude_usage_widget.pyw'
+# The task runs a copy, so moving or deleting the checkout does not break the widget.
+$InstallDir = Join-Path $HOME '.claude-command-center\usage-limit-widget'
+$Widget     = Join-Path $InstallDir 'claude_usage_widget.pyw'
 # Task folder nests the app's folder name under the shared \ClaudeAutomation\ root.
 $TaskFolder = "\ClaudeAutomation\$(Split-Path -Leaf $AppDir)\"
 $TaskName   = 'widget'
@@ -30,6 +34,7 @@ if ($Action -eq 'uninstall') {
     } else {
         Write-Host "Task $TaskFolder$TaskName not found, skipped."
     }
+    if (Test-Path $InstallDir) { Remove-Item $InstallDir -Recurse -Force; Write-Host "Removed $InstallDir" }
     return
 }
 
@@ -45,7 +50,10 @@ if ($LASTEXITCODE -ne 0) { throw "uv python find failed (exit $LASTEXITCODE)" }
 $Pythonw = Join-Path (Split-Path $Python) 'pythonw.exe'
 if (-not (Test-Path $Pythonw)) { throw "Expected $Pythonw next to $Python, not found." }
 
-$TaskAction  = New-ScheduledTaskAction -Execute $Pythonw -Argument "`"$Widget`"" -WorkingDirectory $AppDir
+New-Item -ItemType Directory -Force $InstallDir | Out-Null
+Copy-Item -Force (Join-Path $AppDir 'claude_usage_widget.pyw') $Widget
+
+$TaskAction  = New-ScheduledTaskAction -Execute $Pythonw -Argument "`"$Widget`"" -WorkingDirectory $InstallDir
 $TaskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 # -AtLogOn takes no repetition parameters, so borrow the repetition from a -Once trigger.
 # No duration means it repeats for as long as the user stays logged on.
@@ -67,3 +75,4 @@ Register-ScheduledTask -TaskName $TaskName -TaskPath $TaskFolder `
 Start-ScheduledTask -TaskName $TaskName -TaskPath $TaskFolder
 Write-Host "Registered and started $TaskFolder$TaskName (at logon, restarted hourly)"
 Write-Host "Interpreter: $Pythonw"
+Write-Host "Widget:      $Widget"

@@ -24,9 +24,12 @@ with tkinter).
 .\usage-limit-widget-setup.ps1 -Action uninstall   # stop and remove the task
 ```
 
-Install registers `\ClaudeAutomation\usage-limit-widget\widget`. The task starts the widget at
-logon and restarts it every hour, which also brings it back after you quit it. You can also
-install it through [`setup/command-center.ps1`](../../setup/) as `usage-limit-widget`.
+Install copies the widget into `~\.claude-command-center\usage-limit-widget\` and registers
+`\ClaudeAutomation\usage-limit-widget\widget`. The task starts that copy at logon and restarts it
+every hour, which also brings it back after you quit it. Because it runs the copy, moving or
+deleting the checkout does not break it, and a `git pull` does not reach it: re-run install to
+pick up a newer widget. Uninstall also deletes the copy's folder. You can also install it through
+[`setup/command-center.ps1`](../../setup/) as `usage-limit-widget`.
 
 To run it once without the task: `pythonw claude_usage_widget.pyw`.
 

@@ -1,6 +1,6 @@
 [project]
 name = "usage-limit-widget"
-version = "0.1.0"
+version = "0.2.0"
 description = "Windows top-edge widget showing Claude 5-hour and 7-day usage limits."
 readme = "README.md"
 requires-python = ">=3.11"
