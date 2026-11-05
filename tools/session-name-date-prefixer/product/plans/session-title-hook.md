@@ -150,3 +150,4 @@ session started with `--name` keeps the name the user gave.
 - 2026-11-05: Follow-up at the user's request: matcher `startup|clear` instead of `startup`
   (Key Decision "The hook also runs on `clear`"). Smoke test now runs every case for both sources:
   green with the change, `FAIL: sh: matcher is not startup|clear` with it stashed.
+- 2026-11-05 PR: #89 https://github.com/cheneeheng/claude-code-command-center/pull/89
