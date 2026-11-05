@@ -43,8 +43,9 @@ function Get-CommandCenterRegistry {
         Uninstall      = { param($SetupScript, $Entry)  & $SetupScript -Action uninstall | Out-Null }
         Detect         = {
             param($Entry)
-            $bin = Join-Path $env:LOCALAPPDATA 'claude-automation\cc-inject-date-to-session-name'
-            Test-Path (Join-Path $bin 'claude.ps1')
+            # The hook's command names the tool; see the member's setup script.
+            $settings = Join-Path $env:USERPROFILE '.claude\settings.json'
+            [bool]((Test-Path $settings) -and (Select-String -Path $settings -Pattern 'session-name-date-prefixer' -SimpleMatch -Quiet))
         }
     }
 

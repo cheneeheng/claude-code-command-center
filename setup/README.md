@@ -10,7 +10,7 @@ member's own setup script and records the outcome in a per-machine **manifest**.
 
 | Member | What "install" does |
 |--------|---------------------|
-| `session-name-date-prefixer` | Adds a `claude` wrapper to your user PATH |
+| `session-name-date-prefixer` | Adds a `SessionStart` hook to `~/.claude/settings.json` that names each new session, and removes the old `claude` PATH wrapper |
 | `statusline-hook` | Copies the hook into `~/.claude/` and wires `statusLine` in `settings.json` |
 | `file-sync` | Registers Task Scheduler jobs to keep folder pairs in sync (needs config) |
 | `scheduled-session-digests` | Installs the session-lessons pipeline into the meta repo and registers its hourly task |
