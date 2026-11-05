@@ -56,7 +56,7 @@ remove_old_wrapper() {
 install_hook() {
   mkdir -p "$claude_dir"
   edit_settings --arg cmd "$cmd" \
-    ".hooks.SessionStart = ($others + [{matcher: \"startup|clear\", hooks: [{type: \"command\", command: \$cmd}]}])"
+    ".hooks.SessionStart = ($others + [{matcher: \"startup\", hooks: [{type: \"command\", command: \$cmd}]}])"
   echo "Added the SessionStart hook to $settings"
   remove_old_wrapper
 }
