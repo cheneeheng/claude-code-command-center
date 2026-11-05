@@ -62,3 +62,4 @@ with its log, and the scheduled task runs the new copy.
   `~/.claude-command-center/marketplace-updater/marketplace-updater.ps1`, `run.log` moved over
   with its history from 2026-10-21, the old `%LOCALAPPDATA%` dir is gone, and the new worker's
   `-DryRun` exits 0 with "0 failure(s)".
+- 2026-11-05 PR: #85 https://github.com/cheneeheng/claude-code-command-center/pull/85
