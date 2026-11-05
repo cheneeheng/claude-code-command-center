@@ -265,7 +265,8 @@ size or mtime changed, and only ever upserts rows. A schema version change backs
 `usage.db.bak.v<old version>` (one file per version, so a second change never overwrites the
 first backup, added 2026-10-15) and rebuilds from the transcripts still on disk.
 **Consequences:** History outlives Claude Code's cleanup, and a repeat export takes well under 1 s.
-A schema change loses rows for deleted transcripts, so additive changes are preferred. A copy of a
+A schema change loses rows for deleted transcripts, so additive changes are preferred (replaced
+2026-11-05: a schema change migrates the store, see the last decision). A copy of a
 reply with fewer output tokens never replaces the stored one (added 2026-10-15), because a fork's
 mid-stream snapshot, re-parsed later, used to shrink the finished reply.
 
@@ -406,3 +407,16 @@ a subfolder.
 the latest `cwd`, else the encoded folder name. Two projects with the same basename get the folder
 name appended.
 **Consequences:** Labels stay stable as sessions move around inside a repo.
+
+### 2026-11-05 — A schema change migrates the store instead of rebuilding it
+
+**Status:** Accepted
+**Context:** The store may be the only copy of usage from transcripts Claude Code has deleted, or
+the user deleted after an export. The rebuild described in the first decision drops those rows.
+**Decision:** The next `SCHEMA_VERSION` bump ships a migration that keeps every existing row and
+leaves a new field null where old rows have no value for it. It replaces the drop-and-rebuild in
+`store.ensure_schema`. The backup to `usage.db.bak.v<old version>` stays, as a copy in case a
+migration fails.
+**Consequences:** Deleting exported transcripts is safe across upgrades. Old rows show no value for
+a field added later, and the dashboard must handle that null. No schema change has shipped yet
+(version 1), so no code changes until one does.
