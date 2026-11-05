@@ -43,9 +43,9 @@ sequenceDiagram
     participant H as hook command
 
     C->>H: stdin {source: startup | clear, session_title?, ...}
-    alt session_title present (--name, /rename)
+    alt session_title present and not leaf-<10 digits> (--name, /rename)
         H-->>C: (no output, title kept)
-    else no title
+    else no title, or the hook's own title inherited by /clear
         H->>H: leaf(cwd), non [A-Za-z0-9_-] to "-", stamp yyMMddHHmm
         H-->>C: {"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"leaf-stamp"}}
     end
@@ -65,6 +65,16 @@ flowchart LR
 ```
 
 ## Key Decisions
+
+### 2026-11-05 — The hook replaces its own title, not the user's
+
+**Status:** Accepted (amends the decision below)
+**Context:** `/clear` passes the old session's title in `session_title`, so the skip rule kept the
+hook's own startup title and `/clear` never got a new one.
+**Decision:** The hook skips only a `session_title` that is not in its own `<leaf>-<10 digits>`
+form. The input does not say who set a title, so the form is the only signal.
+**Consequences:** A name given with `--name` or `/rename` survives `/clear`. A user name that
+happens to match `<leaf>-<10 digits>` gets restamped.
 
 ### 2026-11-05 — The hook also runs on `clear`
 
