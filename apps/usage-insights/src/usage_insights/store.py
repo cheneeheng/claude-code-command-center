@@ -42,10 +42,16 @@ class ExportBusy(Exception):
 def store_path() -> Path:
     """Return the store file: ``$C4_USAGE_INSIGHTS_HOME/usage.db``.
 
-    Defaults to ``~/.usage-insights/usage.db``.
+    Defaults to ``~/.claude-command-center/usage-insights/usage.db``. Until setup
+    moves a store from the old default ``~/.usage-insights``, that one is used, so a
+    ``git pull`` of an editable install never starts an empty store beside it.
     """
     home = os.environ.get("C4_USAGE_INSIGHTS_HOME")
-    return (Path(home) if home else Path.home() / ".usage-insights") / "usage.db"
+    if home:
+        return Path(home) / "usage.db"
+    new = Path.home() / ".claude-command-center" / "usage-insights"
+    old = Path.home() / ".usage-insights"
+    return (old if old.is_dir() and not new.exists() else new) / "usage.db"
 
 
 def connect(path: Path, timeout: float | None = None) -> sqlite3.Connection:

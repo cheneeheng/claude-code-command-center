@@ -115,7 +115,10 @@ fetch date, or "Built-in prices".
 
 ## The store
 
-The store is a SQLite file at `~/.usage-insights/usage.db`, or `$C4_USAGE_INSIGHTS_HOME/usage.db`.
+The store is a SQLite file at `~/.claude-command-center/usage-insights/usage.db`, or
+`$C4_USAGE_INSIGHTS_HOME/usage.db`. `reference.json` and `layout.json` sit next to it. A store at
+the old default `~/.usage-insights` keeps being used until you re-run setup, which moves the whole
+folder to the new path (stopping the export task first, and never over an existing store).
 [What the store keeps](docs/store.md) lists every field an export writes and what it leaves out.
 
 - **Retention:** rows are never deleted. When Claude Code removes an old transcript, the sessions,

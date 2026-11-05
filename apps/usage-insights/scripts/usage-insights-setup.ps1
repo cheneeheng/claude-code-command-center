@@ -1,6 +1,8 @@
 # Install / uninstall usage-insights from this checkout (Windows).
 #
 # install:
+#   0. Moves a store from the old default ~/.usage-insights to
+#      ~/.claude-command-center/usage-insights (stopping the export task first).
 #   1. Builds the web frontend (bun) into src/usage_insights/static/.
 #   2. Installs the `usage-insights` command with `uv tool install --editable`.
 #   3. Registers \ClaudeAutomation\usage-insights\export, which runs
@@ -23,8 +25,32 @@ $WebDir     = Join-Path $AppDir 'web'
 $TaskFolder = "\ClaudeAutomation\$(Split-Path -Leaf $AppDir)\"
 $TaskName   = 'export'
 $StoreDir   = if ($env:C4_USAGE_INSIGHTS_HOME) { $env:C4_USAGE_INSIGHTS_HOME }
-              else { Join-Path $env:USERPROFILE '.usage-insights' }
+              else { Join-Path $HOME '.claude-command-center\usage-insights' }
 $StorePath  = Join-Path $StoreDir 'usage.db'
+$OldStoreDir = Join-Path $HOME '.usage-insights'
+
+# The store is history that outlives Claude Code's transcript cleanup, so it is moved,
+# never rebuilt, and never moved over an existing store.
+function Move-OldStore {
+    if ($env:C4_USAGE_INSIGHTS_HOME -or -not (Test-Path $OldStoreDir)) { return }
+    if (Test-Path $StoreDir) {
+        Write-Warning "Both $OldStoreDir and $StoreDir exist; moved nothing. Merge or delete one by hand."
+        return
+    }
+    # A re-run finds the export task registered and maybe mid-run; stop it so it does not
+    # hold usage.db open. Registering it again below re-enables it.
+    if (Get-ScheduledTask -TaskName $TaskName -TaskPath $TaskFolder -ErrorAction SilentlyContinue) {
+        Stop-ScheduledTask -TaskName $TaskName -TaskPath $TaskFolder
+        Disable-ScheduledTask -TaskName $TaskName -TaskPath $TaskFolder | Out-Null
+    }
+    New-Item -ItemType Directory -Force (Split-Path $StoreDir) | Out-Null
+    try {
+        Move-Item $OldStoreDir $StoreDir
+    } catch {
+        throw "Could not move the store from $OldStoreDir to ${StoreDir}: $($_.Exception.Message). Close the usage-insights dashboard and re-run install; the export task stays disabled until then."
+    }
+    Write-Host "Moved the store from $OldStoreDir to $StoreDir"
+}
 
 function Invoke-Native([string]$What, [scriptblock]$Command) {
     & $Command
@@ -58,6 +84,8 @@ if ($Action -eq 'uninstall') {
 
 Assert-OnPath 'bun' 'Install it from https://bun.sh/'
 Assert-OnPath 'uv' 'Install it from https://docs.astral.sh/uv/'
+
+Move-OldStore
 
 Write-Host '[1] Building the web frontend...'
 Push-Location $WebDir

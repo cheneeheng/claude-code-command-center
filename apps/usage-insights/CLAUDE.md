@@ -30,7 +30,8 @@ and detects the install by that task, so a change to the script's parameters or 
 update `setup/` in the same change.
 
 Env: `C4_CLAUDE_DIR` (Claude config dirs, via `claude-usage`), `C4_USAGE_INSIGHTS_HOME` (store
-dir, default `~/.usage-insights`), `C4_USAGE_INSIGHTS_API_KEY` (the chat's Anthropic key; unset
+dir, default `~/.claude-command-center/usage-insights`, falling back to an old `~/.usage-insights`
+until setup moves it), `C4_USAGE_INSIGHTS_API_KEY` (the chat's Anthropic key; unset
 turns the chat off), `C4_USAGE_INSIGHTS_MODEL` (default `claude-sonnet-5-5`). Point the first two at
 temp dirs in any check that runs the CLI, so it never writes to the real store. On Windows give
 `C4_USAGE_INSIGHTS_HOME` a Windows path: a Git Bash `/c/...` path reaches Python as `C:\c\...`.
