@@ -112,3 +112,4 @@ it owns in one folder next to the command-center manifest.
   "all 6 repo(s) ok", and the three old files are gone from `~/claude-meta/.claude/scripts/`.
   Ran the member's setup directly, not `command-center.ps1 install`, because the user's
   command-center `config.json` lists 4 repos while the live config listed 6.
+- 2026-11-05 PR: #84 https://github.com/cheneeheng/claude-code-command-center/pull/84
