@@ -151,3 +151,8 @@ session started with `--name` keeps the name the user gave.
   (Key Decision "The hook also runs on `clear`"). Smoke test now runs every case for both sources:
   green with the change, `FAIL: sh: matcher is not startup|clear` with it stashed.
 - 2026-11-05 PR: #89 https://github.com/cheneeheng/claude-code-command-center/pull/89
+- 2026-11-05: A live `/clear` showed Claude Code ignores `sessionTitle` on `clear`, so the hook's
+  new title was dropped. PR #90 (replace the hook's own inherited title) did not help and is
+  reverted. At the user's request the matcher is back to `startup`, and `/clear` keeping the old
+  title is documented as a limitation (Key Decision "Back to `startup` only").
+- 2026-11-05 PR: #91 https://github.com/cheneeheng/claude-code-command-center/pull/91

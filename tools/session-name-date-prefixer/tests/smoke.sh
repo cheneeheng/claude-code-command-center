@@ -56,7 +56,7 @@ for s in $scripts; do
   others_intact "$dir/settings.json" || fail "$s: install damaged other settings"
   [ "$(jq '[.hooks.SessionStart[] | select(.hooks[0].command | contains("session-name-date-prefixer"))] | length' "$dir/settings.json")" = 1 ] \
     || fail "$s: expected exactly one session-name hook"
-  [ "$(jq -r '.hooks.SessionStart[-1].matcher' "$dir/settings.json")" = 'startup|clear' ] || fail "$s: matcher is not startup|clear"
+  [ "$(jq -r '.hooks.SessionStart[-1].matcher' "$dir/settings.json")" = startup ] || fail "$s: matcher is not startup"
   if [ "$s" = ps1 ]; then
     [ ! -e "$WORK/lad/claude-automation/cc-inject-date-to-session-name" ] || fail "ps1: old wrapper folder left behind"
     runners="pwsh powershell"
@@ -67,18 +67,12 @@ for s in $scripts; do
 
   cmd="$(jq -r '.hooks.SessionStart[-1].hooks[0].command' "$dir/settings.json")"
   for r in $runners; do
-    for src in startup clear; do
-      out="$(run_hook "$s" "$r" "$cmd" "{\"source\":\"$src\"}")" || fail "$s/$r/$src: hook exited non-zero"
-      title="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.sessionTitle')" || fail "$s/$r/$src: output is not JSON: $out"
-      [[ "$title" =~ ^my-proj-[0-9]{10}$ ]] || fail "$s/$r/$src: unexpected title '$title'"
-      out="$(run_hook "$s" "$r" "$cmd" "{\"source\":\"$src\",\"session_title\":\"mine\"}")" || fail "$s/$r/$src: hook exited non-zero"
-      [ -z "$out" ] || fail "$s/$r/$src: hook overrode an existing title: $out"
-      # /clear inherits the hook's own earlier title: that one is replaced, not kept.
-      out="$(run_hook "$s" "$r" "$cmd" "{\"source\":\"$src\",\"session_title\":\"my-proj-0001010000\"}")" || fail "$s/$r/$src: hook exited non-zero"
-      new="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.sessionTitle')" || fail "$s/$r/$src: output is not JSON: $out"
-      [[ "$new" =~ ^my-proj-[0-9]{10}$ && "$new" != my-proj-0001010000 ]] || fail "$s/$r/$src: kept its own old title: '$new'"
-      echo "pass  $s/$r/$src  $title"
-    done
+    out="$(run_hook "$s" "$r" "$cmd" '{"source":"startup"}')" || fail "$s/$r: hook exited non-zero"
+    title="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.sessionTitle')" || fail "$s/$r: output is not JSON: $out"
+    [[ "$title" =~ ^my-proj-[0-9]{10}$ ]] || fail "$s/$r: unexpected title '$title'"
+    out="$(run_hook "$s" "$r" "$cmd" '{"source":"startup","session_title":"mine"}')" || fail "$s/$r: hook exited non-zero"
+    [ -z "$out" ] || fail "$s/$r: hook overrode an existing title: $out"
+    echo "pass  $s/$r  $title"
   done
 
   setup "$s" "$dir" uninstall >/dev/null || fail "$s: uninstall exited non-zero"

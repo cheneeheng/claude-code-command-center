@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A Claude Code `SessionStart` hook (matcher `startup|clear`) that sets each new session's title to
-`<cwd leaf>-<yyMMddHHmm>`, unless the user already named it. The setup scripts write it into
+A Claude Code `SessionStart` hook (matcher `startup`) that sets each new session's title to
+`<cwd leaf>-<yyMMddHHmm>`, unless the session already has one. The setup scripts write it into
 `settings.json`.
 
 ## Running
@@ -18,10 +18,8 @@ See README.md for install/uninstall. Files:
 
 ## Invariants — do not break these
 
-- **Only name a session the user did not name.** The hook prints nothing when its input has a
-  `session_title` (set by `--name`, `/rename`, or another hook), except one in the hook's own
-  `<cwd leaf>-<10 digits>` form: `/clear` inherits the old session's title, so that one is
-  replaced. A user name in exactly that form is replaced too.
+- **Only name a session the user did not name.** The hook prints nothing when its input has
+  `session_title` (set by `--name`, `/rename`, or another hook).
 - **Touch only our hook.** Install and uninstall find it by the `session-name-date-prefixer`
   no-op at the start of its command, and keep every other key and hook. Re-running install leaves
   exactly one.
@@ -31,9 +29,9 @@ See README.md for install/uninstall. Files:
   not say which one `"shell": "powershell"` starts.
 - **Keep the two hook commands behaviourally identical:** same title format, same folder-name
   cleanup (anything outside `[A-Za-z0-9_-]` becomes `-`), same skip rule.
-- **Matcher `startup|clear`:** the user wants a fresh title after `/clear` too. The hooks docs list
-  `sessionTitle` for `startup`, `resume` and `fork` only, so whether `clear` applies it is checked
-  live, not by the smoke test.
+- **Matcher `startup` only.** Claude Code ignores `sessionTitle` on `clear` (the hooks docs list it
+  for `startup`, `resume` and `fork`, and a live `/clear` confirmed it), and a hook cannot run
+  `/rename`. So `/clear` keeps the old title: a known limitation, documented in the README.
 
 ## Conventions
 

@@ -12,7 +12,7 @@ only part that runs outside Claude Code.
 ```mermaid
 flowchart LR
     setup["...-setup.ps1 / .sh<br/>install / uninstall"] -->|"add / remove our SessionStart group"| settings[("~/.claude/settings.json")]
-    cc["Claude Code<br/>session start (source = startup or clear)"] -->|reads hooks| settings
+    cc["Claude Code<br/>session start (source = startup)"] -->|reads hooks| settings
     cc -->|"stdin: hook input JSON"| hook(("hook command"))
     hook -->|"stdout: hookSpecificOutput.sessionTitle"| cc
 ```
@@ -42,10 +42,10 @@ sequenceDiagram
     participant C as Claude Code
     participant H as hook command
 
-    C->>H: stdin {source: startup | clear, session_title?, ...}
-    alt session_title present and not leaf-<10 digits> (--name, /rename)
+    C->>H: stdin {source: startup, session_title?, ...}
+    alt session_title present (--name, /rename)
         H-->>C: (no output, title kept)
-    else no title, or the hook's own title inherited by /clear
+    else no title
         H->>H: leaf(cwd), non [A-Za-z0-9_-] to "-", stamp yyMMddHHmm
         H-->>C: {"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"leaf-stamp"}}
     end
@@ -59,26 +59,29 @@ user's own hooks are never touched.
 ```mermaid
 flowchart LR
     read["read settings.json<br/>(missing/blank = {})"] --> filter["SessionStart groups<br/>without our marker"]
-    filter -->|install| add["+ our group (matcher startup|clear)"] --> save[("settings.json")]
+    filter -->|install| add["+ our group (matcher startup)"] --> save[("settings.json")]
     filter -->|uninstall| drop["drop empty SessionStart / hooks"] --> save
     save --> old["remove the old PATH wrapper if present"]
 ```
 
 ## Key Decisions
 
-### 2026-11-05 — The hook replaces its own title, not the user's
+### 2026-11-05 — Back to `startup` only: `/clear` keeps the old title
 
-**Status:** Accepted (amends the decision below)
-**Context:** `/clear` passes the old session's title in `session_title`, so the skip rule kept the
-hook's own startup title and `/clear` never got a new one.
-**Decision:** The hook skips only a `session_title` that is not in its own `<leaf>-<10 digits>`
-form. The input does not say who set a title, so the form is the only signal.
-**Consequences:** A name given with `--name` or `/rename` survives `/clear`. A user name that
-happens to match `<leaf>-<10 digits>` gets restamped.
+**Status:** Accepted (supersedes "The hook also runs on `clear`")
+**Context:** A live `/clear` showed Claude Code ignores `sessionTitle` there: the hook printed a new
+title and the session kept the inherited one. PR #90 made the hook replace its own inherited title,
+which did not help, because Claude Code drops the output. A hook cannot run `/rename`. A
+`UserPromptSubmit` hook can set `sessionTitle`, but it needs a second hook and a marker file per
+cleared session.
+**Decision:** The matcher is `startup` only, and PR #90 is reverted. Running on `clear` changed
+nothing.
+**Consequences:** Known limitation: after `/clear` the session keeps its old title until the user
+runs `/rename`. Revisit if Claude Code applies `sessionTitle` on `clear`.
 
 ### 2026-11-05 — The hook also runs on `clear`
 
-**Status:** Accepted (amends the decision below)
+**Status:** Superseded by "Back to `startup` only"
 **Context:** The user wants a new dated title after `/clear` as well as at startup, as their own
 snippet had (`startup|clear`). The hooks docs list `sessionTitle` for `startup`, `resume` and `fork`
 only.

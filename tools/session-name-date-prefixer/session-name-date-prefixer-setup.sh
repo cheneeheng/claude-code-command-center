@@ -23,13 +23,10 @@ command -v jq >/dev/null || { echo "jq is required (https://jqlang.org/)" >&2; e
 settings="$claude_dir/settings.json"
 marker="session-name-date-prefixer"
 
-# Prints nothing when the session already has a title the user gave (--name, /rename). A title
-# in this hook's own <folder>-<10 digits> form, which /clear inherits, is replaced. The leading
+# Prints nothing when the session already has a title (--name, /rename). The leading
 # no-op names the tool, so install and uninstall can find this hook.
-cmd="$(cat <<'EOF'
-: session-name-date-prefixer; i="$(cat)"; n="$(basename "$PWD" | tr -c 'A-Za-z0-9_\n-' '-')"; printf '%s' "$i" | grep -q '"session_title"' && ! printf '%s' "$i" | grep -qE "\"session_title\" *: *\"$n-[0-9]{10}\"" || printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"%s-%s"}}' "$n" "$(date +%y%m%d%H%M)"
-EOF
-)"
+# shellcheck disable=SC2016  # expanded by the hook's shell, not here
+cmd=': session-name-date-prefixer; grep -q '\''"session_title"'\'' || printf '\''{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"%s-%s"}}'\'' "$(basename "$PWD" | tr -c '\''A-Za-z0-9_\n-'\'' '\''-'\'')" "$(date +%y%m%d%H%M)"'
 
 # The retired PATH wrapper this hook replaces.
 old_wrapper="$HOME/.local/bin/claude"
@@ -59,7 +56,7 @@ remove_old_wrapper() {
 install_hook() {
   mkdir -p "$claude_dir"
   edit_settings --arg cmd "$cmd" \
-    ".hooks.SessionStart = ($others + [{matcher: \"startup|clear\", hooks: [{type: \"command\", command: \$cmd}]}])"
+    ".hooks.SessionStart = ($others + [{matcher: \"startup\", hooks: [{type: \"command\", command: \$cmd}]}])"
   echo "Added the SessionStart hook to $settings"
   remove_old_wrapper
 }

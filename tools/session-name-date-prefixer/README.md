@@ -1,7 +1,10 @@
 # session-name-date-prefixer
 
-Names each new Claude Code session `<folder>-<yyMMddHHmm>`, at startup and after `/clear`, so
-your session history is easy to browse. A session you start with `--name` keeps the name you gave it, after `/clear` too.
+Names each new Claude Code session `<folder>-<yyMMddHHmm>` at startup, so your session history is
+easy to browse. A session you start with `--name` keeps the name you gave it.
+
+**Limitation:** `/clear` keeps the old session's title. Claude Code ignores a hook's title on
+`clear`, and a hook cannot run `/rename`, so run `/rename <name>` yourself if you want a new one.
 
 It is a `SessionStart` hook in your `settings.json`. The setup script adds it, and removes only
 it on uninstall, leaving your other settings and hooks alone.
