@@ -53,3 +53,4 @@ command-center apps own sit next to its manifest. The user chose this over leavi
   checkout's `.pyw` renamed away, `Start-ScheduledTask` replaced the widget (PID 43648 to 11824)
   and the new one runs from the copy. Uninstall removed the task and the folder; install again
   left it running. `ruff check` passes.
+- 2026-11-05 PR: #87 https://github.com/cheneeheng/claude-code-command-center/pull/87
