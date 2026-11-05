@@ -37,6 +37,20 @@ Test-Merge 'source with the indexed array keeps the destination value' `
 Test-Merge 'object-only path is still created when the source lacks it' `
     '{"x":1}' '{"statusLine":{"command":"DST"}}' 'statusLine.command' '{"x":1,"statusLine":{"command":"DST"}}'
 
+$one = '{"matcher":"startup","hooks":[{"type":"command","command":"DST"}]}'
+Test-Merge 'excluded one-item array stays an array' `
+    '{"hooks":{"SessionStart":[{"matcher":"startup","hooks":[{"type":"command","command":"SRC"}]}]}}' `
+    "{`"hooks`":{`"SessionStart`":[$one]}}" 'hooks.SessionStart' "{`"hooks`":{`"SessionStart`":[$one]}}"
+
+Test-Merge 'excluded one-item array is restored when the source lacks it' `
+    '{"x":1}' "{`"hooks`":{`"SessionStart`":[$one]}}" 'hooks.SessionStart' "{`"x`":1,`"hooks`":{`"SessionStart`":[$one]}}"
+
+Test-Merge 'excluded two-item array keeps both items' `
+    '{"x":1}' '{"a":[1,2]}' 'a' '{"x":1,"a":[1,2]}'
+
+Test-Merge 'excluded null value is not turned into an array' `
+    '{"x":1}' '{"a":null}' 'a' '{"x":1}'
+
 Remove-Item -Recurse -Force $tmp
 if ($failed) { Write-Host "$failed failed"; exit 1 }
 Write-Host 'all passed'

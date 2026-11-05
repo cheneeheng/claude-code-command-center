@@ -58,7 +58,8 @@ function Get-NestedValue {
             $cur = $cur[$step.Index]
         }
     }
-    return $cur
+    # The comma keeps a one-item array an array: a bare return unrolls it into its element.
+    return , $cur
 }
 
 function Set-NestedValue {
