@@ -6,12 +6,12 @@ session limit and the 7-day weekly limit. Each row has a bar, the percentage use
 time, and the time left until the reset.
 
 ```
-     5h  ███████░░│░░░░░  42%      12:21   2h9m
-Pro  7d  █████│█████████  86%  Mon 13:11   4d2h
+     5h  ▮▮▮▮▯▯▯▯▯▯  42%  Thu 12:29   2h9m
+Pro  7d  ▮▮▮▮▮▮▮▮▯▯  86%  Mon 13:19   4d2h
 ```
 
-The tick (`│`) on each bar marks how far through the window you are. A fill past the tick
-means you are using the limit faster than an even pace would. A bar turns red at 80%.
+Each bar has 10 segments of 10%, so you can count the used share at a glance. The segment in
+progress fills partway, and a bar turns red at 80%.
 
 ## Install
 

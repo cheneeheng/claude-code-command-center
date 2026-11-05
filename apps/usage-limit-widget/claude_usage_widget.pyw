@@ -46,6 +46,7 @@ PANEL_W, PANEL_H = 340, 2 * PAD + 2 * ROW_H
 # "Tue 09:00" 50 (+6 so it doesn't crowd the %), "23h59m" 42. The plan
 # column is measured, the bar takes whatever width is left.
 LABEL_W, PCT_W, RESET_W, LEFT_W = 14, 28, 56, 44
+SEGMENTS, SEG_GAP = 10, 2  # the bar is 10 segments of 10% each
 
 # ---- look ----
 BG, BORDER, FG, MUTED, TRACK = "#1f1f1f", "#3a3a3a", "#e8e8e8", "#9a9a9a", "#363636"
@@ -55,7 +56,7 @@ FONT, FONT_BOLD = ("Segoe UI", 9), ("Segoe UI Semibold", 9)
 # five_hour = rolling session limit, seven_day = rolling weekly limit --
 # these are the two caps a Claude subscription (Pro/Max) usage is tracked
 # against; each resets independently on its own rolling window.
-LIMITS = {"five_hour": ("5h", 5 * 3600), "seven_day": ("7d", 7 * 86400)}
+LIMITS = {"five_hour": "5h", "seven_day": "7d"}
 
 
 def claude_dir():
@@ -171,15 +172,11 @@ def format_delta(dt_utc):
 
 
 def format_abs(dt_utc):
-    """24-hour local clock time, e.g. '18:32' or 'Tue 18:32' if not today."""
+    """Weekday and 24-hour local time, e.g. 'Tue 18:32'. Always with the
+    weekday: a 5h window opened late at night resets the next day."""
     if dt_utc is None:
         return "?"
-    local = dt_utc.astimezone()  # convert to system local timezone
-    now_local = datetime.now().astimezone()
-    t = local.strftime("%H:%M")
-    if local.date() != now_local.date():
-        return local.strftime("%a") + " " + t
-    return t
+    return dt_utc.astimezone().strftime("%a %H:%M")  # system local timezone
 
 
 class Widget:
@@ -265,24 +262,25 @@ class Widget:
         reset_x = left_x - LEFT_W - GAP
         pct_x = reset_x - RESET_W - GAP
         bar_x1 = pct_x - PCT_W - GAP
-        now = datetime.now(UTC)
-        for i, (key, (label, window_secs)) in enumerate(LIMITS.items()):
+        seg_w = (bar_x1 - bar_x0 - (SEGMENTS - 1) * SEG_GAP) / SEGMENTS
+        step = 100 / SEGMENTS
+        for i, (key, label) in enumerate(LIMITS.items()):
             block = data.get(key) or {}
             p = pct(block)
             dt = parse_reset(resets_at(block))
             y = PAD + i * ROW_H + ROW_H // 2  # vertical center of the row
             c.create_text(label_x, y, text=label, fill=FG, font=FONT_BOLD, anchor="w")
-            c.create_rectangle(bar_x0, y - 2, bar_x1, y + 2, fill=TRACK, width=0)
-            if p:
-                fill_x = bar_x0 + (bar_x1 - bar_x0) * min(p, 100) / 100
-                color = WARN if p >= 80 else ACCENT
-                c.create_rectangle(bar_x0, y - 2, fill_x, y + 2, fill=color, width=0)
-            if dt is not None:
-                # Pace tick: how far through the window we are. A fill past
-                # the tick means usage is running ahead of an even pace.
-                left = (dt - now).total_seconds() / window_secs
-                tick_x = bar_x0 + (bar_x1 - bar_x0) * min(max(1 - left, 0), 1)
-                c.create_line(tick_x, y - 5, tick_x, y + 5, fill=FG)
+            # One segment per 10%, so the count of lit segments reads at a
+            # glance; the segment in progress fills partway.
+            color = WARN if (p or 0) >= 80 else ACCENT
+            for k in range(SEGMENTS):
+                sx0 = bar_x0 + k * (seg_w + SEG_GAP)
+                c.create_rectangle(sx0, y - 3, sx0 + seg_w, y + 3, fill=TRACK, width=0)
+                part = min(max(((p or 0) - k * step) / step, 0), 1)
+                if part:
+                    c.create_rectangle(
+                        sx0, y - 3, sx0 + seg_w * part, y + 3, fill=color, width=0
+                    )
             shown = f"{p}%" if p is not None else "?%"
             for x, text in (
                 (pct_x, shown),
