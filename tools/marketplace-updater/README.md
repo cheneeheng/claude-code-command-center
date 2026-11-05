@@ -18,10 +18,14 @@ Windows only: PowerShell 7 (`pwsh`) and Task Scheduler, plus the `claude` CLI on
 | `-Marketplaces`     | Names as shown by `claude plugin marketplace list`                   | required |
 | `-Repos`            | Repo folders whose local/project-scope plugins get updated           | required |
 | `-IntervalMinutes`  | How often the task runs (1 to 1439)                                  | `360`   |
-| `-InstallDir`       | Where the worker copy, `config.json` and `run.log` go                | `%LOCALAPPDATA%\claude-automation\marketplace-updater` |
+| `-InstallDir`       | Where the worker copy, `config.json` and `run.log` go                | `~\.claude-command-center\marketplace-updater` |
 
 Install registers `\ClaudeAutomation\marketplace-updater\marketplace-updater`. Also installable
 through `setup/command-center.ps1` (config keys `marketplaces`, `repos`, `intervalMinutes`).
+
+Upgrading from 0.1.x, which installed into `%LOCALAPPDATA%\claude-automation\marketplace-updater`:
+install moves its `run.log` to the new dir and deletes the old dir, once the task runs the new
+worker. If a run holds the old dir open, install warns and leaves it for you to delete.
 
 ## Change the config
 
@@ -50,9 +54,9 @@ and is logged, with the CLI's output, in `run.log` for you to run by hand.
 ## Check it works
 
 ```powershell
-& "$env:LOCALAPPDATA\claude-automation\marketplace-updater\marketplace-updater.ps1" -DryRun   # shows commands, changes nothing
-& "$env:LOCALAPPDATA\claude-automation\marketplace-updater\marketplace-updater.ps1"            # run now
-Get-Content "$env:LOCALAPPDATA\claude-automation\marketplace-updater\run.log" -Tail 20
+& "$HOME\.claude-command-center\marketplace-updater\marketplace-updater.ps1" -DryRun   # shows commands, changes nothing
+& "$HOME\.claude-command-center\marketplace-updater\marketplace-updater.ps1"            # run now
+Get-Content "$HOME\.claude-command-center\marketplace-updater\run.log" -Tail 20
 ```
 
 Exit codes: `0` ok, `1` bad or missing config, `2` a step failed (see `run.log`).
