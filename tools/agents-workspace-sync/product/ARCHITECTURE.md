@@ -1,30 +1,30 @@
 # agents-workspace-sync — Architecture
 
 A daily unattended job that commits and pushes a configured list of `.agents_workspace` git
-repos. Pure git plumbing: no `claude` CLI, no cursor, no staging. It shares the
-`scheduled-session-digests` logging layout and install shape, and nothing else.
+repos. Pure git plumbing: no `claude` CLI, no cursor, no staging. Everything it installs or
+writes lives in one folder, `~/.claude-command-center/agents-workspace-sync/`.
 
 ## System context
 
-The worker lives in the meta repo's scripts dir alongside the digests, reads its own config,
-and writes to N foreign repos that all push to one shared `agents-workspace` remote — one
+The worker lives in its install dir next to its own config and logs, and writes to N foreign
+repos that all push to one shared `agents-workspace` remote — one
 branch per parent project.
 
 ```mermaid
 flowchart LR
     task["Task Scheduler / cron<br/>04:00 daily"] --> worker((agents-workspace-sync))
-    cfg[("agents-workspace-sync-config.json<br/>{scheduleTime, repos[]}")] --> worker
+    cfg[("config.json<br/>{scheduleTime, repos[]}")] --> worker
     worker -->|"add -A · commit · push<br/>(current branch)"| r1["projA/.agents_workspace<br/>branch: projA"]
     worker -->|same| r2["projB/.agents_workspace<br/>branch: projB"]
     r1 --> remote[("origin<br/>agents-workspace.git")]
     r2 --> remote
-    worker -->|per-run log| logs["claude-meta/logs/&lt;yyyy&gt;/&lt;MM&gt;/"]
+    worker -->|per-run log| logs["logs/&lt;yyyy&gt;/&lt;MM&gt;/<br/>(next to the worker)"]
 ```
 
 ## Components
 
 Two behaviourally equivalent workers and their installers. The installer copies the worker into
-the meta repo; the scheduled task runs that installed copy, not the one in this repo.
+the install dir; the scheduled task runs that installed copy, not the one in this repo.
 
 ```mermaid
 flowchart TD
@@ -37,8 +37,9 @@ flowchart TD
         shi["...-setup.sh<br/>crontab"]
     end
     reg["setup/registry.ps1<br/>descriptor"] -->|"-NonInteractive -Repos"| psi
-    installers -->|"copy worker · write config · register trigger"| meta["claude-meta/.claude/scripts/"]
-    meta --> workers
+    installers -->|"copy worker · write config · register trigger"| home["~/.claude-command-center/<br/>agents-workspace-sync/"]
+    installers -.->|"delete a 0.1.x install"| old["claude-meta/.claude/scripts/"]
+    home --> workers
     workers --> repos["N .agents_workspace repos"]
 ```
 
@@ -81,7 +82,7 @@ sequenceDiagram
     end
 ```
 
-Exit: `0` all repos ok · `1` fatal setup (no meta dir / config / repos) · `2` ran with N failures.
+Exit: `0` all repos ok · `1` fatal setup (no config / repos) · `2` ran with N failures.
 
 ## Key Decisions
 
@@ -117,5 +118,15 @@ Exit: `0` all repos ok · `1` fatal setup (no meta dir / config / repos) · `2` 
   caller testing it would test a non-empty array — which is always truthy, silently swallowing
   every failure.
 
-- **Config is a JSON file in the meta repo, re-read every run.** Adding or dropping a repo is an
+- **Config is a JSON file next to the worker, re-read every run.** Adding or dropping a repo is an
   edit, not a reinstall.
+
+- **2026-11-05: everything under `~/.claude-command-center/agents-workspace-sync/`, not
+  claude-meta.** The user wants every file a command-center tool installs or writes in its own
+  folder next to the manifest. Up to 0.1.x the worker, config and logs sat in claude-meta, so
+  the tool needed `C4_CLAUDE_META_DIR` and its setup ran `git init` there, though this tool
+  syncs other repos and never claude-meta. Now the worker finds its config and log dir next to
+  itself, and setup has `-InstallDir` instead of `-MetaDir`. Install pre-fills the repo list from
+  an old config and deletes the old files, after the task points at the new worker. Old logs
+  stay in claude-meta's log tree, which the digests share. An old install at a custom `metaDir`
+  is not found: rare, and its leftovers are inert.

@@ -47,7 +47,7 @@
 
   // agents-workspace-sync: the .agents_workspace repos to commit and push daily. REQUIRED
   // for install -All (there is no sensible default repo list). scheduleTime defaults to
-  // 04:00; metaDir defaults like the digests' does.
+  // 04:00. It installs into ~/.claude-command-center/agents-workspace-sync/.
   "agents-workspace-sync": {
     "repos": ["C:/Users/you/projects/my-repo/.agents_workspace"],
     "scheduleTime": "04:00"

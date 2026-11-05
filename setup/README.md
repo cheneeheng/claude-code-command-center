@@ -59,8 +59,8 @@ defaults, target it directly with `install -Member <name>`.
 ## Manifest
 
 State lives at `~/.claude-command-center/manifest.json` (created on first install). It records, per
-member: `installed`, `installed_at`, `version`, and the params used — `file-sync`, digest, and
-`agents-workspace-sync` uninstalls **replay** those recorded params, so the manifest is what makes a later `uninstall` work.
+member: `installed`, `installed_at`, `version`, and the params used — `file-sync` and digest
+uninstalls **replay** those recorded params, so the manifest is what makes a later `uninstall` work.
 
 `status` compares the manifest against live detection (PATH entry, `settings.json` key, scheduled
 tasks). Yellow = present on the machine but not in the manifest (e.g. installed by hand before);

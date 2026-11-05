@@ -10,8 +10,9 @@ only), stages everything, makes one date-stamped commit, and pushes.
 | | |
 |---|---|
 | **Default trigger** | 04:00 daily (Task Scheduler `\ClaudeAutomation\agents-workspace-sync\agents-workspace-sync`, or cron) |
-| **Config** | `$C4_CLAUDE_META_DIR/.claude/scripts/agents-workspace-sync-config.json` |
-| **Logs** | `$C4_CLAUDE_META_DIR/logs/<yyyy>/<MM>/<timestamp>_agents-workspace-sync.log` |
+| **Install dir** | `~/.claude-command-center/agents-workspace-sync/`: the worker, `VERSION`, `config.json`, `logs/` |
+| **Config** | `~/.claude-command-center/agents-workspace-sync/config.json` |
+| **Logs** | `~/.claude-command-center/agents-workspace-sync/logs/<yyyy>/<MM>/<timestamp>_agents-workspace-sync.log` (Linux cron output also goes to `cron.log` there) |
 | **Needs** | `git` on PATH. Linux also needs `jq`. No `claude` CLI — this tool never calls Claude. |
 
 ---
@@ -94,12 +95,17 @@ bash agents-workspace-sync-setup.sh
 ```
 
 Both prompt for the run time and the repo list (pre-filled from an existing config), validate
-every path up front, install the worker into `$C4_CLAUDE_META_DIR/.claude/scripts/`, and
-register the daily task. Or install it through the umbrella:
+every path up front, install the worker into the install dir (`-InstallDir` / `--install-dir`
+to pick another), and register the daily task. Or install it through the umbrella:
 `setup/command-center.ps1` (descriptor: `agents-workspace-sync`, requires a `repos` config key).
 
-Uninstall removes the task, the installed worker, and the config; the meta repo, its logs, and
-every target repo are left untouched:
+Upgrading from 0.1.x, which installed into `$C4_CLAUDE_META_DIR/.claude/scripts/` (default
+`~/claude-meta`): install pre-fills the repo list from the old config, then deletes the old
+worker, `VERSION` and config there. Those files were tracked in the claude-meta repo, so its
+git-sync commits the deletions. Old logs under `<meta>/logs/` stay where they are.
+
+Uninstall removes the task, the installed worker, and the config; the logs and every target
+repo are left untouched:
 
 ```powershell
 .\agents-workspace-sync-setup.ps1 -Action uninstall   # add -KeepConfig to keep the repo list
@@ -114,26 +120,28 @@ bash agents-workspace-sync-setup.sh --action uninstall   # --keep-config
 ## Manual run
 
 ```powershell
-& "$env:C4_CLAUDE_META_DIR\.claude\scripts\agents-workspace-sync.ps1" -DryRun
-& "$env:C4_CLAUDE_META_DIR\.claude\scripts\agents-workspace-sync.ps1"
-& "$env:C4_CLAUDE_META_DIR\.claude\scripts\agents-workspace-sync.ps1" -Repos "C:\p\a\.agents_workspace"
+& "$HOME\.claude-command-center\agents-workspace-sync\agents-workspace-sync.ps1" -DryRun
+& "$HOME\.claude-command-center\agents-workspace-sync\agents-workspace-sync.ps1"
+& "$HOME\.claude-command-center\agents-workspace-sync\agents-workspace-sync.ps1" -Repos "C:\p\a\.agents_workspace"
 ```
 
 ```bash
-"$C4_CLAUDE_META_DIR/.claude/scripts/agents-workspace-sync.sh" --dry-run
-"$C4_CLAUDE_META_DIR/.claude/scripts/agents-workspace-sync.sh"
-"$C4_CLAUDE_META_DIR/.claude/scripts/agents-workspace-sync.sh" /p/a/.agents_workspace
+~/.claude-command-center/agents-workspace-sync/agents-workspace-sync.sh --dry-run
+~/.claude-command-center/agents-workspace-sync/agents-workspace-sync.sh
+~/.claude-command-center/agents-workspace-sync/agents-workspace-sync.sh /p/a/.agents_workspace
 ```
 
 `--dry-run` / `-DryRun` reports the branch and pending change count per repo and touches
-nothing. Explicit repo paths bypass the config file.
+nothing. Explicit repo paths bypass the config file. The worker reads `config.json` and writes
+`logs/` next to itself, so run the installed copy: one run from the checkout logs into
+`logs/` there (git-ignored).
 
 ### Exit codes
 
 | Code | Meaning |
 |------|---------|
 | `0` | Every repo synced |
-| `1` | Fatal — `C4_CLAUDE_META_DIR` unset, config missing or unparseable, or no repos configured |
+| `1` | Fatal — config missing or unparseable, or no repos configured |
 | `2` | Ran, but one or more repos failed; the rest still synced |
 
 One bad repo never aborts the batch. Sample log:
