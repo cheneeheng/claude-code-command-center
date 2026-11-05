@@ -15,12 +15,14 @@
 # (one branch per parent project), so merging to a default branch would be wrong.
 #
 # Usage: ./agents-workspace-sync.sh [--config <file>] [--dry-run] [repo ...]
-#   --config   JSON config. Default: agents-workspace-sync-config.json next to this
-#              script, else $C4_CLAUDE_META_DIR/.claude/scripts/.
+#   --config   JSON config. Default: config.json next to this script.
 #   --dry-run  Log what would happen; make no commit and no push.
 #   repo ...   Repo paths, bypassing the config file (for testing).
 #
-# Exit codes: 0 = all repos synced, 1 = fatal (no meta dir / no config / no repos),
+# Logs go to logs/<yyyy>/<MM>/ next to this script, normally the install dir
+# ~/.claude-command-center/agents-workspace-sync/.
+#
+# Exit codes: 0 = all repos synced, 1 = fatal (no config / no repos),
 #             2 = ran, but one or more repos failed.
 
 set -uo pipefail
@@ -46,22 +48,17 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --config)  CONFIG_FILE="$2"; shift 2 ;;
         --dry-run) DRY_RUN=1; shift ;;
-        -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
         *)         REPOS+=("$1"); shift ;;
     esac
 done
 
 # ---------------------------------------------------------------------------
-# Logging - shares the claude-meta logs/<yyyy>/<MM>/ layout with the digests
+# Logging - logs/<yyyy>/<MM>/ next to this script
 # ---------------------------------------------------------------------------
-META_DIR="${C4_CLAUDE_META_DIR:-}"
-if [[ -z "$META_DIR" ]]; then
-    printf '%s\n' "$TAG C4_CLAUDE_META_DIR is not set - aborting."
-    exit 1
-fi
-
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_STAMP="$(date '+%Y%m%d_%H%M%S')"
-LOG_DIR="$META_DIR/logs/${LOG_STAMP:0:4}/${LOG_STAMP:4:2}"
+LOG_DIR="$SCRIPT_DIR/logs/${LOG_STAMP:0:4}/${LOG_STAMP:4:2}"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/${LOG_STAMP}_agents-workspace-sync.log"
 
@@ -74,14 +71,7 @@ export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o BatchMode=yes}"
 # Config
 # ---------------------------------------------------------------------------
 if [[ ${#REPOS[@]} -eq 0 ]]; then
-    if [[ -z "$CONFIG_FILE" ]]; then
-        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        if [[ -f "$SCRIPT_DIR/agents-workspace-sync-config.json" ]]; then
-            CONFIG_FILE="$SCRIPT_DIR/agents-workspace-sync-config.json"
-        else
-            CONFIG_FILE="$META_DIR/.claude/scripts/agents-workspace-sync-config.json"
-        fi
-    fi
+    [[ -z "$CONFIG_FILE" ]] && CONFIG_FILE="$SCRIPT_DIR/config.json"
     if [[ ! -f "$CONFIG_FILE" ]]; then
         log "ERROR: config not found: $CONFIG_FILE"
         log "       Re-run agents-workspace-sync-setup.sh, or pass repo paths."

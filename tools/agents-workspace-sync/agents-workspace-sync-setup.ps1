@@ -1,13 +1,15 @@
 # agents-workspace-sync-setup.ps1 - install / uninstall the agents-workspace-sync task
 #
 # What install does:
-#   1. Ensures $C4_CLAUDE_META_DIR exists and sets the env var if missing
-#   2. Copies agents-workspace-sync.ps1 into <meta>\.claude\scripts\
-#   3. Writes <meta>\.claude\scripts\agents-workspace-sync-config.json (repo list + time)
-#   4. Registers the \ClaudeAutomation\agents-workspace-sync\agents-workspace-sync daily task
+#   1. Copies agents-workspace-sync.ps1 and VERSION into <InstallDir>
+#      (default ~\.claude-command-center\agents-workspace-sync\)
+#   2. Writes <InstallDir>\config.json (repo list + time)
+#   3. Registers the \ClaudeAutomation\agents-workspace-sync\agents-workspace-sync daily task
+#   4. Deletes the files an older version installed into <meta>\.claude\scripts\
+#      (<meta> = $C4_CLAUDE_META_DIR, else ~\claude-meta)
 #
 # Uninstall removes the task, the installed script, and (unless -KeepConfig) the config.
-# The claude-meta repo, its logs, and every target repo are left untouched.
+# The logs under <InstallDir>\logs\ and every target repo are left untouched.
 #
 # Examples:
 #   .\agents-workspace-sync-setup.ps1                        # interactive install
@@ -22,7 +24,7 @@ param(
     [string[]]$Repos,
 
     [string]$ScheduleTime,
-    [string]$MetaDir,
+    [string]$InstallDir = (Join-Path $HOME '.claude-command-center\agents-workspace-sync'),
     [switch]$NonInteractive,
     [switch]$KeepConfig
 )
@@ -46,13 +48,25 @@ function Prompt-Input {
     return $raw
 }
 
-if (-not $MetaDir) {
-    $MetaDir = if ($env:C4_CLAUDE_META_DIR) { $env:C4_CLAUDE_META_DIR }
-               else { Join-Path $env:USERPROFILE "claude-meta" }
+$ConfigFile = Join-Path $InstallDir "config.json"
+$Installed  = Join-Path $InstallDir "agents-workspace-sync.ps1"
+$VersionDst = Join-Path $InstallDir "VERSION"
+
+# Where versions up to 0.1.x installed, inside the claude-meta repo.
+$OldMeta    = if ($env:C4_CLAUDE_META_DIR) { $env:C4_CLAUDE_META_DIR } else { Join-Path $HOME "claude-meta" }
+$OldScripts = Join-Path $OldMeta ".claude\scripts"
+$OldConfig  = Join-Path $OldScripts "agents-workspace-sync-config.json"
+
+function Remove-OldInstall {
+    $old = @("agents-workspace-sync.ps1", "agents-workspace-sync.VERSION", "agents-workspace-sync-config.json" |
+        ForEach-Object { Join-Path $OldScripts $_ } | Where-Object { Test-Path $_ })
+    if (-not $old) {
+        Write-Host "      Nothing under $OldScripts." -ForegroundColor Gray
+        return
+    }
+    $old | ForEach-Object { Remove-Item $_ -Force; Write-Host "      Removed old $_" -ForegroundColor Green }
+    Write-Host "      These were tracked in $OldMeta, whose git-sync commits the deletions." -ForegroundColor Gray
 }
-$ScriptsDir = Join-Path $MetaDir ".claude\scripts"
-$ConfigFile = Join-Path $ScriptsDir "agents-workspace-sync-config.json"
-$Installed  = Join-Path $ScriptsDir "agents-workspace-sync.ps1"
 
 # ===========================================================================
 # Uninstall
@@ -70,9 +84,8 @@ if ($Action -eq 'uninstall') {
     }
 
     Step "Removing installed files..."
-    if (Test-Path $Installed) {
-        Remove-Item $Installed -Force
-        Write-Host "      Removed $Installed" -ForegroundColor Green
+    foreach ($f in $Installed, $VersionDst) {
+        if (Test-Path $f) { Remove-Item $f -Force; Write-Host "      Removed $f" -ForegroundColor Green }
     }
     if (-not $KeepConfig -and (Test-Path $ConfigFile)) {
         Remove-Item $ConfigFile -Force
@@ -81,9 +94,12 @@ if ($Action -eq 'uninstall') {
         Write-Host "      Kept $ConfigFile" -ForegroundColor Gray
     }
 
+    Step "Removing an older install..."
+    Remove-OldInstall
+
     Write-Host ""
     Write-Host "=== Uninstall complete ===" -ForegroundColor Cyan
-    Write-Host "Logs under $MetaDir\logs\ and every target repo were left untouched."
+    Write-Host "Logs under $InstallDir\logs\ and every target repo were left untouched."
     return
 }
 
@@ -92,8 +108,7 @@ if ($Action -eq 'uninstall') {
 # ===========================================================================
 Write-Host ""
 Write-Host "=== Agents Workspace Sync - Install ===" -ForegroundColor Cyan
-Write-Host "Meta repo   : $MetaDir"
-Write-Host "Scripts dir : $ScriptsDir"
+Write-Host "Install dir : $InstallDir"
 Write-Host ""
 
 # ---- Settings ---------------------------------------------------------------
@@ -105,10 +120,12 @@ if (-not $ScheduleTime) {
 
 if (-not $Repos) {
     if ($NonInteractive) { throw "agents-workspace-sync needs -Repos when run with -NonInteractive." }
-    # Pre-fill from an existing config so re-running install is not a re-entry chore.
+    # Pre-fill from an existing config, or the one an older version left in claude-meta,
+    # so re-running install is not a re-entry chore.
     $existing = @()
-    if (Test-Path $ConfigFile) {
-        try { $existing = @((Get-Content $ConfigFile -Raw | ConvertFrom-Json).repos) } catch { $existing = @() }
+    $prev = if (Test-Path $ConfigFile) { $ConfigFile } elseif (Test-Path $OldConfig) { $OldConfig }
+    if ($prev) {
+        try { $existing = @((Get-Content $prev -Raw | ConvertFrom-Json).repos) } catch { $existing = @() }
     }
     if ($existing) {
         Write-Host ""
@@ -162,36 +179,15 @@ if ($bad -gt 0) {
 }
 
 # ---------------------------------------------------------------------------
-Step "Setting up claude-meta dir..."
-
-New-Item -ItemType Directory -Force -Path $ScriptsDir | Out-Null
-if (-not (Test-Path (Join-Path $MetaDir ".git"))) {
-    Push-Location $MetaDir
-    git init -q
-    Pop-Location
-    Write-Host "      Initialised git repo: $MetaDir" -ForegroundColor Green
-} else {
-    Write-Host "      $MetaDir already present." -ForegroundColor Gray
-}
-
-$existingVar = [System.Environment]::GetEnvironmentVariable("C4_CLAUDE_META_DIR", "User")
-if ($existingVar -ne $MetaDir) {
-    [System.Environment]::SetEnvironmentVariable("C4_CLAUDE_META_DIR", $MetaDir, "User")
-    $env:C4_CLAUDE_META_DIR = $MetaDir
-    Write-Host "      Set C4_CLAUDE_META_DIR = $MetaDir" -ForegroundColor Green
-} else {
-    Write-Host "      C4_CLAUDE_META_DIR already set." -ForegroundColor Gray
-}
-
-# ---------------------------------------------------------------------------
 Step "Installing files..."
 
+New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 Copy-Item (Join-Path $Here "agents-workspace-sync.ps1") -Destination $Installed -Force
 Write-Host "      $Installed" -ForegroundColor Green
 
 $VersionSrc = Join-Path $Here "VERSION"
 if (Test-Path $VersionSrc) {
-    Copy-Item $VersionSrc -Destination (Join-Path $ScriptsDir "agents-workspace-sync.VERSION") -Force
+    Copy-Item $VersionSrc -Destination $VersionDst -Force
 }
 
 [pscustomobject]@{
@@ -228,9 +224,14 @@ if (Get-ScheduledTask -TaskName $TaskName -TaskPath $TaskFolder -ErrorAction Sil
     Write-Host "      Registered: $TaskFolder$TaskName ($ScheduleTime daily)" -ForegroundColor Green
 }
 
+# ---------------------------------------------------------------------------
+# After the task points at the new worker, so a failed registration leaves the old one working.
+Step "Removing an older install..."
+Remove-OldInstall
+
 Write-Host ""
 Write-Host "=== Install complete ===" -ForegroundColor Cyan
-Write-Host "Logs: $MetaDir\logs\<yyyy>\<MM>\<timestamp>_agents-workspace-sync.log"
+Write-Host "Logs: $InstallDir\logs\<yyyy>\<MM>\<timestamp>_agents-workspace-sync.log"
 Write-Host ""
 Write-Host "--- Verify ---" -ForegroundColor Yellow
 Write-Host "     & '$Installed' -DryRun     # show what each repo would do"

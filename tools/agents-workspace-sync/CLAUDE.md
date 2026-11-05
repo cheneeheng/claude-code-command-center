@@ -16,14 +16,15 @@ See `README.md`. Install via `agents-workspace-sync-setup.ps1` / `.sh`, or throu
 ## Architecture
 
 - `agents-workspace-sync.ps1` / `.sh` — the worker. Reads the config, loops the repos, and for
-  each: validates, `pull --ff-only`, `add -A`, commit, push. Installed into `$C4_CLAUDE_META_DIR/.claude/scripts/`.
+  each: validates, `pull --ff-only`, `add -A`, commit, push. Installed into
+  `~/.claude-command-center/agents-workspace-sync/` (setup's `-InstallDir` / `--install-dir`).
 - `agents-workspace-sync-setup.ps1` / `.sh` — install/uninstall. Writes the config, copies the
   worker, registers the daily Task Scheduler task (`\ClaudeAutomation\agents-workspace-sync\agents-workspace-sync`)
-  or crontab entry.
-- Config: `$C4_CLAUDE_META_DIR/.claude/scripts/agents-workspace-sync-config.json`
-  (`{scheduleTime, repos[]}`), re-read every run so editing it needs no reinstall.
-- Logs: `$C4_CLAUDE_META_DIR/logs/<yyyy>/<MM>/<timestamp>_agents-workspace-sync.log`, the same
-  layout `scheduled-session-digests` uses.
+  or crontab entry, then deletes a 0.1.x install from `<meta>/.claude/scripts/`.
+- Config: `config.json` next to the installed worker (`{scheduleTime, repos[]}`), re-read every
+  run so editing it needs no reinstall.
+- Logs: `logs/<yyyy>/<MM>/<timestamp>_agents-workspace-sync.log` next to the installed worker
+  (cron output also to `cron.log` there).
 
 ## Invariants — do not break these
 
@@ -51,7 +52,9 @@ See `README.md`. Install via `agents-workspace-sync-setup.ps1` / `.sh`, or throu
   `BatchMode=yes` `GIT_SSH_COMMAND` default.
 - **Keep the PowerShell and Bash workers behaviourally equivalent** — same guards, same log
   wording, same exit codes.
-- **Honour `$C4_CLAUDE_META_DIR`** for logs and config; abort when it is unset.
+- **Everything lives in the install dir.** The worker finds its config and log dir next to
+  itself and reads no env var for them. `C4_CLAUDE_META_DIR` is read only by setup, to find and
+  delete a 0.1.x install, and that delete runs only after the task points at the new worker.
 
 ## Conventions
 

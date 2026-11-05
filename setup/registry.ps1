@@ -218,17 +218,12 @@ function Get-CommandCenterRegistry {
             }
             $repos = @($Config.repos)
             $time  = if ($Config.scheduleTime) { $Config.scheduleTime } else { '04:00' }
-            $splat = @{ Action = 'install'; NonInteractive = $true; Repos = $repos; ScheduleTime = $time }
-            if ($Config.metaDir) { $splat.MetaDir = $Config.metaDir }
-            & $SetupScript @splat | Out-Null
-            @{ repos = $repos; scheduleTime = $time; metaDir = $Config.metaDir }
+            & $SetupScript -Action install -NonInteractive -Repos $repos -ScheduleTime $time | Out-Null
+            @{ repos = $repos; scheduleTime = $time }
         }
-        Uninstall      = {
-            param($SetupScript, $Entry)
-            $splat = @{ Action = 'uninstall' }
-            if ($Entry -and $Entry.metaDir) { $splat.MetaDir = $Entry.metaDir }
-            & $SetupScript @splat | Out-Null
-        }
+        # Installs into its default dir under ~/.claude-command-center, so uninstall needs no
+        # params. An old entry's metaDir is ignored: install already moved off it.
+        Uninstall      = { param($SetupScript, $Entry) & $SetupScript -Action uninstall | Out-Null }
         Detect         = {
             param($Entry)
             [bool](Get-ScheduledTask -TaskName 'agents-workspace-sync' -TaskPath '\ClaudeAutomation\agents-workspace-sync\'-ErrorAction SilentlyContinue)

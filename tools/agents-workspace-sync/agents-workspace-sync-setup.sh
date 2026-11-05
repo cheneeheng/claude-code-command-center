@@ -2,18 +2,21 @@
 # agents-workspace-sync-setup.sh - install / uninstall the agents-workspace-sync cron job
 #
 # What install does:
-#   1. Ensures $C4_CLAUDE_META_DIR exists and exports it via ~/.profile if missing
-#   2. Copies agents-workspace-sync.sh into <meta>/.claude/scripts/
-#   3. Writes <meta>/.claude/scripts/agents-workspace-sync-config.json (repo list + time)
-#   4. Installs a daily crontab entry
+#   1. Copies agents-workspace-sync.sh and VERSION into <install-dir>
+#      (default ~/.claude-command-center/agents-workspace-sync/)
+#   2. Writes <install-dir>/config.json (repo list + time)
+#   3. Installs a daily crontab entry
+#   4. Deletes the files an older version installed into <meta>/.claude/scripts/
+#      (<meta> = $C4_CLAUDE_META_DIR, else ~/claude-meta)
 #
 # Uninstall removes the crontab entry, the installed script, and (unless --keep-config)
-# the config. The claude-meta repo, its logs, and every target repo are left untouched.
+# the config. The logs under <install-dir>/logs/ and every target repo are left untouched.
 #
 # Usage:
 #   ./agents-workspace-sync-setup.sh                          # interactive install
 #   ./agents-workspace-sync-setup.sh --action uninstall
 #   ./agents-workspace-sync-setup.sh --non-interactive --repo /p/a/.agents_workspace
+#   ./agents-workspace-sync-setup.sh --install-dir /some/dir  # another install dir
 
 set -euo pipefail
 
@@ -21,7 +24,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 ACTION="install"
 SCHEDULE_TIME=""
-META_DIR="${C4_CLAUDE_META_DIR:-$HOME/claude-meta}"
+INSTALL_DIR="$HOME/.claude-command-center/agents-workspace-sync"
 NON_INTERACTIVE=""
 KEEP_CONFIG=""
 REPOS=()
@@ -35,23 +38,41 @@ while [[ $# -gt 0 ]]; do
         --action)          ACTION="$2"; shift 2 ;;
         --repo)            REPOS+=("$2"); shift 2 ;;
         --time)            SCHEDULE_TIME="$2"; shift 2 ;;
-        --meta-dir)        META_DIR="$2"; shift 2 ;;
+        --install-dir)     INSTALL_DIR="$2"; shift 2 ;;
         --non-interactive) NON_INTERACTIVE=1; shift ;;
         --keep-config)     KEEP_CONFIG=1; shift ;;
-        -h|--help)         sed -n '2,20p' "$0"; exit 0 ;;
+        -h|--help)         sed -n '2,19p' "$0"; exit 0 ;;
         *)                 echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
 
-SCRIPTS_DIR="$META_DIR/.claude/scripts"
-CONFIG_FILE="$SCRIPTS_DIR/agents-workspace-sync-config.json"
-INSTALLED="$SCRIPTS_DIR/agents-workspace-sync.sh"
+CONFIG_FILE="$INSTALL_DIR/config.json"
+INSTALLED="$INSTALL_DIR/agents-workspace-sync.sh"
+VERSION_DST="$INSTALL_DIR/VERSION"
+
+# Where versions up to 0.1.x installed, inside the claude-meta repo.
+OLD_META="${C4_CLAUDE_META_DIR:-$HOME/claude-meta}"
+OLD_SCRIPTS="$OLD_META/.claude/scripts"
+OLD_CONFIG="$OLD_SCRIPTS/agents-workspace-sync-config.json"
 
 STEP=0
 step() { STEP=$((STEP + 1)); printf '\033[33m[%s] %s\033[0m\n' "$STEP" "$1"; }
 ok()   { printf '\033[32m      %s\033[0m\n' "$1"; }
 warn() { printf '\033[31m      %s\033[0m\n' "$1"; }
 dim()  { printf '\033[90m      %s\033[0m\n' "$1"; }
+
+remove_old_install() {
+    local f found=""
+    for f in agents-workspace-sync.sh agents-workspace-sync.VERSION agents-workspace-sync-config.json; do
+        [[ -f "$OLD_SCRIPTS/$f" ]] || continue
+        rm -f "$OLD_SCRIPTS/$f"; ok "Removed old $OLD_SCRIPTS/$f"; found=1
+    done
+    if [[ -n "$found" ]]; then
+        dim "These were tracked in $OLD_META, whose git-sync commits the deletions."
+    else
+        dim "Nothing under $OLD_SCRIPTS."
+    fi
+}
 
 # ===========================================================================
 # Uninstall
@@ -69,16 +90,21 @@ if [[ "$ACTION" == "uninstall" ]]; then
     fi
 
     step "Removing installed files..."
-    [[ -f "$INSTALLED" ]] && rm -f "$INSTALLED" && ok "Removed $INSTALLED"
+    for f in "$INSTALLED" "$VERSION_DST"; do
+        [[ -f "$f" ]] && rm -f "$f" && ok "Removed $f"
+    done
     if [[ -z "$KEEP_CONFIG" && -f "$CONFIG_FILE" ]]; then
         rm -f "$CONFIG_FILE"; ok "Removed $CONFIG_FILE"
     elif [[ -n "$KEEP_CONFIG" ]]; then
         dim "Kept $CONFIG_FILE"
     fi
 
+    step "Removing an older install..."
+    remove_old_install
+
     echo
     printf '\033[36m=== Uninstall complete ===\033[0m\n'
-    echo "Logs under $META_DIR/logs/ and every target repo were left untouched."
+    echo "Logs under $INSTALL_DIR/logs/ and every target repo were left untouched."
     exit 0
 fi
 
@@ -87,8 +113,7 @@ fi
 # ===========================================================================
 echo
 printf '\033[36m=== Agents Workspace Sync - Install ===\033[0m\n'
-echo "Meta repo   : $META_DIR"
-echo "Scripts dir : $SCRIPTS_DIR"
+echo "Install dir : $INSTALL_DIR"
 echo
 
 command -v jq >/dev/null 2>&1 || { echo "jq is required (the worker reads its config with it)." >&2; exit 1; }
@@ -108,9 +133,12 @@ fi
 
 if [[ ${#REPOS[@]} -eq 0 ]]; then
     [[ -n "$NON_INTERACTIVE" ]] && { echo "--non-interactive needs at least one --repo." >&2; exit 1; }
-    # Pre-fill from an existing config so re-running install is not a re-entry chore.
-    if [[ -f "$CONFIG_FILE" ]]; then
-        mapfile -t existing < <(jq -r '.repos[]? // empty' "$CONFIG_FILE")
+    # Pre-fill from an existing config, or the one an older version left in claude-meta,
+    # so re-running install is not a re-entry chore.
+    prev=""
+    if [[ -f "$CONFIG_FILE" ]]; then prev="$CONFIG_FILE"; elif [[ -f "$OLD_CONFIG" ]]; then prev="$OLD_CONFIG"; fi
+    if [[ -n "$prev" ]]; then
+        mapfile -t existing < <(jq -r '.repos[]? // empty' "$prev")
         if [[ ${#existing[@]} -gt 0 ]]; then
             echo
             dim "Currently configured:"
@@ -153,32 +181,14 @@ done
 [[ $BAD -gt 0 ]] && printf '\033[33m      %s path(s) will be logged as errors and skipped at run time.\033[0m\n' "$BAD"
 
 # ---------------------------------------------------------------------------
-step "Setting up claude-meta dir..."
-
-mkdir -p "$SCRIPTS_DIR"
-if [[ ! -d "$META_DIR/.git" ]]; then
-    git -C "$META_DIR" init -q
-    ok "Initialised git repo: $META_DIR"
-else
-    dim "$META_DIR already present."
-fi
-
-if [[ "${C4_CLAUDE_META_DIR:-}" != "$META_DIR" ]]; then
-    if ! grep -q "C4_CLAUDE_META_DIR" "$HOME/.profile" 2>/dev/null; then
-        echo "export C4_CLAUDE_META_DIR=\"$META_DIR\"" >> "$HOME/.profile"
-        ok "Added C4_CLAUDE_META_DIR to ~/.profile"
-    fi
-    export C4_CLAUDE_META_DIR="$META_DIR"
-fi
-
-# ---------------------------------------------------------------------------
 step "Installing files..."
 
+mkdir -p "$INSTALL_DIR"
 cp "$HERE/agents-workspace-sync.sh" "$INSTALLED"
 chmod +x "$INSTALLED"
 ok "$INSTALLED"
 
-[[ -f "$HERE/VERSION" ]] && cp "$HERE/VERSION" "$SCRIPTS_DIR/agents-workspace-sync.VERSION"
+[[ -f "$HERE/VERSION" ]] && cp "$HERE/VERSION" "$VERSION_DST"
 
 printf '%s\n' "${REPOS[@]}" \
     | jq -R . \
@@ -190,16 +200,20 @@ step "Installing crontab entry..."
 
 HH="${SCHEDULE_TIME%%:*}"
 MM="${SCHEDULE_TIME##*:}"
-# cron gives almost no environment; the worker aborts without C4_CLAUDE_META_DIR,
-# so set it inline on the entry.
-CRON_LINE="${MM#0} ${HH#0} * * * C4_CLAUDE_META_DIR=\"$META_DIR\" $INSTALLED >> \"$META_DIR/logs/agents-workspace-sync.log\" 2>&1 $CRON_MARKER"
-mkdir -p "$META_DIR/logs"
+# The worker finds its config and log dir next to itself, so the entry needs no env.
+# Replacing by marker also replaces the line an older version wrote.
+CRON_LINE="${MM#0} ${HH#0} * * * \"$INSTALLED\" >> \"$INSTALL_DIR/cron.log\" 2>&1 $CRON_MARKER"
 { crontab -l 2>/dev/null | grep -vF "$CRON_MARKER" || true; printf '%s\n' "$CRON_LINE"; } | crontab -
 ok "Daily at $SCHEDULE_TIME"
 
+# ---------------------------------------------------------------------------
+# After the cron entry points at the new worker, so a failure leaves the old one working.
+step "Removing an older install..."
+remove_old_install
+
 echo
 printf '\033[36m=== Install complete ===\033[0m\n'
-echo "Logs: $META_DIR/logs/<yyyy>/<MM>/<timestamp>_agents-workspace-sync.log"
+echo "Logs: $INSTALL_DIR/logs/<yyyy>/<MM>/<timestamp>_agents-workspace-sync.log"
 echo
 printf '\033[33m--- Verify ---\033[0m\n'
 echo "     $INSTALLED --dry-run     # show what each repo would do"

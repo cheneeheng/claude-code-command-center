@@ -14,12 +14,14 @@
 # (one branch per parent project), so merging to a default branch would be wrong.
 #
 # Parameters:
-#   -ConfigFile  Path to the JSON config. Default: agents-workspace-sync-config.json
-#                next to this script, else under $C4_CLAUDE_META_DIR\.claude\scripts\.
+#   -ConfigFile  Path to the JSON config. Default: config.json next to this script.
 #   -Repos       One or more repo paths, bypassing the config file (for testing).
 #   -DryRun      Log what would happen; make no commit and no push.
 #
-# Exit codes: 0 = all repos synced, 1 = fatal (no meta dir / no config / no repos),
+# Logs go to logs\<yyyy>\<MM>\ next to this script, normally the install dir
+# ~\.claude-command-center\agents-workspace-sync\.
+#
+# Exit codes: 0 = all repos synced, 1 = fatal (no config / no repos),
 #             2 = ran, but one or more repos failed.
 
 param(
@@ -41,16 +43,10 @@ function Log {
 }
 
 # ---------------------------------------------------------------------------
-# Logging - shares the claude-meta logs/<yyyy>/<MM>/ layout with the digests
+# Logging - logs/<yyyy>/<MM>/ next to this script
 # ---------------------------------------------------------------------------
-$MetaDir = $env:C4_CLAUDE_META_DIR
-if (-not $MetaDir) {
-    Write-Output "$Tag C4_CLAUDE_META_DIR is not set - aborting."
-    exit 1
-}
-
 $LogStamp = Get-Date
-$LogDir   = Join-Path $MetaDir ("logs\{0}\{1}" -f $LogStamp.ToString("yyyy"), $LogStamp.ToString("MM"))
+$LogDir   = Join-Path $PSScriptRoot ("logs\{0}\{1}" -f $LogStamp.ToString("yyyy"), $LogStamp.ToString("MM"))
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $LogFile = Join-Path $LogDir ("{0}_agents-workspace-sync.log" -f $LogStamp.ToString("yyyyMMdd_HHmmss"))
 
@@ -63,11 +59,7 @@ if (-not $env:GIT_SSH_COMMAND)     { $env:GIT_SSH_COMMAND = "ssh -o BatchMode=ye
 # Config
 # ---------------------------------------------------------------------------
 if (-not $Repos) {
-    if (-not $ConfigFile) {
-        $LocalCfg   = Join-Path $PSScriptRoot "agents-workspace-sync-config.json"
-        $ConfigFile = if (Test-Path $LocalCfg) { $LocalCfg }
-                      else { Join-Path $MetaDir ".claude\scripts\agents-workspace-sync-config.json" }
-    }
+    if (-not $ConfigFile) { $ConfigFile = Join-Path $PSScriptRoot "config.json" }
     if (-not (Test-Path $ConfigFile)) {
         Log "ERROR: config not found: $ConfigFile"
         Log "       Re-run agents-workspace-sync-setup.ps1, or pass -Repos."
