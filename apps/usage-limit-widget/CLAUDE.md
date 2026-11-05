@@ -25,6 +25,8 @@ parameters, or task name must update `setup/` in the same change.
 - **The task's restart is the lifecycle.** The task repeats hourly with `MultipleInstances =
   StopExisting`, so each start replaces the running widget. Keep `ExecutionTimeLimit` at zero
   and the battery flags off, or the task kills the widget on its own.
+- **The task runs the copy in `~/.claude-command-center/usage-limit-widget/`**, which install
+  refreshes from the checkout, never the checkout's file, so the checkout can move.
 - **The task runs a base interpreter's `pythonw.exe`** (`uv python find --system`), never the
   `.venv` one, which is git-ignored and is a redirector that spawns a second process.
 - **Keep the panel tight vertically:** one row per limit, no title row. The plan
