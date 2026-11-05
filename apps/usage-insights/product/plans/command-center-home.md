@@ -72,3 +72,4 @@ over with every session it holds, and the dashboard shows the same history as be
   holds the same counts, the old dir is gone, the export task is `Ready`, and a real
   `usage-insights export` wrote into the new store. `docs/store.md` names no path, so it needed no
   change.
+- 2026-11-05 PR: #86 https://github.com/cheneeheng/claude-code-command-center/pull/86
