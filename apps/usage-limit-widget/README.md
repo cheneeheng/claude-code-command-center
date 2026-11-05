@@ -6,12 +6,13 @@ session limit and the 7-day weekly limit. Each row has a bar, the percentage use
 time, and the time left until the reset.
 
 ```
-     5h  ▮▮▮▮▯▯▯▯▯▯  42%  Thu 12:29   2h9m
-Pro  7d  ▮▮▮▮▮▮▮▮▯▯  86%  Mon 13:19   4d2h
+            5h  ▮▮▮▮▯▯▯▯▯▯  42%  Thu 12:29   2h9m
+Claude Pro  7d  ▮▮▮▮▮▮▮▮▯▯  86%  Mon 13:19   4d2h
 ```
 
 Each bar has 10 segments of 10%, so you can count the used share at a glance. The segment in
-progress fills partway, and a bar turns red at 80%.
+progress fills partway. As in `statusline-hook`, a bar is green below 50%, yellow below 80%,
+and red from 80%.
 
 ## Install
 

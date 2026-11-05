@@ -40,7 +40,7 @@ KEEP_PAD_X = 15  # extra width each side once visible (hysteresis)
 HIDE_MARGIN_PX = 10  # extra height below panel once visible (hysteresis)
 REFRESH_SECS = 300  # how often to re-fetch usage from Anthropic ("r" fetches now)
 PAD, GAP, ROW_H = 6, 8, 17  # one row per limit, columns GAP apart
-PANEL_W, PANEL_H = 340, 2 * PAD + 2 * ROW_H
+PANEL_W, PANEL_H = 380, 2 * PAD + 2 * ROW_H
 # Grid: plan (spans both rows) | label | bar | % | reset at | time left.
 # Fixed widths fit the widest value in Segoe UI 9: "5h" 14, "100%" 28,
 # "Tue 09:00" 50 (+6 so it doesn't crowd the %), "23h59m" 42. The plan
@@ -50,7 +50,14 @@ SEGMENTS, SEG_GAP = 10, 2  # the bar is 10 segments of 10% each
 
 # ---- look ----
 BG, BORDER, FG, MUTED, TRACK = "#1f1f1f", "#3a3a3a", "#e8e8e8", "#9a9a9a", "#363636"
-ACCENT, WARN = "#d97757", "#e5534b"  # Claude orange; red once usage is high
+ACCENT = "#d97757"  # Claude orange, for the plan label
+
+
+def level_color(p):
+    """Green below 50%, yellow below 80%, red above: the statusline-hook's bands."""
+    return "#3fb950" if p < 50 else "#d29922" if p < 80 else "#e5534b"
+
+
 FONT, FONT_BOLD = ("Segoe UI", 9), ("Segoe UI Semibold", 9)
 
 # five_hour = rolling session limit, seven_day = rolling weekly limit --
@@ -250,7 +257,7 @@ class Widget:
                 width=PANEL_W - 2 * PAD,
             )
             return
-        plan = data.get("plan", "?")
+        plan = f"Claude {data.get('plan', '?')}"
         plan_w = tkfont.Font(font=FONT_BOLD).measure(plan)
         c.create_text(
             PAD, PANEL_H // 2, text=plan, fill=ACCENT, font=FONT_BOLD, anchor="w"
@@ -272,7 +279,7 @@ class Widget:
             c.create_text(label_x, y, text=label, fill=FG, font=FONT_BOLD, anchor="w")
             # One segment per 10%, so the count of lit segments reads at a
             # glance; the segment in progress fills partway.
-            color = WARN if (p or 0) >= 80 else ACCENT
+            color = level_color(p or 0)
             for k in range(SEGMENTS):
                 sx0 = bar_x0 + k * (seg_w + SEG_GAP)
                 c.create_rectangle(sx0, y - 3, sx0 + seg_w, y + 3, fill=TRACK, width=0)
