@@ -17,6 +17,7 @@ member's own setup script and records the outcome in a per-machine **manifest**.
 | `agents-workspace-sync` | Registers a daily task that commits and pushes each listed `.agents_workspace` repo (needs config) |
 | `marketplace-updater` | Registers a task that refreshes the listed marketplaces and updates their plugins in the listed repos on an interval (needs config) |
 | `usage-insights` (app) | Builds the web frontend, installs the `usage-insights` command (`uv tool`), and registers a task that exports transcripts into its store daily and at logon (needs `bun` and `uv`) |
+| `usage-limit-widget` (app) | Registers a task that starts the usage-limit widget at logon and restarts it hourly (needs `uv`) |
 
 Other apps, `usage-report`, and libs are **not** managed here — they are run on demand, not installed.
 
