@@ -12,7 +12,7 @@ only part that runs outside Claude Code.
 ```mermaid
 flowchart LR
     setup["...-setup.ps1 / .sh<br/>install / uninstall"] -->|"add / remove our SessionStart group"| settings[("~/.claude/settings.json")]
-    cc["Claude Code<br/>session start (source = startup)"] -->|reads hooks| settings
+    cc["Claude Code<br/>session start (source = startup or clear)"] -->|reads hooks| settings
     cc -->|"stdin: hook input JSON"| hook(("hook command"))
     hook -->|"stdout: hookSpecificOutput.sessionTitle"| cc
 ```
@@ -42,7 +42,7 @@ sequenceDiagram
     participant C as Claude Code
     participant H as hook command
 
-    C->>H: stdin {source: startup, session_title?, ...}
+    C->>H: stdin {source: startup | clear, session_title?, ...}
     alt session_title present (--name, /rename)
         H-->>C: (no output, title kept)
     else no title
@@ -59,12 +59,23 @@ user's own hooks are never touched.
 ```mermaid
 flowchart LR
     read["read settings.json<br/>(missing/blank = {})"] --> filter["SessionStart groups<br/>without our marker"]
-    filter -->|install| add["+ our group (matcher startup)"] --> save[("settings.json")]
+    filter -->|install| add["+ our group (matcher startup|clear)"] --> save[("settings.json")]
     filter -->|uninstall| drop["drop empty SessionStart / hooks"] --> save
     save --> old["remove the old PATH wrapper if present"]
 ```
 
 ## Key Decisions
+
+### 2026-11-05 — The hook also runs on `clear`
+
+**Status:** Accepted (amends the decision below)
+**Context:** The user wants a new dated title after `/clear` as well as at startup, as their own
+snippet had (`startup|clear`). The hooks docs list `sessionTitle` for `startup`, `resume` and `fork`
+only.
+**Decision:** The matcher is `startup|clear`. The skip rule is unchanged: a session that already
+has a title keeps it.
+**Consequences:** If Claude Code ignores `sessionTitle` on `clear`, as the docs suggest, the extra
+run costs one shell start and changes nothing. A live `/clear` shows which holds.
 
 ### 2026-11-05 — A SessionStart hook replaces the PATH wrapper
 

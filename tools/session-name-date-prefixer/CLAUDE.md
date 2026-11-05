@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A Claude Code `SessionStart` hook (matcher `startup`) that sets each new session's title to
+A Claude Code `SessionStart` hook (matcher `startup|clear`) that sets each new session's title to
 `<cwd leaf>-<yyMMddHHmm>`, unless the session already has one. The setup scripts write it into
 `settings.json`.
 
@@ -29,7 +29,9 @@ See README.md for install/uninstall. Files:
   not say which one `"shell": "powershell"` starts.
 - **Keep the two hook commands behaviourally identical:** same title format, same folder-name
   cleanup (anything outside `[A-Za-z0-9_-]` becomes `-`), same skip rule.
-- **No `clear` matcher:** Claude Code ignores `sessionTitle` on `clear`.
+- **Matcher `startup|clear`:** the user wants a fresh title after `/clear` too. The hooks docs list
+  `sessionTitle` for `startup`, `resume` and `fork` only, so whether `clear` applies it is checked
+  live, not by the smoke test.
 
 ## Conventions
 

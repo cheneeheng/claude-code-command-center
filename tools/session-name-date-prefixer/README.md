@@ -1,7 +1,7 @@
 # session-name-date-prefixer
 
-Names each new Claude Code session `<folder>-<yyMMddHHmm>`, so your session history is easy to
-browse. A session you start with `--name` keeps the name you gave it.
+Names each new Claude Code session `<folder>-<yyMMddHHmm>`, at startup and after `/clear`, so
+your session history is easy to browse. A session you start with `--name` keeps the name you gave it.
 
 It is a `SessionStart` hook in your `settings.json`. The setup script adds it, and removes only
 it on uninstall, leaving your other settings and hooks alone.

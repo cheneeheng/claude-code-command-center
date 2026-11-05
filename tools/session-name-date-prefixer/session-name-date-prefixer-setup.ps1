@@ -75,7 +75,7 @@ function Install-Hook {
         $settings | Add-Member -NotePropertyName hooks -NotePropertyValue ([pscustomobject]@{}) -Force
     }
     $ours = [pscustomobject]@{
-        matcher = 'startup'
+        matcher = 'startup|clear'
         hooks   = @([pscustomobject]@{ type = 'command'; shell = 'powershell'; command = $command })
     }
     $groups = @(Get-OtherGroups $settings) + $ours
