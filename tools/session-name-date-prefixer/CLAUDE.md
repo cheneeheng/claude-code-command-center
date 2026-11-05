@@ -4,30 +4,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A `claude` CLI wrapper that auto-injects a dated `--name <cwd>-<yyMMddHHmm>` when the user does not
-pass `--name`/`-n`, so session history is easy to browse. Placed on `PATH` ahead of the real
-binary, it passes every argument through unchanged except for that one addition.
+A Claude Code `SessionStart` hook (matcher `startup`) that sets each new session's title to
+`<cwd leaf>-<yyMMddHHmm>`, unless the session already has one. The setup scripts write it into
+`settings.json`.
 
 ## Running
 
 See README.md for install/uninstall. Files:
 
-- `session-name-date-prefixer.ps1` / `.sh` — the wrappers (Windows / Linux-macOS).
-- `session-name-date-prefixer-setup.ps1` / `.sh` — installers; install puts the wrapper on `PATH`
-  ahead of the real `claude`, uninstall reverses it.
+- `session-name-date-prefixer-setup.ps1` — Windows: writes the PowerShell hook (`"shell": "powershell"`).
+- `session-name-date-prefixer-setup.sh` — Linux/macOS: writes the bash hook. Needs `jq`.
+- `tests/smoke.sh` — `bash tests/smoke.sh`; CI runs it on Ubuntu and Windows.
 
 ## Invariants — do not break these
 
-- **Pass-through is sacred.** Forward every argument to the real `claude` unchanged. The only
-  modification is prepending `--name` when both `--name` and `-n` are absent. Never drop, reorder,
-  or rewrite other arguments.
-- **Only inject when the user gave no name.** If `--name`/`-n` is present, change nothing.
-- **The wrapper must locate and exec the real `claude`, not itself** — it sits ahead on `PATH`;
-  preserve the resolution that avoids infinite recursion.
-- **Keep the `.ps1` and `.sh` wrappers behaviourally identical.**
+- **Only name a session the user did not name.** The hook prints nothing when its input has
+  `session_title` (set by `--name`, `/rename`, or another hook).
+- **Touch only our hook.** Install and uninstall find it by the `session-name-date-prefixer`
+  no-op at the start of its command, and keep every other key and hook. Re-running install leaves
+  exactly one.
+- **`SessionStart` stays a JSON array.** In the `.ps1`, wrap filtered lists in `@()`: a one-item
+  `Where-Object` result is a single object, and `ConvertTo-Json` would write it as an object.
+- **The PowerShell command must run in both Windows PowerShell 5.1 and pwsh**, because the docs do
+  not say which one `"shell": "powershell"` starts.
+- **Keep the two hook commands behaviourally identical:** same title format, same folder-name
+  cleanup (anything outside `[A-Za-z0-9_-]` becomes `-`), same skip rule.
+- **No `clear` matcher:** Claude Code ignores `sessionTitle` on `clear`.
 
 ## Conventions
 
-- PowerShell + Bash tool; no Python, no dependencies.
+- PowerShell + Bash tool; no Python, no dependencies beyond `jq` for the bash setup.
 - Also installable via the repo-wide `setup/` orchestrator.
 - New decisions go in the repo-root `.agents_workspace/DECISION_LOG.md`.

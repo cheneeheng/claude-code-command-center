@@ -1,0 +1,31 @@
+name: CI · session-name-date-prefixer
+
+# No path filter: this job is meant to be a required check, and a path-filtered required
+# check never reports on PRs that skip it.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: tools/session-name-date-prefixer
+
+jobs:
+  smoke:
+    name: session-name-date-prefixer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      # Both runner images ship bash, jq, and pwsh; Windows also has powershell 5.1.
+      - name: Smoke test (setup install + run hook + uninstall)
+        run: bash tests/smoke.sh

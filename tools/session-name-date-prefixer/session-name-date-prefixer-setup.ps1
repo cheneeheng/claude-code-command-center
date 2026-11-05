@@ -1,88 +1,116 @@
 #!/usr/bin/env pwsh
-# Combined install/uninstall for the claude session-name wrapper.
+# Install/uninstall the SessionStart hook that names each new session <folder>-<yyMMddHHmm>.
+# The hook lives in settings.json; other keys and hooks are preserved.
 # Usage:
-#   .\session-name-date-prefixer-setup.ps1            # install (default)
-#   .\session-name-date-prefixer-setup.ps1 -Action install
+#   .\session-name-date-prefixer-setup.ps1                        # install (default)
 #   .\session-name-date-prefixer-setup.ps1 -Action uninstall
+#   .\session-name-date-prefixer-setup.ps1 -ClaudeDir D:\claude   # override config dir
 
 param(
     [ValidateSet('install', 'uninstall')]
-    [string]$Action = 'install'
+    [string]$Action = 'install',
+
+    # Claude config dir to install into (defaults to ~/.claude).
+    [string]$ClaudeDir = (Join-Path $HOME '.claude')
 )
 
-$binDir  = "$env:LOCALAPPDATA\claude-automation\cc-inject-date-to-session-name"
-$wrapper = "$binDir\claude.ps1"
-$source  = Join-Path $PSScriptRoot "session-name-date-prefixer.ps1"
+$ErrorActionPreference = 'Stop'
+$settingsPath = Join-Path $ClaudeDir 'settings.json'
+$marker       = 'session-name-date-prefixer'
 
-function Install-Wrapper {
-    # 1. Create bin dir
-    if (-not (Test-Path $binDir)) {
-        New-Item -ItemType Directory -Force $binDir | Out-Null
-        Write-Host "Created $binDir"
+# Runs through "shell": "powershell", which is not documented as pwsh or powershell.exe, so it
+# stays valid in both. Prints nothing when the session already has a title (--name, /rename).
+# The leading no-op names the tool, so install and uninstall can find this hook.
+$command = @'
+$null = 'session-name-date-prefixer'; if (-not ([Console]::In.ReadToEnd() | ConvertFrom-Json).session_title) { '{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"' + ((Split-Path -Leaf (Get-Location)) -replace '[^A-Za-z0-9_-]', '-') + '-' + (Get-Date -Format yyMMddHHmm) + '"}}' }
+'@
+
+# The retired PATH wrapper this hook replaces (Windows only, hence the LOCALAPPDATA guard).
+$oldBinDir = if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'claude-automation\cc-inject-date-to-session-name' }
+
+function Read-Settings {
+    if (Test-Path $settingsPath) {
+        $raw = Get-Content -Raw $settingsPath
+        if ($raw.Trim()) { return $raw | ConvertFrom-Json }
     }
-
-    # 2. Copy wrapper
-    Copy-Item -Force $source $wrapper
-    Write-Host "Installed wrapper to $wrapper"
-
-    # 3. Prepend to user PATH if not already present
-    $current = [Environment]::GetEnvironmentVariable('PATH', 'User')
-    $dirs    = $current -split ';' | Where-Object { $_ -ne '' }
-
-    if ($binDir -notin $dirs) {
-        [Environment]::SetEnvironmentVariable('PATH', "$binDir;$current", 'User')
-        Write-Host "Added $binDir to user PATH"
-    } else {
-        Write-Host "$binDir already on user PATH — skipped"
-    }
-
-    # 4. Verify the real claude binary exists somewhere else on PATH
-    $realClaude = Get-Command claude -All -ErrorAction SilentlyContinue |
-        Where-Object { $_.Source -notlike '*claude.ps1' } |
-        Select-Object -First 1
-
-    if ($realClaude) {
-        Write-Host "Real claude found at: $($realClaude.Source)"
-    } else {
-        Write-Warning "Real claude binary not found on PATH. Install Claude Code first."
-    }
-
-    Write-Host ""
-    Write-Host "Done. Open a new terminal for PATH changes to take effect."
+    return [pscustomobject]@{}
 }
 
-function Uninstall-Wrapper {
-    # 1. Remove wrapper file
-    if (Test-Path $wrapper) {
-        Remove-Item -Force $wrapper
-        Write-Host "Removed wrapper $wrapper"
-    } else {
-        Write-Host "Wrapper not found at $wrapper — skipped"
-    }
+function Save-Settings($obj) {
+    # -Depth 20 keeps nested settings (hooks, permissions) intact; pwsh writes BOM-less UTF-8.
+    $obj | ConvertTo-Json -Depth 20 | Set-Content -Path $settingsPath -Encoding utf8
+}
 
-    # 2. Remove bin dir if empty
-    if ((Test-Path $binDir) -and -not (Get-ChildItem -Force $binDir)) {
-        Remove-Item -Force $binDir
-        Write-Host "Removed empty $binDir"
-    }
+# SessionStart groups that are not ours. @() keeps a one-item result an array, so
+# ConvertTo-Json still writes SessionStart as a JSON array.
+function Get-OtherGroups($settings) {
+    if (-not $settings.hooks -or -not $settings.hooks.SessionStart) { return @() }
+    @($settings.hooks.SessionStart | Where-Object {
+        -not @($_.hooks | Where-Object { $_.command -like "*$marker*" })
+    })
+}
 
-    # 3. Strip binDir from user PATH
+function Remove-OldWrapper {
+    if (-not $oldBinDir) { return }
+    if (Test-Path $oldBinDir) {
+        Remove-Item -Recurse -Force $oldBinDir
+        Write-Host "Removed the old wrapper folder $oldBinDir"
+    }
     $current = [Environment]::GetEnvironmentVariable('PATH', 'User')
-    $dirs    = $current -split ';' | Where-Object { $_ -ne '' -and $_ -ne $binDir }
-    $new     = $dirs -join ';'
-
-    if ($new -ne $current) {
+    $dirs    = @($current -split ';' | Where-Object { $_ -ne '' })
+    if ($dirs -contains $oldBinDir) {
+        $new = ($dirs | Where-Object { $_ -ne $oldBinDir }) -join ';'
         [Environment]::SetEnvironmentVariable('PATH', $new, 'User')
-        Write-Host "Removed $binDir from user PATH"
-    } else {
-        Write-Host "$binDir not on user PATH — skipped"
+        Write-Host "Removed $oldBinDir from the user PATH (open a new terminal to pick it up)"
     }
+}
 
-    Write-Host ""
-    Write-Host "Done. Open a new terminal for PATH changes to take effect."
+function Install-Hook {
+    if (-not (Test-Path $ClaudeDir)) {
+        New-Item -ItemType Directory -Force $ClaudeDir | Out-Null
+        Write-Host "Created $ClaudeDir"
+    }
+    $settings = Read-Settings
+    if (-not $settings.hooks) {
+        $settings | Add-Member -NotePropertyName hooks -NotePropertyValue ([pscustomobject]@{}) -Force
+    }
+    $ours = [pscustomobject]@{
+        matcher = 'startup'
+        hooks   = @([pscustomobject]@{ type = 'command'; shell = 'powershell'; command = $command })
+    }
+    $groups = @(Get-OtherGroups $settings) + $ours
+    $settings.hooks | Add-Member -NotePropertyName SessionStart -NotePropertyValue $groups -Force
+    Save-Settings $settings
+    Write-Host "Added the SessionStart hook to $settingsPath"
+    Remove-OldWrapper
+}
+
+function Uninstall-Hook {
+    if (Test-Path $settingsPath) {
+        $settings = Read-Settings
+        $groups = @(Get-OtherGroups $settings)
+        if ($settings.hooks -and $settings.hooks.SessionStart -and
+            $groups.Count -lt @($settings.hooks.SessionStart).Count) {
+            if ($groups.Count) {
+                $settings.hooks.SessionStart = $groups
+            } else {
+                $settings.hooks.PSObject.Properties.Remove('SessionStart')
+                if (-not $settings.hooks.PSObject.Properties.Name) {
+                    $settings.PSObject.Properties.Remove('hooks')
+                }
+            }
+            Save-Settings $settings
+            Write-Host "Removed the SessionStart hook from $settingsPath"
+        } else {
+            Write-Host "No session-name hook in $settingsPath, skipped"
+        }
+    } else {
+        Write-Host "$settingsPath not found, skipped"
+    }
+    Remove-OldWrapper
 }
 
 switch ($Action) {
-    'install'   { Install-Wrapper }
-    'uninstall' { Uninstall-Wrapper }
+    'install'   { Install-Hook }
+    'uninstall' { Uninstall-Hook }
 }
