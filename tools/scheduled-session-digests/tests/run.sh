@@ -129,9 +129,14 @@ start_time_of() {
     pwsh -NoProfile -Command "[DateTimeOffset]::new((Get-Process -Id $1).StartTime.ToUniversalTime()).ToUnixTimeSeconds()"
   fi
 }
-# The PID the shell under test sees for a background process.
+# The PID the shell under test sees for a background process. Until the job execs, Git Bash
+# maps its PID to the bash fork's Windows process, which exits on exec, so wait (up to 10 s)
+# for its cmdline to stop being this shell's before reading the Windows PID.
 pid_for_ut() {
-  if [[ "$SHELL_UT" == pwsh && -r "/proc/$1/winpid" ]]; then cat "/proc/$1/winpid"; else echo "$1"; fi
+  if [[ "$SHELL_UT" == pwsh && -r "/proc/$1/winpid" ]]; then
+    local i; for i in {1..100}; do cmp -s "/proc/$1/cmdline" "/proc/$$/cmdline" || break; sleep 0.1; done
+    cat "/proc/$1/winpid"
+  else echo "$1"; fi
 }
 
 suite_archive() {
@@ -191,7 +196,8 @@ suite_archive() {
   # Lock: a live lock makes a second run exit 0 without touching anything.
   # (--all from here on: session 1111 was moved 40 days back above.)
   rm -rf "$META/transcripts"
-  sleep 60 & local holder=$!
+  # The holder execs late on purpose, as on a slow runner, so pid_for_ut must wait for the exec.
+  (sleep 0.3; exec sleep 60) & local holder=$!
   local hp; hp="$(pid_for_ut "$holder")"
   printf '{"pid":%s,"startTime":%s}\n' "$hp" "$(start_time_of "$hp")" > "$META/.claude/session-lessons/state/run.lock"
   out="$(run_ut --archive-only --all)"; rc=$?
