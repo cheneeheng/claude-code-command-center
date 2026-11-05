@@ -84,9 +84,10 @@ back; `layout/edits.ts` holds the agent's four edits; `hooks/useAgent.ts` drives
 - **One writer at a time.** An export takes `BEGIN IMMEDIATE` with a short timeout and raises
   `ExportBusy` instead of waiting out a long first export. A store backup must happen before the
   write lock is taken.
-- A schema change bumps `store.SCHEMA_VERSION`. The exporter then backs up the old store and
-  rebuilds from the transcripts still on disk, which loses rows for deleted transcripts. Avoid it
-  when an additive change will do.
+- A schema change bumps `store.SCHEMA_VERSION` and ships a migration that keeps every existing
+  row, with a new field null for old rows. The first such change replaces the drop-and-rebuild in
+  `store.ensure_schema`, which loses rows for deleted transcripts. Keep the backup before it.
+- A change to what the export writes updates `docs/store.md` in the same change.
 
 ## Conventions
 

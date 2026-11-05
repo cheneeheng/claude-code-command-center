@@ -116,6 +116,7 @@ fetch date, or "Built-in prices".
 ## The store
 
 The store is a SQLite file at `~/.usage-insights/usage.db`, or `$C4_USAGE_INSIGHTS_HOME/usage.db`.
+[What the store keeps](docs/store.md) lists every field an export writes and what it leaves out.
 
 - **Retention:** rows are never deleted. When Claude Code removes an old transcript, the sessions,
   messages, and events already exported stay in the store.
