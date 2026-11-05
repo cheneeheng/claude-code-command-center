@@ -19,6 +19,7 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 | [`per-project-plugin-toggler`](apps/per-project-plugin-toggler/) | Enable/disable Claude Code plugins per project from a browser UI or inside VSCode; browse and install from known marketplaces. |
 | [`usage-insights`](apps/usage-insights/) | Local dashboard that helps you decide what to change: this week's and month's token and cost forecast, where spend goes by project, model, and session, and which skills, subagents, and tools are never used, fading, or followed by trouble. Keeps its own transcript store, so history outlives Claude Code's cleanup. Replaces `usage-dashboard`. |
 | [`claude-component-browser`](apps/claude-component-browser/) | Local web app to search and read every Claude Code component — skill, agent, and hook — on your machine, from installed plugins and from loose (non-plugin) `.claude` skills/agents, grouped by source. |
+| [`usage-limit-widget`](apps/usage-limit-widget/) | Windows widget hidden at the top edge of the screen: hover it to see your 5-hour and 7-day Claude usage limits and when they reset. Starts at logon and restarts hourly. |
 
 > **Retired:** the `usage-dashboard` app was replaced by `usage-insights` and removed. Its last
 > version is at the tag [`usage-dashboard-final`](../../tree/usage-dashboard-final/apps/usage-dashboard).
@@ -70,7 +71,7 @@ The installable `tools/` members (`statusline-hook`, `session-name-date-prefixer
 
 It delegates to each tool's own setup script and records state in a manifest under
 `~/.claude-command-center/`. See [`setup/README.md`](setup/README.md). It also manages
-`usage-insights`, the one app that registers a scheduled task. Other apps and
+`usage-insights` and `usage-limit-widget`, the apps that register a scheduled task. Other apps and
 `usage-report` are run on demand, not installed, so they are not managed here.
 
 ## Environment variables
@@ -80,7 +81,7 @@ never collides with Claude Code's or the OS's variables:
 
 | Variable | Used by | Purpose |
 |----------|---------|---------|
-| `C4_CLAUDE_DIR` | `usage-report`, `usage-insights`, `scheduled-session-digests`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. `scheduled-session-digests` reads every entry, at install time. |
+| `C4_CLAUDE_DIR` | `usage-report`, `usage-insights`, `usage-limit-widget`, `scheduled-session-digests`, `setup/` | Override the Claude config dir (default `~/.claude`); pathsep-separated, first entry wins. `scheduled-session-digests` reads every entry, at install time. |
 | `C4_CLAUDE_META_DIR` | `scheduled-session-digests`, `agents-workspace-sync`, `setup/` | Location of the `claude-meta` directory (default `~/claude-meta`). `scheduled-session-digests` reads it only as the default for `-MetaDir` and never sets it. |
 | `C4_STATUSLINE_NOW` | `statusline-hook` | Test-only: pins "now" (epoch seconds) for the golden fixtures. |
 | `C4_USAGE_INSIGHTS_HOME` | `usage-insights` | Store dir holding `usage.db`, `reference.json`, and `layout.json` (default `~/.usage-insights`). |

@@ -10,7 +10,7 @@ A monorepo of independent projects centered on Claude Code, grouped by category:
 ```
 apps/      full applications you run (cross-repo-file-diff, multi-repo-plan-runner,
            multi-repo-workspace, per-project-plugin-toggler,
-           usage-insights, claude-component-browser)
+           usage-insights, claude-component-browser, usage-limit-widget)
 tools/     single-purpose utilities & scripts (statusline-hook,
            session-name-date-prefixer, file-sync,
            scheduled-session-digests, usage-report)

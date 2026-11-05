@@ -22,6 +22,7 @@ jobs:
           - apps/per-project-plugin-toggler
           - apps/usage-insights
           - apps/claude-component-browser
+          - apps/usage-limit-widget
           - tools/usage-report
           - libs/claude-usage
           - libs/claude-plugins

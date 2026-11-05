@@ -1,0 +1,22 @@
+[project]
+name = "usage-limit-widget"
+version = "0.1.0"
+description = "Windows top-edge widget showing Claude 5-hour and 7-day usage limits."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15",
+]
+
+# Run directly (pythonw claude_usage_widget.pyw); not installed as a package.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+# ruff skips .pyw files unless told to include them.
+extend-include = ["*.pyw"]

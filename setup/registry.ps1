@@ -276,5 +276,22 @@ function Get-CommandCenterRegistry {
         }
     }
 
-    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $agentsWorkspaceSync, $marketplaceUpdater, $usageInsights)
+    # --- usage-limit-widget --------------------------------------------------
+    $ulwDir = Join-Path $apps 'usage-limit-widget'
+    $usageLimitWidget = [pscustomobject]@{
+        Name           = 'usage-limit-widget'
+        DisplayName    = 'Usage limit widget'
+        Category       = 'apps'
+        SetupScript    = Join-Path $ulwDir 'usage-limit-widget-setup.ps1'
+        Version        = Read-MemberVersion $ulwDir
+        RequiredConfig = @()
+        Install        = { param($SetupScript, $Config) & $SetupScript -Action install | Out-Null; @{} }
+        Uninstall      = { param($SetupScript, $Entry)  & $SetupScript -Action uninstall | Out-Null }
+        Detect         = {
+            param($Entry)
+            [bool](Get-ScheduledTask -TaskName 'widget' -TaskPath '\ClaudeAutomation\usage-limit-widget\' -ErrorAction SilentlyContinue)
+        }
+    }
+
+    @($sessionNamePrefixer, $statuslineHook, $fileSync, $sessionDigests, $agentsWorkspaceSync, $marketplaceUpdater, $usageInsights, $usageLimitWidget)
 }
