@@ -147,3 +147,7 @@ session started with `--name` keeps the name the user gave.
   ps1/pwsh and ps1/powershell. With `$groups[0]` swapped in for the array, the smoke test fails
   with "uninstall damaged other settings", so it catches the blocking finding's bug.
 - 2026-11-05 PR: #83 https://github.com/cheneeheng/claude-code-command-center/pull/83
+- 2026-11-05: Follow-up at the user's request: matcher `startup|clear` instead of `startup`
+  (Key Decision "The hook also runs on `clear`"). Smoke test now runs every case for both sources:
+  green with the change, `FAIL: sh: matcher is not startup|clear` with it stashed.
+- 2026-11-05 PR: #89 https://github.com/cheneeheng/claude-code-command-center/pull/89
