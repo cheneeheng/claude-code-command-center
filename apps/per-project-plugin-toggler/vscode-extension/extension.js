@@ -447,11 +447,29 @@ function streamMarketplaceRefresh(projectRoot, onLine) {
   });
 }
 
+const SELECTED_PROJECT_KEY = "skillsToggle.selectedProject";
+
+// VSCode returns lowercase drive letters on Windows; normalize to uppercase so spawn's cwd
+// matches what the CLI writes to installed_plugins.json, and so stored selections compare
+// equal to the folder list.
+function folderPath(folder) {
+  const p = folder.uri.fsPath;
+  if (/^[a-z]:/.test(p)) return p[0].toUpperCase() + p.slice(1);
+  return p;
+}
+
 class SkillsViewProvider {
   static viewType = "skillsToggle.pluginList";
 
-  constructor(extensionUri) {
+  constructor(extensionUri, workspaceState) {
     this._extensionUri = extensionUri;
+    // The folder chosen in a multi-root workspace. workspaceState is per workspace, so the
+    // choice survives a window reload without leaking into other workspaces. Only consulted
+    // when two or more folders are open; a single-folder window is always fixed.
+    this._workspaceState = workspaceState;
+    this._selectedRoot = workspaceState.get(SELECTED_PROJECT_KEY) || null;
+    // The settings watchers of the folder in use; rebuilt by _watchFolder on every switch.
+    this._folderWatchers = [];
   }
 
   resolveWebviewView(webviewView) {
@@ -485,60 +503,95 @@ class SkillsViewProvider {
     // time the view is rebuilt, so pushing them onto context.subscriptions accumulated a
     // fresh set on each rebuild that nothing disposed until deactivate — and every
     // settings change then triggered one full plugin scan per leaked set.
-    const watchers = [];
-    const folders = vscode.workspace.workspaceFolders;
-    if (folders && folders.length > 0) {
-      const onchange = () => this._refresh(webviewView.webview);
-
-      // Local + project settings — workspace-relative
-      const settingsWatcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(folders[0], ".claude/settings.local.json")
-      );
-      const projectSettingsWatcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(folders[0], ".claude/settings.json")
-      );
-      // User settings + install registry — outside the workspace, so they need a
-      // RelativePattern rooted at the home directory. A bare absolute path string is a
-      // glob, and VSCode matches globs against workspace files only: built that way these
-      // two never fired, so a CLI `claude plugin install` left an open panel stale.
-      // Neither pattern contains `**`, so neither watches the home directory recursively.
-      const home = vscode.Uri.file(os.homedir());
-      const userSettingsWatcher = vscode.workspace.createFileSystemWatcher(
+    // User settings + install registry — outside the workspace, so they need a
+    // RelativePattern rooted at the home directory. A bare absolute path string is a
+    // glob, and VSCode matches globs against workspace files only: built that way these
+    // two never fired, so a CLI `claude plugin install` left an open panel stale.
+    // Neither pattern contains `**`, so neither watches the home directory recursively.
+    // Created whatever the folder count, so a window that gains its first folder later
+    // still watches them.
+    const webview = webviewView.webview;
+    const home = vscode.Uri.file(os.homedir());
+    const homeWatchers = [
+      vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(home, ".claude/settings.json")
-      );
-      const installedWatcher = vscode.workspace.createFileSystemWatcher(
+      ),
+      vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(home, ".claude/plugins/installed_plugins.json")
-      );
+      ),
+    ];
+    for (const w of homeWatchers) this._onFileEvents(w, webview);
+    this._watchFolder(webview);
 
-      for (const w of [settingsWatcher, projectSettingsWatcher, userSettingsWatcher, installedWatcher]) {
-        w.onDidChange(onchange);
-        w.onDidCreate(onchange);
-        w.onDidDelete(onchange);
-        watchers.push(w);
-      }
-    }
+    // Folders added or removed while the panel is open: the dropdown, the fixed/selectable
+    // card and the watched folder all follow. A selection whose folder is gone falls back to
+    // the first folder in _projectRoot, and applies again if the folder comes back.
+    const foldersListener = vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      this._watchFolder(webview);
+      this._refresh(webview);
+    });
 
     webviewView.onDidDispose(() => {
-      for (const w of watchers) w.dispose();
+      for (const w of homeWatchers) w.dispose();
+      for (const w of this._folderWatchers) w.dispose();
+      this._folderWatchers = [];
+      foldersListener.dispose();
     });
   }
 
-  _projectRoot() {
+  _onFileEvents(watcher, webview) {
+    const onchange = () => this._refresh(webview);
+    watcher.onDidChange(onchange);
+    watcher.onDidCreate(onchange);
+    watcher.onDidDelete(onchange);
+  }
+
+  // Local + project settings of the folder in use. Disposes the previous folder's pair, so
+  // only the selected folder's edits refresh the panel.
+  _watchFolder(webview) {
+    for (const w of this._folderWatchers) w.dispose();
+    this._folderWatchers = [];
+    const folder = this._projectFolder();
+    if (!folder) return;
+    for (const rel of [".claude/settings.local.json", ".claude/settings.json"]) {
+      const w = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, rel));
+      this._onFileEvents(w, webview);
+      this._folderWatchers.push(w);
+    }
+  }
+
+  // The workspace folder in use: none → null; one → that folder, whatever is stored;
+  // two or more → the stored selection when it is still open, else the first folder.
+  _projectFolder() {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) return null;
-    const p = folders[0].uri.fsPath;
-    // VSCode returns lowercase drive letters on Windows; normalize to uppercase
-    // so spawn's cwd matches what the CLI writes to installed_plugins.json.
-    if (/^[a-z]:/.test(p)) return p[0].toUpperCase() + p.slice(1);
-    return p;
+    if (folders.length === 1) return folders[0];
+    return folders.find((f) => folderPath(f) === this._selectedRoot) || folders[0];
+  }
+
+  _projectRoot() {
+    const folder = this._projectFolder();
+    return folder ? folderPath(folder) : null;
+  }
+
+  // Folders offered in the dropdown: only in a multi-root workspace, so an empty list tells
+  // the webview to show the fixed card.
+  _projects() {
+    const folders = vscode.workspace.workspaceFolders || [];
+    if (folders.length < 2) return [];
+    return folders.map((f) => ({ name: f.name, path: folderPath(f) }));
   }
 
   _refresh(webview) {
     const projectRoot = this._projectRoot();
     if (!projectRoot) {
-      webview.postMessage({ type: "error", message: "No workspace folder open." });
+      webview.postMessage({ type: "error", message: "No workspace folder open.", projects: [] });
       return;
     }
+    // Computed before the try, so an error in the selected folder still carries the
+    // folder list: the webview keeps the dropdown up and the user can switch back.
+    const projects = this._projects();
+    const projectName = this._projectFolder().name;
     try {
       const raw = loadInstalledPlugins(projectRoot);
       const isMock = raw.mock || false;
@@ -587,11 +640,34 @@ class SkillsViewProvider {
         installedScopes,
         marketplaces,
         projectRoot,
+        projects,
         mock: isMock,
       });
     } catch (e) {
-      webview.postMessage({ type: "error", message: e.message });
+      webview.postMessage({
+        type: "error",
+        message: `${projectName}: ${e.message}`,
+        projects,
+        projectRoot,
+      });
     }
+  }
+
+  async _selectProject(webview, requested) {
+    const folders = vscode.workspace.workspaceFolders || [];
+    // Act only on a path that is one of the open folders; anything else re-posts the
+    // current state so the dropdown snaps back.
+    const match = folders.find((f) => folderPath(f) === requested);
+    if (!match) {
+      this._refresh(webview);
+      return;
+    }
+    // Switch and refresh before persisting, so the new folder is in use before any later
+    // message is handled.
+    this._selectedRoot = folderPath(match);
+    this._watchFolder(webview);
+    this._refresh(webview);
+    await this._workspaceState.update(SELECTED_PROJECT_KEY, this._selectedRoot);
   }
 
   async _onMessage(webview, msg) {
@@ -599,6 +675,10 @@ class SkillsViewProvider {
       // The webview drives the first load: it only asks once its message listener is
       // installed, so the reply cannot be delivered into a document that would ignore it.
       this._refresh(webview);
+      return;
+    }
+    if (msg.type === "selectProject") {
+      await this._selectProject(webview, msg.path);
       return;
     }
     if (msg.type === "toggle") {
@@ -626,13 +706,19 @@ class SkillsViewProvider {
         }
       }
 
-      const load = { local: loadSettingsLocal, project: loadSettingsProject, user: loadSettingsUser };
-      const settings = scope === "user" ? load.user() : load[scope](projectRoot);
-      if (!settings.enabledPlugins) settings.enabledPlugins = {};
-      settings.enabledPlugins[id] = enabled;
-      if (scope === "local") saveSettingsLocal(projectRoot, settings);
-      else if (scope === "project") saveSettingsProject(projectRoot, settings);
-      else saveSettingsUser(settings);
+      // A malformed settings file throws here; _refresh then posts the error state (with
+      // the folder list) instead of leaving an unhandled rejection behind.
+      try {
+        const load = { local: loadSettingsLocal, project: loadSettingsProject, user: loadSettingsUser };
+        const settings = scope === "user" ? load.user() : load[scope](projectRoot);
+        if (!settings.enabledPlugins) settings.enabledPlugins = {};
+        settings.enabledPlugins[id] = enabled;
+        if (scope === "local") saveSettingsLocal(projectRoot, settings);
+        else if (scope === "project") saveSettingsProject(projectRoot, settings);
+        else saveSettingsUser(settings);
+      } catch (_e) {
+        // Fall through: the refresh below reads the same file and reports its error.
+      }
 
       this._refresh(webview);
     } else if (msg.type === "marketplaceRefresh") {
@@ -729,7 +815,7 @@ class SkillsViewProvider {
 }
 
 function activate(context) {
-  const provider = new SkillsViewProvider(context.extensionUri);
+  const provider = new SkillsViewProvider(context.extensionUri, context.workspaceState);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       SkillsViewProvider.viewType,

@@ -76,6 +76,9 @@
     <div class="project-label">PROJECT</div>
     <div class="project-card-row">
       <span class="project-name" id="project-name"></span>
+      <!-- Shown instead of the name only in a multi-root workspace (load.projects has two
+           or more entries); a single-folder window keeps the fixed name above. -->
+      <select class="project-select" id="project-select" aria-label="Project" style="display:none"></select>
     </div>
     <div class="project-path" id="project-path"></div>
   </div>

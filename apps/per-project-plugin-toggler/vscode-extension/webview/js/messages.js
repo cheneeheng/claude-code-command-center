@@ -2,14 +2,9 @@
 window.addEventListener("message", (event) => {
   const msg = event.data;
   if (msg.type === "load") {
-    const projectRoot = msg.projectRoot || "";
-    const folderName = projectRoot
-      ? projectRoot.replace(/\\/g, "/").split("/").filter(Boolean).pop() || projectRoot
-      : "";
-    document.getElementById("project-name").textContent = folderName;
-    document.getElementById("project-path").textContent = projectRoot;
-    // Drop the inline display:none from panel.html; the stylesheet owns the value.
-    document.getElementById("project-card").style.display = "";
+    // Before the operationInProgress early return below, so the folder list stays current
+    // while a streamed op holds the rest of the render.
+    renderProjectCard(msg);
     document.getElementById("mock-notice").style.display = msg.mock ? "flex" : "none";
     document.getElementById("error").style.display = "none";
     state.local = (msg.plugins && msg.plugins.local) || [];
@@ -28,7 +23,12 @@ window.addEventListener("message", (event) => {
     renderPlugins();
     if (installPanelOpen) renderInstallPanel();
   } else if (msg.type === "error") {
+    // The card (and dropdown) stays up on error, so a broken folder never hides the way
+    // back to a working one; the previous folder's rows are hidden so none stays clickable.
+    if (msg.projectRoot) renderProjectCard(msg);
     showError(msg.message);
+    document.getElementById("plugin-sections").style.display = "none";
+    document.getElementById("bulk-actions").style.display = "none";
   } else if (msg.type === "marketplaceRefreshStart") {
     const btn   = document.getElementById("marketplace-refresh-btn");
     const logEl = document.getElementById("marketplace-refresh-log");
@@ -55,9 +55,51 @@ window.addEventListener("message", (event) => {
   }
 });
 
+// ---- project card ----
+// One folder: the fixed name. Two or more (msg.projects): a dropdown of the workspace
+// folders by name, with the selected folder's path under it either way.
+function renderProjectCard(msg) {
+  const projectRoot = msg.projectRoot || "";
+  const projects = msg.projects || [];
+  const nameEl = document.getElementById("project-name");
+  const select = document.getElementById("project-select");
+  if (projects.length > 1) {
+    // Options built with textContent/value: folder names come from the user's
+    // workspace file and must never reach innerHTML.
+    select.replaceChildren(
+      ...projects.map((p) => {
+        const opt = document.createElement("option");
+        opt.value = p.path;
+        opt.textContent = p.name;
+        return opt;
+      })
+    );
+    select.value = projectRoot;
+    select.disabled = operationInProgress;
+    select.style.display = "";
+    nameEl.style.display = "none";
+  } else {
+    const folderName = projectRoot
+      ? projectRoot.replace(/\\/g, "/").split("/").filter(Boolean).pop() || projectRoot
+      : "";
+    nameEl.textContent = folderName;
+    nameEl.style.display = "";
+    select.style.display = "none";
+  }
+  document.getElementById("project-path").textContent = projectRoot;
+  // Drop the inline display:none from panel.html; the stylesheet owns the value.
+  document.getElementById("project-card").style.display = "";
+}
+
+// No switching while a streamed install/uninstall log is on screen.
+function setProjectSelectEnabled(enabled) {
+  document.getElementById("project-select").disabled = !enabled;
+}
+
 // ---- streamed-op UI helpers (shared by install + uninstall) ----
 function opStart(id) {
   operationInProgress = true;
+  setProjectSelectEnabled(false);
   const op = pendingOps[id];
   if (!op) return;
   const btn   = op.els.btn ? document.getElementById(op.els.btn) : null;
@@ -79,6 +121,7 @@ function opDone(id, ok, error) {
   if (ok) {
     setTimeout(() => {
       operationInProgress = false;
+      setProjectSelectEnabled(true);
       delete pendingOps[id];
       // The { type: 'load' } that arrived at *Done time was deferred while
       // operationInProgress was true. Re-render now from that stored state so
@@ -88,6 +131,7 @@ function opDone(id, ok, error) {
     }, 3000);
   } else {
     operationInProgress = false;
+    setProjectSelectEnabled(true);
     if (op) {
       const btn   = op.els.btn ? document.getElementById(op.els.btn) : null;
       const errEl = op.els.err ? document.getElementById(op.els.err) : null;

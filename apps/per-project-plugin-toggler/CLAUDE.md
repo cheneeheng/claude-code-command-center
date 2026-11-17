@@ -23,7 +23,10 @@ monochrome activity-bar icon referenced by `package.json`.)
 Two independent surfaces with shared file-based data contract — see README.md for the diagram. Key distinction:
 
 - **HTML version:** stateless HTTP server; `project_root` is fixed at process start via `cwd`.
-- **VSCode extension:** stateful webview panel; `projectRoot = vscode.workspace.workspaceFolders[0].uri.fsPath`.
+- **VSCode extension:** stateful webview panel; `projectRoot` is the single workspace folder, or
+  in a multi-root workspace the folder picked in the PROJECT card dropdown (kept in
+  `workspaceState` under `skillsToggle.selectedProject`, falling back to the first folder). The
+  host validates every `selectProject` path against the open folders.
 
 Both surfaces use the same read/merge/write logic (implemented independently in Python and Node.js).
 

@@ -87,7 +87,7 @@ The extension watches `.claude/settings.local.json` and `~/.claude/plugins/insta
 
 ## Troubleshooting
 
-**Panel shows no plugins / blank panel** — ensure a folder is open (`File > Open Folder`). The extension uses the first workspace folder as project root. If `~/.claude/plugins/installed_plugins.json` is missing, the panel shows mock data with a banner.
+**Panel shows no plugins / blank panel** — ensure a folder is open (`File > Open Folder`). With one folder open, that folder is the project root. In a multi-root workspace, pick the project from the dropdown in the PROJECT card; the choice is remembered per workspace. If `~/.claude/plugins/installed_plugins.json` is missing, the panel shows mock data with a banner.
 
 **Changes not reflected in Claude Code** — settings take effect on the next Claude Code session. Restart any active Claude Code terminal after making changes.
 

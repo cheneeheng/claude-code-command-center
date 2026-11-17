@@ -9,6 +9,20 @@ Releases are tagged `pppt-vX.Y.Z` (see [`docs/releasing.md`](../../docs/releasin
 Development through 0.9.x predates this monorepo and happened in a previous repository;
 this log starts at the first release tracked here.
 
+## [Unreleased]
+
+### Added
+- Multi-root workspace support in the VSCode extension: with two or more workspace folders
+  open, the PROJECT card becomes a dropdown of the folders, and the panel works on the one
+  you pick (plugins, settings, and install/uninstall/marketplace refresh). The choice is
+  remembered per workspace. A single-folder window keeps the fixed card.
+
+### Fixed
+- The VSCode extension now watches the user settings and `installed_plugins.json` even when
+  the window had no folder open when the panel was first shown.
+- A malformed `.claude/settings*.json` no longer leaves an unhandled error behind a toggle;
+  the panel shows the error with the folder's name.
+
 ## [0.10.0] - 2026-10-03
 
 ### Added
