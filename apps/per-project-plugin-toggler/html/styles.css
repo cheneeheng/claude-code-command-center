@@ -200,6 +200,29 @@ h1 {
   color: var(--fg);
 }
 
+/* VSCode extension only: the folder dropdown that replaces .project-name in a multi-root
+   workspace. Same box as .marketplace-select, at the project name's size and weight. */
+.project-select {
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 3px 6px;
+  margin: 2px 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  cursor: pointer;
+}
+
+.project-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .project-change-btn {
   background: none;
   border: 1px solid var(--border);

@@ -70,7 +70,8 @@ synchronous filesystem walk now starts strictly after the panel has painted.
 
 **The four file watchers.** `resolveWebviewView` creates one `FileSystemWatcher` per source
 file, and all four are built with `RelativePattern` — the two workspace ones
-(`.claude/settings.json`, `.claude/settings.local.json`) rooted at the workspace folder, the
+(`.claude/settings.json`, `.claude/settings.local.json`) rooted at the project folder in use
+(rebuilt whenever a multi-root workspace switches folder or the folder list changes), the
 two user ones (`~/.claude/settings.json`, `~/.claude/plugins/installed_plugins.json`) rooted
 at the home directory. Rooting matters: a bare absolute path string is a glob, and VSCode
 matches globs against workspace files only, so the user-level pair silently never fired

@@ -1,6 +1,6 @@
 # User Guide — VSCode Extension
 
-The VSCode extension embeds the plugin manager as a sidebar panel inside VSCode. It uses the first workspace folder as the project root and watches for file changes without needing a separate server process.
+The VSCode extension embeds the plugin manager as a sidebar panel inside VSCode. It works on one project at a time (the folder you have open, or the one you pick in a multi-root workspace) and watches for file changes without needing a separate server process.
 
 ## Prerequisites
 
@@ -37,6 +37,22 @@ This produces `claude-code-plugin-toggler-<version>.vsix` in the same directory.
 
 Click the **Skills Toggle** icon in the VSCode activity bar (left sidebar). The panel opens in the primary sidebar. It stays open across sessions — VSCode restores it on next launch.
 
+## Choosing the project
+
+The **PROJECT** card at the top of the panel shows the project the panel works on, with its path underneath.
+
+| Window | PROJECT card |
+|--------|--------------|
+| One folder open | Shows that folder's name. It is fixed: there is nothing to choose. |
+| Multi-root workspace (two or more folders) | A dropdown of the workspace's folders by name. Pick one and the panel reloads for that folder: its local and project plugins, its `.claude/` settings, and the folder the `claude` CLI runs in for install, uninstall and marketplace refresh. |
+
+In a multi-root workspace:
+
+- The choice is remembered per workspace, so it is still selected after you reload the window.
+- If you remove the selected folder from the workspace, the panel falls back to the first folder.
+- The dropdown is greyed out while an install or uninstall is running, and comes back when it ends.
+- If the selected folder's settings cannot be read (for example invalid JSON in `.claude/settings.local.json`), the panel shows an error naming the folder and keeps the dropdown, so you can switch to another folder.
+
 ## Understanding the plugin list
 
 Plugins are shown in two sections:
@@ -50,7 +66,7 @@ Plugins are shown in two sections:
 
 Flip the toggle on any **Local** plugin. VSCode shows a confirmation dialog before writing the change. If you cancel, the toggle resets to its previous state.
 
-The change is written to `.claude/settings.local.json` in the workspace root. Claude Code picks it up on the next session start.
+The change is written to `.claude/settings.local.json` in the selected project's folder. Claude Code picks it up on the next session start.
 
 ### Localizing an inherited plugin
 
@@ -87,7 +103,7 @@ The extension watches `.claude/settings.local.json` and `~/.claude/plugins/insta
 
 ### Panel shows no plugins / blank panel
 
-- Verify the workspace has a folder open (`File > Open Folder`). The extension uses the first workspace folder as project root; it does not work in a windowless VSCode instance.
+- Verify the workspace has a folder open (`File > Open Folder`). In a multi-root workspace, check which project the PROJECT card dropdown has selected (see [Choosing the project](#choosing-the-project)). The extension does not work in a windowless VSCode instance.
 - Check that `~/.claude/plugins/installed_plugins.json` exists. If it doesn't, the panel enters mock mode (banner shown).
 
 ### Confirmation dialog does not appear / toggle resets immediately
