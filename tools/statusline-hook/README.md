@@ -35,6 +35,19 @@ Bad or unexpected input never breaks your session: the script prints nothing and
 
 ## Install
 
+**From a release.** Each [`slh-v*` release](https://github.com/cheneeheng/claude-code-command-center/releases?q=slh-v)
+has one installer per platform. Download it, extract it, and run the setup script inside:
+
+```powershell
+# Windows: statusline-hook-windows.zip
+Expand-Archive statusline-hook-windows.zip .; ./statusline-hook/statusline-hook-setup.ps1
+```
+
+```bash
+# Linux and macOS: statusline-hook-unix.tar.gz (needs jq)
+tar -xzf statusline-hook-unix.tar.gz && ./statusline-hook/statusline-hook-setup.sh
+```
+
 **With a setup script.** It copies the script into your Claude config dir and wires the
 `statusLine` key in `settings.json`, keeping your other settings. Use the one for your shell:
 
