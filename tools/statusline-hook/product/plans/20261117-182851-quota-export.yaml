@@ -167,3 +167,6 @@ record:
     event: Built Phase
     phase: 2
     details: doc grep loop clean, Superseded present, Unreleased entry added (VERSION kept 0.2.0 per docs/releasing.md)
+  - date: 2026-11-17
+    event: PR
+    details: "#95 https://github.com/cheneeheng/claude-code-command-center/pull/95"
