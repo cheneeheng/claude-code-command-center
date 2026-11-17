@@ -71,18 +71,11 @@ managed by the repo-wide [`setup/`](../../setup/) installer
 For PowerShell, use `"command": "pwsh -NoProfile -File ~/.claude/statusline-hook.ps1"` (or
 `powershell` instead of `pwsh` on a machine without PowerShell 7).
 
-## Quota export (opt-in)
+## Quota export
 
-Claude Code sends your rate-limit usage only to the statusline, never to hooks. To let a hook act
-on it, for example a guard that stops work before you hit your limit, set
-`C4_STATUSLINE_EXPORT=1` (or `true`, `yes`), most simply in the `env` block of
-`~/.claude/settings.json`:
-
-```json
-{ "env": { "C4_STATUSLINE_EXPORT": "1" } }
-```
-
-Each turn that carries `rate_limits`, the statusline then overwrites one file,
+Claude Code sends your rate-limit usage only to the statusline, never to hooks. So that a hook can
+act on it, for example a guard that stops work before you hit your limit, each turn that carries
+`rate_limits` the statusline overwrites one file,
 `~/.claude/statusline/latest/rate-limits.jsonl`, with a single line:
 
 ```json
@@ -90,9 +83,15 @@ Each turn that carries `rate_limits`, the statusline then overwrites one file,
 ```
 
 `ts` is epoch milliseconds, and `rate_limits` is exactly what Claude Code sent. The file never
-grows, every window writes the same account-wide reading, and a reader never sees half a line. It
-is off by default: without the variable the statusline writes nothing. The output on screen is the
-same either way.
+grows, every window writes the same account-wide reading, and a reader never sees half a line. The
+output on screen is the same either way.
+
+The export is on by default. To turn it off, set `C4_STATUSLINE_DISABLE_EXPORT=1` (or `true`,
+`yes`), most simply in the `env` block of `~/.claude/settings.json`:
+
+```json
+{ "env": { "C4_STATUSLINE_DISABLE_EXPORT": "1" } }
+```
 
 ## Development
 
@@ -109,7 +108,7 @@ bash tests/export.sh pwsh -NoProfile -File statusline-hook.ps1
 ```
 
 The export test points `HOME` and `USERPROFILE` at a temp dir, and the golden and smoke tests
-unset `C4_STATUSLINE_EXPORT`, so no test touches your real reading.
+set `C4_STATUSLINE_DISABLE_EXPORT=1`, so no test touches your real reading.
 
 The harness pins `TZ=UTC` and the clock (`C4_STATUSLINE_NOW`, epoch seconds, a test-only
 override) so reset times and time left are deterministic. PowerShell on Windows ignores `TZ` and

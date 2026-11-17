@@ -88,7 +88,7 @@ they name that member.
   (the repo's own namespace), so it never collides with Claude Code's or the OS's variables.
   Current vars: `C4_CLAUDE_DIR` (config dir override), `C4_CLAUDE_META_DIR` (claude-meta dir;
   scheduled-session-digests reads it only as its default meta dir), `C4_STATUSLINE_NOW` (statusline-hook test-only clock override),
-  `C4_STATUSLINE_EXPORT` (statusline-hook opt-in quota export),
+  `C4_STATUSLINE_DISABLE_EXPORT` (statusline-hook: turns off the default quota export),
   `C4_ROUNDTABLE_REGISTRY` (multi-repo-workspace registry path override),
   `C4_ROUNDTABLE_HOME` (multi-repo-workspace state dir, default `~/.roundtable`),
   `C4_USAGE_INSIGHTS_HOME` (usage-insights store dir, default `~/.claude-command-center/usage-insights`),

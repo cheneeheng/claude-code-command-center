@@ -133,14 +133,14 @@ try {
     # Never let a bad payload break the statusline: print nothing.
 }
 
-# Opt-in quota export: hooks never receive rate_limits, so with C4_STATUSLINE_EXPORT on, the
-# latest reading is relayed to one file for readers such as the ceh-every-session usage-limit
+# Quota export, on unless C4_STATUSLINE_DISABLE_EXPORT is on: hooks never receive rate_limits, so
+# the latest reading is relayed to one file for readers such as the ceh-every-session usage-limit
 # guard. Written after the statusline is printed, through a temp file and a rename, so a reader
 # never sees half a line and a failure never changes the output. WriteAllText with a BOM-less
 # UTF8Encoding, because 5.1's Out-File and Set-Content write UTF-16 or ANSI.
 $tmp = $null
 try {
-    if ($env:C4_STATUSLINE_EXPORT -in @('1', 'true', 'yes') -and
+    if ($env:C4_STATUSLINE_DISABLE_EXPORT -notin @('1', 'true', 'yes') -and
         $data -is [System.Management.Automation.PSCustomObject] -and
         $data.rate_limits -is [System.Management.Automation.PSCustomObject] -and
         @($data.rate_limits.PSObject.Properties).Count -gt 0) {
