@@ -164,6 +164,5 @@ cd web && bun run typecheck && bun run test && bun run build
 ```
 
 `bun run build` writes the frontend into `src/usage_insights/static/`, which the server serves.
-The design and its reasons are in [`product/ARCHITECTURE.md`](product/ARCHITECTURE.md) and the
-build plans in [`product/plans/`](product/plans/). The tests never reach the network or the
+The tests never reach the network or the
 `claude` CLI, and the chat's tests need no API key.
