@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A decision-focused dashboard over Claude Code usage: projection, spend breakdown, and skill and
 tool health, plus a chat whose agent adds panels. It replaced the retired `usage-dashboard`. The build
 plans are `usage-insights.md` and `ag-ui-dashboard.md` in
-`.agents_workspace/product/usage-insights/plan/` (the chat,
+`.agents_workspace/product/plan/usage-insights/` (the chat,
 query, layout, and reference data). Their Design sections are binding.
 
 ## Commands

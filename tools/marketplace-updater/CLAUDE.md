@@ -22,8 +22,8 @@ See `README.md`. Install via `marketplace-updater-setup.ps1`, or through `setup/
   registers `\ClaudeAutomation\marketplace-updater\marketplace-updater` (every `IntervalMinutes`,
   through `conhost.exe --headless pwsh`).
 - `tests/updater.ps1` + `tests/stub-claude.ps1` — the real worker against a stub `claude`.
-- Plan and design: `plan/marketplace-updater.md` and `ARCHITECTURE.md` in
-  `.agents_workspace/product/marketplace-updater/`.
+- Plan and design: `.agents_workspace/product/plan/marketplace-updater/marketplace-updater.md`
+  and `.agents_workspace/product/architecture/marketplace-updater/ARCHITECTURE.md`.
 
 ## Invariants — do not break these
 
