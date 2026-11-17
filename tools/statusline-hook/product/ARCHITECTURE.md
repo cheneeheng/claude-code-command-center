@@ -3,7 +3,8 @@
 A public Claude Code statusline (v0.1.0). Each turn it prints up to three aligned rows: model,
 context gauge, runtime and cost, then 5-hour and 7-day rate-limit gauges with local reset times.
 It ships as two single-file ports, bash + jq and PowerShell 5.1/7, held to identical output by
-shared golden fixtures. It only prints the statusline: no export, no state.
+shared golden fixtures. It prints the statusline and keeps no state. The one exception is an opt-in
+quota export: with `C4_STATUSLINE_EXPORT` on, it overwrites `~/.claude/statusline/latest/rate-limits.jsonl`.
 
 ## System context
 
@@ -11,6 +12,8 @@ shared golden fixtures. It only prints the statusline: no export, no state.
 flowchart LR
     cc["Claude Code<br/>(statusLine caller)"] -->|"JSON on stdin"| hook((statusline-hook))
     hook -->|"1–3 rows on stdout"| cc
+    hook -.->|"opt-in: C4_STATUSLINE_EXPORT"| quota["~/.claude/statusline/latest/<br/>rate-limits.jsonl"]
+    quota -.->|"read by"| guard["usage-limit guard<br/>(ceh-every-session hook)"]
     setup["statusline-hook-setup.ps1<br/>· setup/ orchestrator"] -->|"copy script + wire statusLine"| cfg["&lt;config-dir&gt;/settings.json"]
 ```
 
@@ -25,15 +28,19 @@ flowchart TD
     fixtures["fixtures/*.json + *.out<br/>(the spec)"]
     golden["tests/golden.sh &lt;command&gt;"]
     smoke["tests/smoke.sh"]
+    export["tests/export.sh &lt;command&gt;<br/>temp HOME"]
     setup["statusline-hook-setup.ps1<br/>-Variant ps1|sh · -Action · -ClaudeDir"]
     ci[".github/workflows/statusline.yml<br/>Ubuntu + Windows, UTC"]
 
     golden -->|"runs each against"| fixtures
     golden --> sh
     golden --> ps
+    export --> sh
+    export --> ps
     smoke --> setup
     setup -->|copy variant| ports
     ci --> golden
+    ci --> export
     ci --> smoke
 ```
 
@@ -70,9 +77,26 @@ the script from the tag.
 **Consequences:** Parity is enforced by CI, not by reviewer memory. Every behaviour change is a
 fixture edit plus two script edits.
 
+### 2026-11-17 — Opt-in quota export of one overwritten file
+
+**Status:** Accepted (supersedes 2026-10-10 "The statusline only prints the statusline")
+**Context:** The ceh-every-session usage-limit guard is a hook, and hooks never receive
+`rate_limits`. With no exporter since 0.2.0, the guard read only readings from 2026-10-10 and
+warned "stale" in every session. The reading can leave only through the statusLine command, so a
+"separate tool" would have had to be a wrapper in that chain.
+**Decision:** The owner chose an opt-in export in the hook over a wrapper script. With
+`C4_STATUSLINE_EXPORT` set to `1`, `true` or `yes`, both ports overwrite
+`~/.claude/statusline/latest/rate-limits.jsonl` with one line,
+`{"session_id","ts" (epoch ms),"data":{"rate_limits"}}`, UTF-8 without BOM, after printing,
+through a temp file and a rename, with every error swallowed. The golden and smoke tests unset the
+variable, and `tests/export.sh` covers the export with a temp home.
+**Consequences:** Default users still get a statusline that writes nothing. The 0.1.x per-session,
+append-only files do not return, so the file never grows. The path is fixed to `~/.claude`, because
+that is the only place the guard reads.
+
 ### 2026-10-10 — The statusline only prints the statusline
 
-**Status:** Accepted (supersedes 2026-07-02 "JSONL export is opt-in" and "Hook self-locates its
+**Status:** Superseded by 2026-11-17 "Opt-in quota export of one overwritten file". Was Accepted (supersedes 2026-07-02 "JSONL export is opt-in" and "Hook self-locates its
 config dir")
 **Context:** The owner wants data export done by a separate tool.
 **Decision:** Removed the JSONL export and `C4_STATUSLINE_EXPORT`. The hook writes no files and

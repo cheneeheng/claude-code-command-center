@@ -1,0 +1,172 @@
+schema: plan/v2
+title: Opt-in quota export from statusline-hook
+status: built
+created: 2026-11-17
+goal: |
+  With `C4_STATUSLINE_EXPORT=1`, both statusline ports also write the latest rate-limit reading
+  to one file, `~/.claude/statusline/latest/rate-limits.jsonl`, overwritten on every render. The
+  ceh-every-session usage-limit guard (`usage-limit-watch.py`) reads the newest
+  `~/.claude/statusline/*/*.jsonl` record, and today finds only readings from 2026-10-10, because
+  0.2.0 retired the JSONL export. The flow that matters: a Claude Code turn renders the statusline,
+  the file now holds this turn's reading, and the guard's next tool call sees it fresh. Claude Code
+  sends `rate_limits` only to the statusline command, never to hooks, so the reading can leave
+  only through the statusline command chain. The owner chose on 2026-11-17 to put the export in
+  `statusline-hook` itself rather than in a wrapper in that chain, reversing the 2026-10-10
+  "prints only" decision. The statusline output stays byte-identical with or without the export.
+scope:
+  in:
+    - With `C4_STATUSLINE_EXPORT` set to `1`, `true` or `yes`, `statusline-hook.sh` and `statusline-hook.ps1` write one JSON line to `<home>/.claude/statusline/latest/rate-limits.jsonl` when the payload carries a non-empty `rate_limits` object, replacing the file's previous content.
+    - |
+      The line is `{"session_id": <payload session_id or null>, "ts": <epoch milliseconds now>, "data": {"rate_limits": <payload rate_limits verbatim>}}`, UTF-8 with no BOM, ending in a single `\n` with no `\r`, the record shape the guard reads.
+    - With the variable unset or any other value, or with no `rate_limits`, or on bad input, nothing is written, and the statusline output and exit code are unchanged in every case.
+    - The golden and smoke tests never write the file, even when the caller's environment has the export on.
+    - "`tests/export.sh` proves the above for both ports, and CI runs it."
+    - The README documents the opt-in, the member CLAUDE.md and ARCHITECTURE.md describe the export and supersede the 2026-10-10 decision, and the root CLAUDE.md and README list the variable again.
+  out:
+    - item: A wrapper script in the statusLine command chain that tees stdin to the file
+      reason: The owner chose the in-hook export on 2026-11-17. A wrapper would add a second script and its own setup wiring for the same result.
+    - item: The per-session, append-only `<project-dir>/<session_id>.jsonl` files 0.1.x wrote
+      reason: They grew without bound and had to be untracked twice. The guard needs only the newest reading, and one overwritten file gives it that.
+    - item: A configurable export path, or following `C4_CLAUDE_DIR` or `CLAUDE_CONFIG_DIR`
+      reason: The guard reads `Path.home()/.claude/statusline` and nothing else, so another path would write a file nobody reads.
+    - item: Exporting anything besides `rate_limits` and `session_id`
+      reason: No reader needs it. usage-insights takes everything else from transcripts.
+    - item: Cutting the `slh-v0.3.0` tag
+      reason: A release is its own step per `docs/releasing.md`, done when the owner asks.
+    - item: Updating the ceh-every-session guard's docstring and README, which still describe per-session files
+      reason: The guard already reads this record shape, so only wording drifts. It is a separate PR in ceh-claude-code-library, tracked in that repo's `.agents_workspace/BACKLOG.md`.
+design:
+  - topic: Opt-in variable
+    decision: |
+      `C4_STATUSLINE_EXPORT`, the name 0.1.x used, matched case-insensitively against `1`, `true`
+      and `yes`, the values the 0.1.x root README row listed. The default stays "prints only", so
+      a public user who never sets it gets a statusline that writes nothing.
+  - topic: File and home directory
+    decision: |
+      `<home>/.claude/statusline/latest/rate-limits.jsonl`. The guard globs `*/*.jsonl` one level
+      under `statusline/`, so the file needs the `latest/` folder. `<home>` is `$HOME` in bash and
+      `$env:USERPROFILE`, falling back to `$env:HOME`, in PowerShell, because Python's
+      `Path.home()` on Windows reads `USERPROFILE`. Each port creates the folder when missing.
+  - topic: Record
+    decision: |
+      One line, `{"session_id", "ts", "data": {"rate_limits"}}`, UTF-8 without BOM, ending in one
+      `\n` and no `\r`. `ts` is the real clock in milliseconds, never `C4_STATUSLINE_NOW`, because
+      the guard compares it to its own clock to judge staleness. bash builds it with one extra
+      `jq -c` call on `$input` using `now`, piped through `tr -d '\r'` as the render is, because
+      jq on Windows writes `\r\n`. PowerShell builds it with `ConvertTo-Json -Compress -Depth 10`
+      over `$data.rate_limits` and `[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()`, and writes
+      it with `[IO.File]::WriteAllText($tmp, $json + "`n", (New-Object Text.UTF8Encoding $false))`,
+      because PowerShell 5.1's `Out-File`, `>` and `Set-Content` write UTF-16 or ANSI and
+      `-Encoding UTF8` adds a BOM, each of which the guard's `json.loads` rejects.
+  - topic: Atomic overwrite and concurrency
+    decision: |
+      Each port writes to `rate-limits.jsonl.<pid>.tmp` in the same folder, then renames it over
+      `rate-limits.jsonl` (`mv -f`, `Move-Item -Force`). Several Claude Code windows render
+      concurrently, so the reader sees either the old line or a new one, never half of one. Last
+      writer wins, which is right because every window reads the same account-wide quota. A retry
+      just writes the line again, so the write is idempotent. A failed rename (a Windows sharing
+      violation while the guard reads) removes the temp file and is ignored: the next render
+      writes again. A pid collision, or a `.tmp` left by a killed process, is harmless, because
+      the guard globs only `*.jsonl`.
+  - topic: Failure isolation
+    decision: |
+      The export runs after the statusline is printed, with every error swallowed (`2>/dev/null`
+      and `|| true` in bash, its own `try { } catch { }` in PowerShell), so it can never change the
+      output bytes or the exit code. The golden fixtures stay the spec and do not change.
+  - topic: Tests never touch the real file
+    decision: |
+      `tests/golden.sh` and `tests/smoke.sh` run `unset C4_STATUSLINE_EXPORT` before any port runs,
+      because a session whose settings.json `env` turns the export on passes it to every
+      subprocess, and the fixtures would then overwrite the real reading with fake numbers the
+      guard reads as fresh. `tests/export.sh` points `HOME` and `USERPROFILE` at a temp dir and
+      sets or unsets the variable itself in each case.
+  - topic: Invariant rewording
+    decision: |
+      The member CLAUDE.md invariant becomes: "The statusline only prints the statusline, except
+      the opt-in quota export: with `C4_STATUSLINE_EXPORT` on, it overwrites the one file
+      `~/.claude/statusline/latest/rate-limits.jsonl`. No other file, no other state between
+      turns." A new ARCHITECTURE.md Key Decision, dated 2026-11-17, supersedes "2026-10-10 — The
+      statusline only prints the statusline", marks that one Superseded, and gives the reason:
+      hooks never receive `rate_limits`, so the reading leaves only through the statusLine command,
+      and the owner chose an opt-in export in the hook over a second wrapper script.
+phases:
+  - name: Export in both ports, with its test
+    builds: |
+      The Opt-in variable, File and home directory, Record, Atomic overwrite and Failure isolation
+      decisions in `statusline-hook.sh` and `statusline-hook.ps1` (ASCII-only); the
+      `unset C4_STATUSLINE_EXPORT` line in `tests/golden.sh` and `tests/smoke.sh`; and
+      `tests/export.sh <command...>`, which runs each case with `HOME` and `USERPROFILE` pointed at
+      a temp dir (`cygpath -w` for `USERPROFILE` when available) and asserts:
+      - With the variable `1` and `fixtures/full.json` given `"session_id": "s1"` by
+        `jq '.session_id="s1"'`: the file holds exactly one line, its first byte is `{`, it has no
+        `\r`, Python `json.loads(open(p, encoding="utf-8").read())` parses it as the guard does,
+        `.data.rate_limits` equals the fixture's, `.session_id` is `"s1"`, `.ts` is within 60 s of
+        now in milliseconds, and stdout and exit code equal those of the same run with the
+        variable unset.
+      - A second run with the variable `TRUE` still leaves one line.
+      - With the variable `1` and `fixtures/no-rate-limits.json`, and with it explicitly unset
+        and `fixtures/full.json`, no file exists.
+      A step in `.github/workflows/statusline.yml` runs it for bash and pwsh, and for powershell
+      on Windows.
+    check: |
+      From `tools/statusline-hook`: `bash tests/export.sh bash statusline-hook.sh`,
+      `bash tests/export.sh pwsh -NoProfile -File statusline-hook.ps1`, and on Windows
+      `bash tests/export.sh powershell -NoProfile -File statusline-hook.ps1` each print PASS;
+      `bash tests/golden.sh` for bash and pwsh prints "all fixtures pass"; `bash tests/smoke.sh`
+      prints PASS.
+    status: done
+    evidence: |
+      export.sh PASS for bash, pwsh and powershell 5.1; golden.sh bash "all fixtures pass";
+      smoke.sh PASS; all run with C4_STATUSLINE_EXPORT=1 in the caller's env, and no real
+      ~/.claude/statusline/latest/ was created.
+    note: |
+      export.sh compares stdout with the same run with the export off, not with
+      fixtures/full.out, because PowerShell ignores TZ on Windows and a local pwsh run then
+      differs from the UTC fixture in reset times. golden.sh with pwsh locally fails the same 6
+      fixtures on main's unchanged script, with identical output, for that reason; CI runs it in
+      UTC.
+  - name: Docs and version
+    builds: |
+      README section on the opt-in export (what it writes, where, why, and that it is off by
+      default); in the member CLAUDE.md, the Invariant rewording and `tests/export.sh` in Running
+      / checking; in `product/ARCHITECTURE.md`, line 6's "no export, no state" sentence rewritten
+      to name the opt-in export, the file added to the System context diagram and `export.sh` to
+      the Components diagram, and the new Key Decision with the 2026-10-10 one marked Superseded;
+      `C4_STATUSLINE_EXPORT` back in the root CLAUDE.md variable list and the root README variable
+      table; and a `CHANGELOG.md` entry under `[Unreleased]`, Added. `VERSION` stays 0.2.0 until
+      the release, per `docs/releasing.md`.
+    check: |
+      From the repo root: `for f in CLAUDE.md README.md tools/statusline-hook/README.md
+      tools/statusline-hook/CLAUDE.md tools/statusline-hook/product/ARCHITECTURE.md; do grep -q
+      'latest/rate-limits.jsonl\|C4_STATUSLINE_EXPORT' "$f" || echo "missing $f"; done` prints
+      nothing; `grep -c 'Superseded' tools/statusline-hook/product/ARCHITECTURE.md` is at least 1;
+      `sed -n '/Unreleased/,/0.2.0/p' tools/statusline-hook/CHANGELOG.md` shows the new entry.
+    status: done
+    evidence: |
+      The five-file grep loop printed nothing; grep -c Superseded printed 1; the Unreleased
+      section holds the Added entry.
+    note: |
+      Planned as VERSION 0.3.0 with a 0.3.0 changelog section. docs/releasing.md bumps VERSION
+      and moves Unreleased items only at release, so the entry went under Unreleased and VERSION
+      stays 0.2.0.
+open:
+  - question: Should the export be on by default rather than opt-in?
+    assumption: Opt-in, since the statusline is public and most users have no reader for the file. The owner sets `C4_STATUSLINE_EXPORT=1` in the `env` of their own settings.json.
+record:
+  - date: 2026-11-17
+    event: Planned
+    details: status ready
+  - date: 2026-11-17
+    event: Reviewed
+    details: Revise first, 3 blocking (wrapper alternative not weighed, PowerShell write encoding unset, tests overwrite the real file); all 10 findings fixed in the plan the same day
+  - date: 2026-11-17
+    event: Built Phase
+    phase: 1
+    details: export.sh PASS for bash, pwsh and powershell; golden bash all fixtures pass; smoke PASS
+  - date: 2026-11-17
+    event: Built Phase
+    phase: 2
+    details: doc grep loop clean, Superseded present, Unreleased entry added (VERSION kept 0.2.0 per docs/releasing.md)
+  - date: 2026-11-17
+    event: PR
+    details: "#95 https://github.com/cheneeheng/claude-code-command-center/pull/95"

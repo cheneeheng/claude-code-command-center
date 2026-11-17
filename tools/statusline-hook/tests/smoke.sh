@@ -10,6 +10,8 @@ set -euo pipefail
 HOOK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
+# A caller with the export on would overwrite the real quota reading with fixture numbers.
+unset C4_STATUSLINE_EXPORT
 
 fail() { echo "FAIL: $1"; exit 1; }
 
