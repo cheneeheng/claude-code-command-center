@@ -8,12 +8,12 @@ All notable changes to `statusline-hook` are documented here. The format follows
 
 ### Added
 
-- Opt-in quota export: with `C4_STATUSLINE_EXPORT=1` (or `true`, `yes`), both scripts overwrite
-  `~/.claude/statusline/latest/rate-limits.jsonl` with one line holding the turn's `rate_limits`,
-  so a hook such as a usage-limit guard can read them. Hooks never receive `rate_limits`. Off by
-  default, the file never grows, and the printed statusline is unchanged.
+- Quota export: both scripts overwrite `~/.claude/statusline/latest/rate-limits.jsonl` with one
+  line holding the turn's `rate_limits`, so a hook such as a usage-limit guard can read them.
+  Hooks never receive `rate_limits`. On by default; set `C4_STATUSLINE_DISABLE_EXPORT=1` (or
+  `true`, `yes`) to turn it off. The file never grows, and the printed statusline is unchanged.
 - `tests/export.sh`, run in CI for bash, pwsh and Windows PowerShell 5.1. The golden and smoke
-  tests now unset `C4_STATUSLINE_EXPORT`, so they never overwrite a real reading.
+  tests set `C4_STATUSLINE_DISABLE_EXPORT=1`, so they never overwrite a real reading.
 
 ## [0.2.0] - 2026-10-11
 
