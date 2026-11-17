@@ -132,4 +132,31 @@ try {
 } catch {
     # Never let a bad payload break the statusline: print nothing.
 }
+
+# Opt-in quota export: hooks never receive rate_limits, so with C4_STATUSLINE_EXPORT on, the
+# latest reading is relayed to one file for readers such as the ceh-every-session usage-limit
+# guard. Written after the statusline is printed, through a temp file and a rename, so a reader
+# never sees half a line and a failure never changes the output. WriteAllText with a BOM-less
+# UTF8Encoding, because 5.1's Out-File and Set-Content write UTF-16 or ANSI.
+$tmp = $null
+try {
+    if ($env:C4_STATUSLINE_EXPORT -in @('1', 'true', 'yes') -and
+        $data -is [System.Management.Automation.PSCustomObject] -and
+        $data.rate_limits -is [System.Management.Automation.PSCustomObject] -and
+        @($data.rate_limits.PSObject.Properties).Count -gt 0) {
+        $root = if ($env:USERPROFILE) { $env:USERPROFILE } else { $env:HOME }
+        $dir = Join-Path $root '.claude/statusline/latest'
+        $null = New-Item -ItemType Directory -Force -Path $dir -ErrorAction Stop
+        $json = [ordered]@{
+            session_id = $data.session_id
+            ts         = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            data       = @{ rate_limits = $data.rate_limits }
+        } | ConvertTo-Json -Compress -Depth 10
+        $tmp = Join-Path $dir "rate-limits.jsonl.$PID.tmp"
+        [IO.File]::WriteAllText($tmp, $json + "`n", (New-Object System.Text.UTF8Encoding $false))
+        Move-Item -LiteralPath $tmp -Destination (Join-Path $dir 'rate-limits.jsonl') -Force -ErrorAction Stop
+    }
+} catch {
+    if ($tmp) { Remove-Item -LiteralPath $tmp -ErrorAction SilentlyContinue }
+}
 exit 0

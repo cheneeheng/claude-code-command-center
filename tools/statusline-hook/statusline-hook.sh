@@ -89,4 +89,22 @@ jq -nRrj --argjson d "$input" '
     ]
   | join("\n") + "\n"
 ' 2>/dev/null | tr -d '\r'
+
+# Opt-in quota export: hooks never receive rate_limits, so with C4_STATUSLINE_EXPORT on, the
+# latest reading is relayed to one file for readers such as the ceh-every-session usage-limit
+# guard. Written after the statusline is printed, through a temp file and a rename, so a reader
+# never sees half a line and a failure never changes the output.
+case "${C4_STATUSLINE_EXPORT:-}" in
+  1 | [Tt][Rr][Uu][Ee] | [Yy][Ee][Ss])
+    dir="$HOME/.claude/statusline/latest"
+    line="$(jq -c 'select(.rate_limits | type == "object" and length > 0)
+      | {session_id, ts: (now * 1000 | floor), data: {rate_limits}}' <<<"$input" 2>/dev/null |
+      tr -d '\r')"
+    if [ -n "$line" ] && mkdir -p "$dir" 2>/dev/null; then
+      tmp="$dir/rate-limits.jsonl.$$.tmp"
+      { printf '%s\n' "$line" >"$tmp" && mv -f "$tmp" "$dir/rate-limits.jsonl"; } 2>/dev/null ||
+        rm -f "$tmp" 2>/dev/null
+    fi
+    ;;
+esac
 exit 0

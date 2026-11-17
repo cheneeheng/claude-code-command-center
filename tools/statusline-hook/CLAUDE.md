@@ -22,6 +22,9 @@ bash tests/golden.sh bash statusline-hook.sh
 bash tests/golden.sh pwsh -NoProfile -File statusline-hook.ps1
 bash tests/golden.sh powershell -NoProfile -File statusline-hook.ps1
 bash tests/smoke.sh
+bash tests/export.sh bash statusline-hook.sh
+bash tests/export.sh pwsh -NoProfile -File statusline-hook.ps1
+bash tests/export.sh powershell -NoProfile -File statusline-hook.ps1
 ```
 
 On a machine whose time zone isn't UTC, the PowerShell runs show reset-time differences only
@@ -31,8 +34,12 @@ On a machine whose time zone isn't UTC, the PowerShell runs show reset-time diff
 
 - **`fixtures/` is the spec, and both ports must produce the same bytes.** A behaviour change is a
   fixture change plus the same edit in both scripts, with the golden harness green for both.
-- **The statusline only prints the statusline.** No export, no files written, no state between
-  turns. Data export belongs in a separate tool.
+- **The statusline only prints the statusline, except the opt-in quota export:** with
+  `C4_STATUSLINE_EXPORT` on, it overwrites the one file
+  `~/.claude/statusline/latest/rate-limits.jsonl`. No other file, no other state between turns.
+  The export runs after printing and swallows every error, so it never changes the output bytes.
+  Tests must never write the real file: `golden.sh` and `smoke.sh` unset the variable, and
+  `export.sh` uses a temp home.
 - **Bad input prints nothing and exits 0.** That covers invalid JSON, a non-object payload, and
   anything that throws.
 - **Output is `\n`-terminated rows with no `\r`, on every OS.** The bash port strips the `\r` that

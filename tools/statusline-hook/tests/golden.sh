@@ -15,6 +15,8 @@ set -uo pipefail
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 export TZ=UTC
 export C4_STATUSLINE_NOW=1738400000  # 2025-02-01 08:53:20 UTC
+# A caller with the export on would overwrite the real quota reading with fixture numbers.
+unset C4_STATUSLINE_EXPORT
 failed=0
 
 for input in "$DIR"/fixtures/*.json; do

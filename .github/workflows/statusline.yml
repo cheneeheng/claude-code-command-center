@@ -35,5 +35,12 @@ jobs:
       - name: Golden fixtures (Windows PowerShell 5.1)
         if: runner.os == 'Windows'
         run: bash tests/golden.sh powershell -NoProfile -File statusline-hook.ps1
+      - name: Quota export (bash)
+        run: bash tests/export.sh bash statusline-hook.sh
+      - name: Quota export (pwsh)
+        run: bash tests/export.sh pwsh -NoProfile -File statusline-hook.ps1
+      - name: Quota export (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        run: bash tests/export.sh powershell -NoProfile -File statusline-hook.ps1
       - name: Smoke test (setup install + run + uninstall)
         run: bash tests/smoke.sh
