@@ -60,7 +60,7 @@ all). Register a new installable tool by adding a descriptor to `setup/registry.
 installs or uninstalls (its setup script's name, path, or parameters; its config keys; what it
 registers, such as task names or folders; its detection signal), or adds or removes an installable
 member, update `setup/` too: the `registry.ps1` descriptor, `command-center.config.example.jsonc`,
-and setup's README, CLAUDE.md, and `.agents_workspace/product/setup/ARCHITECTURE.md` wherever
+and setup's README, CLAUDE.md, and `.agents_workspace/product/architecture/setup/ARCHITECTURE.md` wherever
 they name that member.
 
 ## Conventions
@@ -113,9 +113,10 @@ they name that member.
   `CHANGELOG.md` once it cuts its first repo-wide release. Components not yet released
   independently carry no `CHANGELOG.md` until their first release. `docs/` is for users of a
   member; what the people and agents building it read lives in the private workspace under
-  `.agents_workspace/product/<member>/`, named after the member's folder: the living
-  `ARCHITECTURE.md` (diagrams + Key Decisions log), build plans in `plan/<slug>.md`, fix records
-  in `fix/`, and reviews in `review/<kind>/`. Members carry no `product/` folder. Never link to
+  `.agents_workspace/product/<category>/<member>/`, with `<member>` named after the member's
+  folder: the living `architecture/<member>/ARCHITECTURE.md` (diagrams + Key Decisions log),
+  build plans in `plan/<member>/<slug>.md`, fix records in `fix/<member>/`, and reviews in
+  `review/<kind>/<member>/`. Members carry no `product/` folder. Never link to
   these files from a README or `docs/`, which are public. A built plan is kept, never deleted,
   with its append-only
   `## Record`. No per-member decision logs: agent decisions go in the active

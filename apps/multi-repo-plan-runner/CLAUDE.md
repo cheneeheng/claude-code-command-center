@@ -29,7 +29,7 @@ settings · `defaults` · `projects[]`); `load_registry` merges them per-knob
 
 ## Architecture
 
-Two thin frontends over one shared core. Read `.agents_workspace/product/multi-repo-plan-runner/ARCHITECTURE.md` (the living
+Two thin frontends over one shared core. Read `.agents_workspace/product/architecture/multi-repo-plan-runner/ARCHITECTURE.md` (the living
 architecture doc) for the full diagrams + Key Decisions log before any structural change.
 
 - `core.py` — registry load, plan discovery/read, `safe_slug`, `manual_command`, `resolve_instruction`, the headless `run_implement` generator, and the server-side `RunManager` (batch orchestration). The only subprocess (`claude -p`) lives here.
