@@ -1,0 +1,56 @@
+name: Release · statusline-hook
+
+# Independent of repo releases: push an slh-v* tag (e.g. slh-v0.3.0) to attach one installer
+# archive per platform, each holding that platform's hook script and its setup script. The tag
+# must match tools/statusline-hook/VERSION. Release notes are the version's CHANGELOG section.
+on:
+  push:
+    tags: ['slh-v*']
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: tools/statusline-hook
+
+jobs:
+  release:
+    name: Build and attach installers
+    runs-on: ubuntu-latest   # plain scripts, nothing to compile: package once
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Assert tag matches VERSION
+        run: |
+          TAG="${GITHUB_REF_NAME#slh-v}"
+          VER="$(tr -d '[:space:]' < VERSION)"
+          if [ "$TAG" != "$VER" ]; then
+            echo "::error::tag slh-v$TAG does not match VERSION $VER"
+            exit 1
+          fi
+          echo "VER=$VER" >> "$GITHUB_ENV"
+
+      - name: Extract release notes
+        run: |
+          awk -v h="## [$VER]" 'index($0, h) == 1 {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] || { echo "::error::no CHANGELOG section for $VER"; exit 1; }
+
+      - name: Build installer archives
+        run: |
+          out="$RUNNER_TEMP/dist" && mkdir -p "$out/win/statusline-hook" "$out/unix/statusline-hook"
+          cp statusline-hook.ps1 statusline-hook-setup.ps1 README.md ../../LICENSE "$out/win/statusline-hook/"
+          cp statusline-hook.sh statusline-hook-setup.sh README.md ../../LICENSE "$out/unix/statusline-hook/"
+          chmod +x "$out"/unix/statusline-hook/*.sh
+          (cd "$out/win" && zip -qr "$out/statusline-hook-windows.zip" statusline-hook)
+          tar -C "$out/unix" -czf "$out/statusline-hook-unix.tar.gz" statusline-hook
+
+      - name: Attach installers to release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: ${{ runner.temp }}/notes.md
+          files: |
+            ${{ runner.temp }}/dist/statusline-hook-windows.zip
+            ${{ runner.temp }}/dist/statusline-hook-unix.tar.gz

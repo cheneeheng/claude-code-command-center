@@ -6,8 +6,13 @@ All notable changes to `statusline-hook` are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-17
+
 ### Added
 
+- Installers on the GitHub release: `statusline-hook-windows.zip` (PowerShell hook and setup
+  script) and `statusline-hook-unix.tar.gz` (bash hook and setup script), built by
+  `.github/workflows/release-statusline.yml` when an `slh-v*` tag is pushed.
 - Quota export: both scripts overwrite `~/.claude/statusline/latest/rate-limits.jsonl` with one
   line holding the turn's `rate_limits`, so a hook such as a usage-limit guard can read them.
   Hooks never receive `rate_limits`. On by default; set `C4_STATUSLINE_DISABLE_EXPORT=1` (or
