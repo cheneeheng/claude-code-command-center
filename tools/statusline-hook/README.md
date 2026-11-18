@@ -1,28 +1,28 @@
 # statusline-hook
 
-A clean, rate-limit-first statusline for Claude Code. Each turn it prints up to three aligned rows:
+A clean, rate-limit-first statusline for Claude Code. Each turn it prints one line:
 
 ```
-Opus 5.5 high   ctx ━━━━────── 42% · ◷ 1h 12m · ⧗ 15:43 (59m) · $1.23
-                5h  ━━━━━━──── 63%  ↺ 17:00 (2h 14m)
-                7d  ━━━━━━━━── 85%  ↺ Thu 17:00 (5d 7h)
+Opus 5.5 high | ⧗ 36m | ctx 42% | 5h 63% ↺ 7h 6m | 7d 85% ↺ 5d 7h | ◷ 1h 12m | $1.23
 ```
 
-- **Row 1:** model and reasoning effort (shown when the model supports effort), context-window
-  gauge, session runtime (`◷`), prompt cache expiry (`⧗`), session cost.
-- **Cache:** the local time the main session's prompt cache expires and, in brackets, how long
-  until it does, or `expired`. It assumes a one-hour cache, counted from the last main-session
-  reply in the transcript (subagent and synthetic replies are ignored). The statusline only
-  redraws on activity, so the countdown is live only with a `refreshInterval` set; the expiry
-  time is right either way. The segment is left out until the session's first reply.
-- **Rows 2–3:** your 5-hour and 7-day rate-limit usage, with the local time each window resets
-  and, in brackets, how long until it does.
-  Claude Code sends these only to Pro/Max subscribers, after the session's first response; a row
-  is left out while its window is absent.
+- **Session:** model and reasoning effort (shown when the model supports effort), context-window
+  percentage, session runtime (`◷`), session cost. Every percentage is right-aligned in three
+  characters, so a single-digit value does not shift the rest of the line.
+- **Cache (`⧗`):** how long until the main session's prompt cache expires, or `expired`. It
+  assumes a one-hour cache, counted from the last main-session reply in the transcript (subagent
+  and synthetic replies are ignored). The segment is left out until the session's first reply.
+- **Rate limits:** your 5-hour and 7-day usage, with how long until each window resets (`↺`).
+  Claude Code sends these only to Pro/Max subscribers, after the session's first response; a
+  segment is left out while its window is absent.
+- **Countdowns:** the cache and reset times are shown as time left, not clock times. Claude Code
+  redraws the statusline only on activity, so the setup scripts add `"refreshInterval": 60` to
+  the `statusLine` key, which re-runs the script every 60 seconds and keeps them true while you
+  are away. Without it, a countdown is stale until your next turn.
 
-Colour carries meaning, not decoration: every gauge turns green below 50%, yellow below 80%, and red
-from 80%. Labels, separators, and reset times are dimmed. Rows 2–3 stay under about 55 characters
-and row 1 under about 75, so it fits a split pane. Plain Unicode only, so no Nerd Font is needed.
+Colour carries meaning, not decoration: every percentage turns green below 50%, yellow below 80%,
+and red from 80%. Labels, separators, and countdowns are dimmed. The full line is about 90
+characters, so a very narrow pane cuts it off. Plain Unicode only, so no Nerd Font is needed.
 
 Two equivalent single-file scripts. Pick the one for your shell:
 
@@ -76,7 +76,8 @@ managed by the repo-wide [`setup/`](../../setup/) installer
 {
   "statusLine": {
     "type": "command",
-    "command": "bash ~/.claude/statusline-hook.sh"
+    "command": "bash ~/.claude/statusline-hook.sh",
+    "refreshInterval": 60
   }
 }
 ```

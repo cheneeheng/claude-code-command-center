@@ -73,7 +73,8 @@ function Install-StatusLine {
     Remove-InstalledScripts -Keep $scriptName
 
     $settings = Read-Settings
-    $value = [pscustomobject]@{ type = "command"; command = $command }
+    # refreshInterval re-runs the command every 60 s, so the countdowns stay true while idle.
+    $value = [pscustomobject]@{ type = "command"; command = $command; refreshInterval = 60 }
     $settings | Add-Member -NotePropertyName statusLine -NotePropertyValue $value -Force
     Save-Settings $settings
     Write-Host "Wired statusLine -> $command in $settingsPath"

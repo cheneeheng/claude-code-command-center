@@ -80,7 +80,8 @@ install_statusline() {
     else runner="powershell -NoProfile -File"; fi
   fi
   local cmd="$runner \"$dest\""
-  edit_settings --arg cmd "$cmd" '.statusLine = {type: "command", command: $cmd}'
+  # refreshInterval re-runs the command every 60 s, so the countdowns stay true while idle.
+  edit_settings --arg cmd "$cmd" '.statusLine = {type: "command", command: $cmd, refreshInterval: 60}'
   echo "Wired statusLine -> $cmd in $settings"
 }
 

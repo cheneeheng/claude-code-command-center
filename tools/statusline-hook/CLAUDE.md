@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A public Claude Code statusline: up to three aligned rows (model, context gauge, runtime, prompt
-cache expiry, cost; then 5-hour and 7-day rate-limit gauges with reset times). Two single-file
+A public Claude Code statusline: one line (model, prompt cache countdown, context percentage,
+5-hour and 7-day rate-limit percentages with reset countdowns, runtime, cost). Two single-file
 ports:
 
 - `statusline-hook.sh`: bash; one `jq` call pulls `transcript_path`, a second renders everything
@@ -42,13 +42,10 @@ On a machine whose time zone isn't UTC, the PowerShell runs show reset-time diff
   `C4_STATUSLINE_DISABLE_EXPORT=1`, and `export.sh` uses a temp home.
 - **Bad input prints nothing and exits 0.** That covers invalid JSON, a non-object payload, and
   anything that throws.
-- **Output is `\n`-terminated rows with no `\r`, on every OS.** The bash port strips the `\r` that
+- **Output is one `\n`-terminated line with no `\r`, on every OS.** The bash port strips the `\r` that
   jq writes on Windows, and the PowerShell port writes with `[Console]::Out.Write`.
-- **Rows 2–3 start with U+2800 (Braille blank), not a space.** Claude Code trims leading
-  whitespace from each row, which collapsed the alignment. U+2800 renders empty but isn't
-  whitespace. The indent is U+2800 plus (model + effort width + 2) spaces.
 - **`statusline-hook.ps1` stays ASCII-only.** PowerShell 5.1 reads a BOM-less script as ANSI, so
-  glyphs are built from code points (`[char]0x2501`).
+  glyphs are built from code points (`[char]0x21BA`).
 - **`C4_STATUSLINE_NOW` is test-only.** It pins "now" (epoch seconds) so the time left until a
   reset is deterministic in the fixtures. Never document it as a user setting.
 - **Dependencies:** bash needs only `jq`. PowerShell needs no modules.

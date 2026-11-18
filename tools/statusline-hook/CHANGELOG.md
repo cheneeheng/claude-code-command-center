@@ -6,6 +6,18 @@ All notable changes to `statusline-hook` are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The setup scripts write `"refreshInterval": 60` into the `statusLine` key, so Claude Code re-runs
+  the script every 60 seconds and the countdowns stay true while you are away.
+
+### Changed
+
+- One-line layout without gauge bars, joined by ` | ` in this order: model and effort, cache,
+  context, 5-hour, 7-day, runtime, cost. Every percentage is a number right-aligned in three
+  characters. The cache expiry and both resets show only the time left, with no clock time or
+  weekday. The quota export is unchanged.
+
 ## [0.3.0] - 2026-11-17
 
 ### Added
