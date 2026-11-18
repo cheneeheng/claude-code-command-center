@@ -6,6 +6,8 @@ All notable changes to `statusline-hook` are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-18
+
 ### Added
 
 - The setup scripts write `"refreshInterval": 60` into the `statusLine` key, so Claude Code re-runs
