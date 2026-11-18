@@ -30,7 +30,7 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 
 | Tool | What it does |
 |------|--------------|
-| [`statusline-hook`](tools/statusline-hook/) | Claude Code statusline (bash + jq, or PowerShell) with model, context, runtime and cost on one row and aligned 5-hour / 7-day rate-limit gauges below. |
+| [`statusline-hook`](tools/statusline-hook/) | Claude Code statusline (bash + jq, or PowerShell) with model, context, runtime, cost and 5-hour / 7-day rate-limit usage on one line. |
 | [`session-name-date-prefixer`](tools/session-name-date-prefixer/) | Prefix Claude Code session names with the date. |
 | [`file-sync`](tools/file-sync/) | Keep a named file in sync across two folders (newer wins): `CLAUDE.md` (raw copy) and `settings.json` (JSON merge, excluded keys preserved), via one generic engine. |
 | [`scheduled-session-digests`](tools/scheduled-session-digests/) | Install once and it runs in the background: every night, headless Claude Code turns each of your new sessions into a lessons-learned file, and every week merges the new lessons into one master file, in a local git repo you own. Also keeps a cleaned copy of each session's transcript. |
