@@ -6,8 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 See README.md for full usage. Quick agent reference:
 
-- **VSCode extension dev:** `F5` in VSCode → command palette → `Skills: Manage Plugins`. Package
-  with `cd vscode-extension && vsce package`.
+- **VSCode extension dev:** open `vscode-extension/`, press `F5`, then click the **Plugin
+  Toggler** icon in the activity bar of the new window (the extension contributes no command).
+  Package with `cd vscode-extension && npm run package`, which writes
+  `dist/claude-code-plugin-toggler.vsix` and copies the root `LICENSE` and the member
+  `CHANGELOG.md` into the extension folder first (both copies are git-ignored).
 
 **CSS/icon —** `vscode-extension/webview/styles.css` and `vscode-extension/webview/icon.svg` are
 the source and are edited directly. (`vscode-extension/icon.svg` at the extension root is
@@ -34,13 +37,19 @@ diagram.
 - VSCode extension confirmation is opt-in via the `pluginToggler.confirmActions` setting (default `false`). When enabled, toggle/uninstall show a `showWarningMessage`; on cancel, current state is re-posted to reset the webview toggle. When disabled (default), these actions apply immediately.
 - The VSCode webview requests its own first load with a `ready` message; the extension must not
   push `load` from `resolveWebviewView` (see README — VSCode's 200ms frame-promotion timer drops it).
+- The webview allows no inline script (`script-src` is the extension's own files only). Wire a
+  new button with a `data-action` attribute and a row in `webview/js/events.js`, never an
+  inline `onclick`.
+- User-level paths go through `claudeDir()`, which honours `CLAUDE_CONFIG_DIR`.
+- The `claude` CLI is looked up on `PATH` only (`resolveClaude`), never by bare name.
 - No npm runtime dependencies — `@types/vscode` is dev-only.
 
 ## Tests
 
 Unit tests with Node's built-in runner, no test dependency: `cd vscode-extension && npm test`
-(`node --test test/`). CI (`.github/workflows/extension.yml`) also runs ESLint on
-`extension.js` and a `vsce package` check.
+(`node --test test/`). CI (`.github/workflows/extension.yml`) also runs ESLint
+(`npm run lint`: `extension.js`, `webview/js`, `test`, `test-support`, `scripts`) and a
+packaging check (`npm run package`).
 
 - `test/` holds only `*.test.js` files. Helpers live in `test-support/`, because Node 20 may
   run every `.js` file under a folder named `test` as a test.
