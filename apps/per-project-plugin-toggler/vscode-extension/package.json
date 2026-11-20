@@ -13,7 +13,7 @@
   "homepage": "https://github.com/cheneeheng/claude-code-command-center/tree/main/apps/per-project-plugin-toggler#readme",
   "license": "SEE LICENSE IN LICENSE",
   "icon": "media/icon.png",
-  "engines": { "vscode": "^1.144.0" },
+  "engines": { "vscode": "^1.146.0" },
   "categories": ["Other"],
   "keywords": ["claude", "claude code", "anthropic", "plugins", "skills", "agents", "ai"],
   "activationEvents": [],
