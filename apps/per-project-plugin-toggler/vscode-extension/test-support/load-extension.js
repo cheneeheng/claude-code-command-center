@@ -47,4 +47,54 @@ function writeJson(file, data) {
   fs.writeFileSync(file, JSON.stringify(data));
 }
 
-module.exports = { extension, internals: extension._internals, vscode, useTempHome, useTempDir, writeJson };
+// Writes a fake `claude` into dir: a script that prints `<tag> <its arguments>`. When
+// FAKE_CLAUDE_PID_FILE is set it also writes its pid there and never exits, to stand in
+// for a CLI call that hangs. On Windows it is a .cmd shim, as an npm install of the CLI is.
+function writeFakeClaude(dir, tag) {
+  fs.mkdirSync(dir, { recursive: true });
+  const script = path.join(dir, "claude-fake.js");
+  fs.writeFileSync(
+    script,
+    `console.log(${JSON.stringify(tag)} + " " + process.argv.slice(2).join(" "));
+if (process.env.FAKE_CLAUDE_PID_FILE) {
+  require("fs").writeFileSync(process.env.FAKE_CLAUDE_PID_FILE, String(process.pid));
+  setInterval(() => {}, 1000);
+}
+`
+  );
+  if (process.platform === "win32") {
+    fs.writeFileSync(
+      path.join(dir, "claude.cmd"),
+      `@echo off\r\n"${process.execPath}" "%~dp0claude-fake.js" %*\r\n`
+    );
+  } else {
+    const shim = path.join(dir, "claude");
+    // Absolute paths only: the tests run it with a PATH that holds nothing else.
+    fs.writeFileSync(shim, `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`);
+    fs.chmodSync(shim, 0o755);
+  }
+}
+
+// Sets PATH for one test and restores it after. Pass the folders to search, in order.
+// NoDefaultCurrentDirectoryInExePath is cleared as well: some shells set it, and it stops
+// cmd.exe from searching the current folder, which a default Windows session does.
+function usePath(t, dirs) {
+  const saved = { PATH: process.env.PATH, guard: process.env.NoDefaultCurrentDirectoryInExePath };
+  process.env.PATH = dirs.join(path.delimiter);
+  delete process.env.NoDefaultCurrentDirectoryInExePath;
+  t.after(() => {
+    process.env.PATH = saved.PATH;
+    if (saved.guard !== undefined) process.env.NoDefaultCurrentDirectoryInExePath = saved.guard;
+  });
+}
+
+module.exports = {
+  extension,
+  internals: extension._internals,
+  vscode,
+  useTempHome,
+  useTempDir,
+  writeJson,
+  writeFakeClaude,
+  usePath,
+};

@@ -30,6 +30,13 @@ this log starts at the first release tracked here.
 - Save settings through a temp file and a rename, so a write that fails midway no longer
   leaves a truncated settings file.
 - Ignore a toggle message whose plugin id or enabled value has the wrong type.
+- Say that the `claude` CLI was not found on `PATH`, instead of only `Exit code 1`.
+- Stop a `claude` call that is still running when the panel is closed.
+
+### Security
+- Run only a `claude` found on `PATH`. On Windows a `claude.cmd`, `claude.bat` or
+  `claude.exe` in the project folder could run in its place.
+- Refuse a plugin id that starts with a dash, which the CLI would read as an option.
 - The VSCode extension now watches the user settings and `installed_plugins.json` even when
   the window had no folder open when the panel was first shown.
 - A malformed `.claude/settings*.json` no longer leaves an unhandled error behind a toggle;
