@@ -40,9 +40,13 @@ Worked example: the plugin toggler (`pppt`).
    ```
    The tag **must** equal the manifest version — `release-extension.yml` asserts this and fails
    otherwise.
-5. The workflow builds the `.vsix` and attaches it to the GitHub release for the tag. It does
-   **not** publish to the VSCode Marketplace (that would need `npx vsce publish` + a `VSCE_PAT`
-   secret).
+5. The workflow builds the `.vsix`, attaches it to the GitHub release for the tag, and publishes
+   that same `.vsix` to the VS Code Marketplace with `vsce publish --oidc`. It authenticates
+   through Marketplace Trusted Publishing, so the repo holds no token. The policy lives on the
+   `c4-tools` publisher at <https://marketplace.visualstudio.com/manage> and names owner
+   `cheneeheng`, repo `claude-code-command-center` and workflow `release-extension.yml`.
+   Renaming the workflow file breaks publishing until the policy is updated. A manual run
+   (`workflow_dispatch`) builds and attaches only, and never publishes.
 
 ## Cutting a whole-repo release
 
