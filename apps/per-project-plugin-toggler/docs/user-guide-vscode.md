@@ -98,8 +98,6 @@ A skill tagged **manual only** cannot be invoked by the model, so you call it yo
 
 **Refresh** runs `claude plugin marketplace update`. **Close** closes the install panel. Marketplaces are added with Claude Code (`claude plugin marketplace add`), not in this panel.
 
-The button sits under the plugin list, so it shows once the project has at least one plugin. Install your first plugin with the `claude` CLI.
-
 > If `claude` is not on `PATH`, the error appears in the plugin row at install time, not when the panel loads.
 
 ## Live updates
@@ -129,7 +127,7 @@ Open a folder (`File > Open Folder`). In a multi-root workspace, check which pro
 
 ### "No plugins found for this project."
 
-No plugin is installed for this project or for your user, and no settings file names one. Check that `~/.claude/plugins/installed_plugins.json` exists, and install a plugin with the `claude` CLI.
+No plugin is installed for this project or for your user, and no settings file names one. Check that `~/.claude/plugins/installed_plugins.json` exists, and install a plugin with **+ Install/Uninstall plugin** or the `claude` CLI.
 
 ### "The claude CLI was not found on PATH."
 

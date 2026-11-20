@@ -60,4 +60,6 @@ packaging check (`npm run package`).
   writes the real `~/.claude`.
 - `extension.js` exports its internals for tests under `_internals`. Add a function there
   when a test needs it.
-- The webview scripts under `webview/js/` have no tests (they need a DOM).
+- The webview scripts under `webview/js/` need a DOM, so only what runs against a few stubbed
+  globals is tested: `test/empty-state.test.js` runs `render.js` through `vm` with elements
+  as plain objects. Anything else in the webview is checked by hand in a real window.

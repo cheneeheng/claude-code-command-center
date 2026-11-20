@@ -38,6 +38,8 @@ this log starts at the first release tracked here.
   is the only surface. Edit `webview/styles.css` and `webview/icon.svg` directly.
 
 ### Fixed
+- Keep the **+ Install/Uninstall plugin** button up when a project has no plugins. It was
+  hidden with the empty list, so a first plugin could not be installed from the panel.
 - Stop a toggle from replacing a malformed `.claude/settings.json` or `~/.claude/settings.json`
   with only `enabledPlugins`: a settings file that does not parse is now left untouched at
   every scope, and the panel shows the error.
