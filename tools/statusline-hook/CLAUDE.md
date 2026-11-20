@@ -45,7 +45,7 @@ On a machine whose time zone isn't UTC, the PowerShell runs show reset-time diff
 - **Output is one `\n`-terminated line with no `\r`, on every OS.** The bash port strips the `\r` that
   jq writes on Windows, and the PowerShell port writes with `[Console]::Out.Write`.
 - **`statusline-hook.ps1` stays ASCII-only.** PowerShell 5.1 reads a BOM-less script as ANSI, so
-  glyphs are built from code points (`[char]0x21BA`).
+  glyphs are built from code points (`[char]::ConvertFromUtf32(0x1F504)`).
 - **`C4_STATUSLINE_NOW` is test-only.** It pins "now" (epoch seconds) so the time left until a
   reset is deterministic in the fixtures. Never document it as a user setting.
 - **Dependencies:** bash needs only `jq`. PowerShell needs no modules.

@@ -3,16 +3,16 @@
 A clean, rate-limit-first statusline for Claude Code. Each turn it prints one line:
 
 ```
-Opus 5.5 high | ⧗ 36m | ctx 42% | 5h 63% ↺ 7h 6m | 7d 85% ↺ 5d 7h | ◷ 1h 12m | $1.23
+Opus 5.5 high | ⏳ 36m | 📋 42% | 5h 63% 🔄 7h 6m | 7d 85% 🔄 5d 7h | 🕒 1h 12m | $1.23
 ```
 
 - **Session:** model and reasoning effort (shown when the model supports effort), context-window
-  percentage, session runtime (`◷`), session cost. Every percentage is right-aligned in three
+  percentage (`📋`), session runtime (`🕒`), session cost. Every percentage is right-aligned in three
   characters, so a single-digit value does not shift the rest of the line.
-- **Cache (`⧗`):** how long until the main session's prompt cache expires, or `expired`. It
+- **Cache (`⏳`):** how long until the main session's prompt cache expires, or `expired`. It
   assumes a one-hour cache, counted from the last main-session reply in the transcript (subagent
   and synthetic replies are ignored). The segment is left out until the session's first reply.
-- **Rate limits:** your 5-hour and 7-day usage, with how long until each window resets (`↺`).
+- **Rate limits:** your 5-hour and 7-day usage, with how long until each window resets (`🔄`).
   Claude Code sends these only to Pro/Max subscribers, after the session's first response; a
   segment is left out while its window is absent.
 - **Countdowns:** the cache and reset times are shown as time left, not clock times. Claude Code
@@ -21,8 +21,8 @@ Opus 5.5 high | ⧗ 36m | ctx 42% | 5h 63% ↺ 7h 6m | 7d 85% ↺ 5d 7h | ◷ 1h
   are away. Without it, a countdown is stale until your next turn.
 
 Colour carries meaning, not decoration: every percentage turns green below 50%, yellow below 80%,
-and red from 80%. Labels, separators, and countdowns are dimmed. The full line is about 90
-characters, so a very narrow pane cuts it off. Plain Unicode only, so no Nerd Font is needed.
+and red from 80%. Separators and the 5h and 7d labels are bold, and nothing is dimmed. The full
+line is about 90 characters, so a very narrow pane cuts it off. Plain Unicode only, so no Nerd Font is needed.
 
 Two equivalent single-file scripts. Pick the one for your shell:
 
