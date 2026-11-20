@@ -4,17 +4,10 @@ const path = require("path");
 const os = require("os");
 const { spawn } = require("child_process");
 
-function _mockPlugins() {
-  return {
-    local: [
-      { id: "ceh-dev-tools@ceh-plugins", version: "1.1.0", installPath: "" },
-    ],
-    project: [],
-    user: [
-      { id: "frontend-design@anthropic", version: "2.0.1", installPath: "" },
-    ],
-    mock: true,
-  };
+// Claude Code's user config folder. CLAUDE_CONFIG_DIR moves every ~/.claude path, the
+// user settings and the plugin registry included, so reads and writes follow it.
+function claudeDir() {
+  return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
 }
 
 function confirmActionsEnabled() {
@@ -27,10 +20,12 @@ function normalisePath(p) {
   if (!p) return "";
   try {
     const resolved = path.resolve(p);
-    // Windows: lowercase drive letter to normalise "C:\..." vs "c:\..."
-    // UNC paths (\\server\share\...) are handled by the platform resolver.
-    if (/^[A-Z]:/.test(resolved)) {
-      return resolved[0].toLowerCase() + resolved.slice(1);
+    // Windows and macOS fold case in paths, so "C:\Repo" and "c:\repo" are one folder.
+    // Linux does not. UNC paths (\\server\share\...) are handled by the platform resolver.
+    // less-code: by platform, not by volume; a case-sensitive macOS volume would need a
+    // per-path check.
+    if (process.platform === "win32" || process.platform === "darwin") {
+      return resolved.toLowerCase();
     }
     return resolved;
   } catch {
@@ -44,18 +39,14 @@ function normalisePath(p) {
 // can't serve this surface, so this copy is kept in sync by hand — see
 // docs/shared-plugin-logic.md.
 function loadInstalledPlugins(projectRoot) {
-  const installedPath = path.join(
-    os.homedir(),
-    ".claude",
-    "plugins",
-    "installed_plugins.json"
-  );
-  if (!fs.existsSync(installedPath)) return _mockPlugins();
+  const installedPath = path.join(claudeDir(), "plugins", "installed_plugins.json");
+  const buckets = { local: [], project: [], user: [] };
+  // No registry yet means no plugins: the panel shows its empty state.
+  if (!fs.existsSync(installedPath)) return buckets;
 
   try {
     const raw = JSON.parse(fs.readFileSync(installedPath, "utf8"))["plugins"];
     const normProject = normalisePath(projectRoot);
-    const buckets = { local: [], project: [], user: [] };
 
     for (const [pluginId, entries] of Object.entries(raw)) {
       for (const entry of entries) {
@@ -82,7 +73,7 @@ function loadInstalledPlugins(projectRoot) {
 
 // The settings file of a scope: local and project live in the project, user in the home dir.
 function settingsPath(scope, projectRoot) {
-  if (scope === "user") return path.join(os.homedir(), ".claude", "settings.json");
+  if (scope === "user") return path.join(claudeDir(), "settings.json");
   return path.join(
     projectRoot,
     ".claude",
@@ -123,6 +114,9 @@ function saveSettings(scope, projectRoot, settings) {
 }
 
 function parseSkillFrontmatter(text, fallbackName) {
+  // The patterns below match "\n". A file checked out with CRLF endings (git on Windows)
+  // otherwise shows a block-scalar description as just its marker, ">-".
+  text = text.replace(/\r\n/g, "\n");
   const fmMatch = text.match(/^---\s*\n([\s\S]*?)\n---/);
   if (!fmMatch)
     return { name: fallbackName, description: "", manualOnly: false };
@@ -168,20 +162,17 @@ function loadPluginSkills(installPath) {
   const skillsDir = path.join(installPath, "skills");
   if (!fs.existsSync(skillsDir)) return [];
 
-  return fs
-    .readdirSync(skillsDir)
-    .filter((name) => fs.statSync(path.join(skillsDir, name)).isDirectory())
-    .sort()
-    .filter((folderName) =>
-      fs.existsSync(path.join(skillsDir, folderName, "SKILL.md"))
-    )
-    .map((folderName) => {
-      const text = fs.readFileSync(
-        path.join(skillsDir, folderName, "SKILL.md"),
-        "utf8"
-      );
-      return parseSkillFrontmatter(text, folderName);
-    });
+  const skills = [];
+  for (const folderName of fs.readdirSync(skillsDir).sort()) {
+    try {
+      const text = fs.readFileSync(path.join(skillsDir, folderName, "SKILL.md"), "utf8");
+      skills.push(parseSkillFrontmatter(text, folderName));
+    } catch {
+      // Not a skill folder, or one that cannot be read (a broken link, a locked file).
+      // Skipped, so one bad entry does not put the whole panel in its error state.
+    }
+  }
+  return skills;
 }
 
 function loadPluginAgents(installPath) {
@@ -189,15 +180,16 @@ function loadPluginAgents(installPath) {
   const agentsDir = path.join(installPath, "agents");
   if (!fs.existsSync(agentsDir)) return [];
 
-  return fs
-    .readdirSync(agentsDir)
-    .filter((f) => f.endsWith(".md"))
-    .sort()
-    .map((f) => {
-      const stem = path.basename(f, ".md");
+  const agents = [];
+  for (const f of fs.readdirSync(agentsDir).filter((f) => f.endsWith(".md")).sort()) {
+    try {
       const text = fs.readFileSync(path.join(agentsDir, f), "utf8");
-      return parseSkillFrontmatter(text, stem);
-    });
+      agents.push(parseSkillFrontmatter(text, path.basename(f, ".md")));
+    } catch {
+      // Unreadable agent file: skipped, as an unreadable skill is.
+    }
+  }
+  return agents;
 }
 
 function _hookDetail(h) {
@@ -270,12 +262,7 @@ function buildSections(raw, settings) {
 }
 
 function loadKnownMarketplaces() {
-  const mp = path.join(
-    os.homedir(),
-    ".claude",
-    "plugins",
-    "known_marketplaces.json"
-  );
+  const mp = path.join(claudeDir(), "plugins", "known_marketplaces.json");
   if (!fs.existsSync(mp)) return [];
   try {
     const raw = JSON.parse(fs.readFileSync(mp, "utf8"));
@@ -473,13 +460,13 @@ class SkillsViewProvider {
     // Created whatever the folder count, so a window that gains its first folder later
     // still watches them.
     const webview = webviewView.webview;
-    const home = vscode.Uri.file(os.homedir());
+    const home = vscode.Uri.file(claudeDir());
     const homeWatchers = [
       vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(home, ".claude/settings.json")
+        new vscode.RelativePattern(home, "settings.json")
       ),
       vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(home, ".claude/plugins/installed_plugins.json")
+        new vscode.RelativePattern(home, "plugins/installed_plugins.json")
       ),
     ];
     for (const w of homeWatchers) this._onFileEvents(w, webview);
@@ -558,7 +545,6 @@ class SkillsViewProvider {
     const projectName = this._projectFolder().name;
     try {
       const raw = loadInstalledPlugins(projectRoot);
-      const isMock = raw.mock || false;
 
       const settings = {
         local: loadSettings("local", projectRoot).enabledPlugins || {},
@@ -605,7 +591,6 @@ class SkillsViewProvider {
         marketplaces,
         projectRoot,
         projects,
-        mock: isMock,
       });
     } catch (e) {
       webview.postMessage({

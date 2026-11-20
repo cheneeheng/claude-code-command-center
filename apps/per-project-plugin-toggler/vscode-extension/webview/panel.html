@@ -83,11 +83,6 @@
     <div class="project-path" id="project-path"></div>
   </div>
 
-  <div class="mock-notice" id="mock-notice" style="display:none">
-    &#9888; Mock data &#8212; <code>~/.claude/plugins/installed_plugins.json</code> not found.
-    <button onclick="document.getElementById('mock-notice').style.display='none'">&#10005;</button>
-  </div>
-
   <!-- The skeleton lives inside #status so it clears itself: showStatus() overwrites this
        markup, and render.js / showError() hide the element. No extra wiring needed. -->
   <div id="status" class="status" role="status" aria-live="polite">

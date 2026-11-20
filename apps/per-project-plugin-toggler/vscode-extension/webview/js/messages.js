@@ -5,7 +5,6 @@ window.addEventListener("message", (event) => {
     // Before the operationInProgress early return below, so the folder list stays current
     // while a streamed op holds the rest of the render.
     renderProjectCard(msg);
-    document.getElementById("mock-notice").style.display = msg.mock ? "flex" : "none";
     document.getElementById("error").style.display = "none";
     state.local = (msg.plugins && msg.plugins.local) || [];
     state.project = (msg.plugins && msg.plugins.project) || [];

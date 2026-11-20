@@ -292,26 +292,6 @@ h1 {
   padding: 0.08rem 0.35rem;
 }
 
-/* --- Mock notice --- */
-/* Retinted to the terracotta brand family; token-driven so light/dark/vscode
-   adapt from one block (replaces the former hardcoded data-theme/data-context triad). */
-.mock-notice {
-  font-size: 0.78rem;
-  background: var(--accent-wash);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-lg);
-  padding: 6px 10px;
-  margin-bottom: 12px;
-  color: var(--accent);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-:root[data-context="vscode"] .mock-notice {
-  color: var(--fg);
-}
-
 /* --- Status / Error --- */
 .status { color: var(--fg-muted); font-size: 0.88rem; padding: 0.75rem 0; }
 .error-msg { color: #e05c5c; font-size: 0.88rem; padding: 0.75rem 0; }
