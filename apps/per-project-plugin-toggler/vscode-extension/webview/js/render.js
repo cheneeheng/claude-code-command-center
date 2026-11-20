@@ -51,7 +51,7 @@ function renderSkillsDisclosure(skills) {
     </div>`).join("");
   return `
     <div class="skills-disclosure">
-      <button class="skills-toggle-btn" data-label="skill" onclick="toggleDisclosure(this)">
+      <button class="skills-toggle-btn" data-label="skill" data-action="toggle-disclosure">
         ${skills.length} skill${skills.length !== 1 ? "s" : ""} &#9658;
       </button>
       <div class="skills-list">${rows}</div>
@@ -67,7 +67,7 @@ function renderAgentsDisclosure(agents) {
     </div>`).join("");
   return `
     <div class="skills-disclosure">
-      <button class="skills-toggle-btn" data-label="agent" onclick="toggleDisclosure(this)">
+      <button class="skills-toggle-btn" data-label="agent" data-action="toggle-disclosure">
         ${agents.length} agent${agents.length !== 1 ? "s" : ""} &#9658;
       </button>
       <div class="skills-list">${rows}</div>
@@ -89,7 +89,7 @@ function renderHooksDisclosure(hooks) {
   }).join("");
   return `
     <div class="skills-disclosure">
-      <button class="skills-toggle-btn" data-label="hook" data-count="${hooks.length}" onclick="toggleDisclosure(this)">
+      <button class="skills-toggle-btn" data-label="hook" data-count="${hooks.length}" data-action="toggle-disclosure">
         ${hooks.length} hook${hooks.length !== 1 ? "s" : ""} &#9658;
       </button>
       <div class="skills-list">${blocks}</div>
@@ -108,7 +108,6 @@ function toggleDisclosure(btn) {
 
 function sectionRowHtml(p, scope) {
   const escId = esc(p.id);   // HTML attribute/text context
-  const jsId = jsStr(p.id);  // inline-handler (JS string) context
   const installed = p.installed !== false;
 
   const disclosures = installed
@@ -117,9 +116,9 @@ function sectionRowHtml(p, scope) {
 
   const actionBtn = installed
     ? `<button class="mp-install-btn mp-install-btn--uninstall" id="btn-uninstall-${scope}-${escId}"
-               onclick="uninstallPlugin('${jsId}','${scope}', sectionUninstallEls('${scope}','${jsId}'))">Uninstall</button>`
+               data-action="uninstall" data-id="${escId}" data-scope="${scope}">Uninstall</button>`
     : `<button class="mp-install-btn" id="btn-install-${scope}-${escId}"
-               onclick="installPlugin('${jsId}','${scope}', sectionInstallEls('${scope}','${jsId}'))">Install &#8595;</button>`;
+               data-action="install" data-id="${escId}" data-scope="${scope}">Install &#8595;</button>`;
 
   return `
     <div class="plugin-row" id="row-${scope}-${escId}" data-id="${escId}">

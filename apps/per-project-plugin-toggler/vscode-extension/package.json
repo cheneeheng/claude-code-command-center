@@ -46,7 +46,7 @@
     }
   },
   "scripts": {
-    "lint":        "eslint extension.js",
+    "lint":        "eslint extension.js webview/js test test-support",
     "test":        "node --test test/",
     "package":     "vsce package --out dist/skills-toggle.vsix",
     "install-ext": "code --install-extension dist/skills-toggle.vsix"

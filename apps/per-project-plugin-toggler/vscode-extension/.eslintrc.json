@@ -14,5 +14,18 @@
     "n/no-missing-require": ["error", { "allowModules": ["vscode"] }],
     "n/no-unpublished-require": "off"
   },
+  "overrides": [
+    {
+      "files": ["webview/js/**"],
+      "env": { "browser": true, "node": false },
+      "rules": {
+        "no-unused-vars": "off",
+        "no-undef": "off",
+        "n/no-unsupported-features/es-builtins": "off",
+        "n/no-unsupported-features/es-syntax": "off",
+        "n/no-unsupported-features/node-builtins": "off"
+      }
+    }
+  ],
   "ignorePatterns": ["node_modules/", "dist/"]
 }
