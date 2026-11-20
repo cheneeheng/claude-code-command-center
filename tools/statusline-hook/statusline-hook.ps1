@@ -1,6 +1,6 @@
 # Claude Code statusline (PowerShell port). Runs on Windows PowerShell 5.1 and PowerShell 7.
 #
-#   Opus 5.5 high | [hourglass] 36m | ctx 42% | 5h 63% [reset] 7h 6m | 7d 85% [reset] 5d 7h | [clock] 1h 12m | $1.23
+#   Opus 5.5 high | [hourglass] 36m | [clipboard] 42% | 5h 63% [arrows] 7h 6m | 7d 85% [arrows] 5d 7h | [clock] 1h 12m | $1.23
 #
 # Reads the JSON Claude Code pipes to stdin. A rate-limit segment is shown only when Claude Code
 # sends that window. Bad input prints nothing. The render spec is the fixtures/ folder;
@@ -14,11 +14,12 @@
 
 $ESC   = [char]27
 $RESET = "$ESC[0m"
-$DIM   = "$ESC[2m"
-$SEP   = " $DIM$([char]0x007C)$RESET "
-$CYCLE = [char]0x21BA          # reset arrow
-$CLOCK = [char]0x25F7          # runtime marker
-$GLASS = [char]0x29D7          # cache expiry marker
+$BOLD  = "$ESC[1m"
+$SEP   = " $BOLD|$RESET "
+$CTX   = [char]::ConvertFromUtf32(0x1F4CB) # clipboard (context)
+$CYCLE = [char]::ConvertFromUtf32(0x1F504) # anticlockwise arrows (reset)
+$CLOCK = [char]::ConvertFromUtf32(0x1F552) # three o'clock (runtime)
+$GLASS = [char]::ConvertFromUtf32(0x23F3)  # hourglass (cache expiry)
 
 function Get-Level([long]$p) {
     if ($p -lt 50) { "$ESC[32m" } elseif ($p -lt 80) { "$ESC[33m" } else { "$ESC[31m" }
@@ -41,7 +42,7 @@ function Get-Left([double]$seconds) {
 
 function Get-Reset($resetsAt) {
     if ($null -eq $resetsAt -or [double]$resetsAt -le 0) { return '' }
-    " $DIM$CYCLE $(Get-Left ([long][math]::Floor([double]$resetsAt) - $NOW))$RESET"
+    " $CYCLE $(Get-Left ([long][math]::Floor([double]$resetsAt) - $NOW))"
 }
 
 # The main session caches its prompt for one hour after its last API reply. Synthetic
@@ -65,7 +66,7 @@ function Get-Cache($path) {
         $end = $t.ToUnixTimeSeconds() + 3600
     } catch { return '' }
     $state = if ($end -gt $NOW) { Get-Left ($end - $NOW) } else { 'expired' }
-    "$DIM$GLASS$RESET $state"
+    "$GLASS $state"
 }
 
 function Get-Runtime($ms) {
@@ -92,16 +93,16 @@ try {
 
     $model  = if ($null -eq $data.model.display_name) { '' } else { [string]$data.model.display_name }
     $effort = if ($null -eq $data.effort.level) { '' } else { [string]$data.effort.level }
-    $label  = "$ESC[1m$ESC[36m$model$RESET"
+    $label  = "$BOLD$ESC[36m$model$RESET"
     if ($effort) { $label += " $ESC[36m$effort$RESET" }
     # Segments are joined by the separator, so an absent one leaves no stray separator.
     $segs = @($label, (Get-Cache $data.transcript_path),
-              ("${DIM}ctx$RESET" + (Get-Pct $data.context_window.used_percentage)))
+              ("$CTX" + (Get-Pct $data.context_window.used_percentage)))
     foreach ($w in @(@('5h', $data.rate_limits.five_hour), @('7d', $data.rate_limits.seven_day))) {
         if ($null -eq $w[1]) { continue }
-        $segs += "$DIM$($w[0])$RESET" + (Get-Pct $w[1].used_percentage) + (Get-Reset $w[1].resets_at)
+        $segs += "$BOLD$($w[0])$RESET" + (Get-Pct $w[1].used_percentage) + (Get-Reset $w[1].resets_at)
     }
-    $segs += "$DIM$CLOCK$RESET " + (Get-Runtime $data.cost.total_duration_ms)
+    $segs += "$CLOCK " + (Get-Runtime $data.cost.total_duration_ms)
     $segs += '$' + (Get-Cost $data.cost.total_cost_usd)
     # Write, not Write-Output: no trailing \r\n on Windows, one \n after the line.
     [Console]::Out.Write((($segs | Where-Object { $_ }) -join $SEP) + "`n")

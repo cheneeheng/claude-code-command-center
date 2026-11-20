@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code statusline (bash port). Needs jq.
 #
-#   Opus 5.5 high | ⧗ 36m | ctx 42% | 5h 63% ↺ 7h 6m | 7d 85% ↺ 5d 7h | ◷ 1h 12m | $1.23
+#   Opus 5.5 high | ⏳ 36m | 📋 42% | 5h 63% 🔄 7h 6m | 7d 85% 🔄 5d 7h | 🕒 1h 12m | $1.23
 #
 # Reads the JSON Claude Code pipes to stdin. A rate-limit segment is shown only when Claude Code
 # sends that window. Bad input prints nothing. The render spec is the fixtures/ folder;
@@ -33,7 +33,7 @@ jq -nRrj --argjson d "$input" '
     | (($s % 3600) / 60 | floor) as $m
     | if $d > 0 then "\($d)d \($h)h" elif $h > 0 then "\($h)h \($m)m" else "\($m)m" end;
   def reset($now):
-    if (. // 0) > 0 then " " + c(2) + "↺ " + (floor - $now | left) + c(0) else "" end;
+    if (. // 0) > 0 then " 🔄 " + (floor - $now | left) else "" end;
   def runtime:
     ((. // 0) / 1000 | floor) as $s
     | ($s / 3600 | floor) as $h | (($s % 3600) / 60 | floor) as $m
@@ -42,13 +42,13 @@ jq -nRrj --argjson d "$input" '
     ((. // 0) * 100 + 0.5 | floor) as $c
     | "\($c / 100 | floor)." + ($c % 100 | tostring | if length < 2 then "0" + . else . end);
   def seg($label; $w; $now):
-    c(2) + $label + c(0) + ($w.used_percentage | pct) + ($w.resets_at | reset($now));
+    c(1) + $label + c(0) + ($w.used_percentage | pct) + ($w.resets_at | reset($now));
 
   # The main session caches its prompt for one hour after its last API reply. Synthetic
   # replies never reached the API, and sidechain replies belong to subagents.
   def cache($now):
     (.[0:19] + "Z" | fromdateiso8601 + 3600) as $end
-    | c(2) + "⧗" + c(0) + " "
+    | "⏳ "
       + if $end > $now then ($end - $now | left) else "expired" end;
 
   [inputs | fromjson? | objects
@@ -60,15 +60,15 @@ jq -nRrj --argjson d "$input" '
   | ($ENV.C4_STATUSLINE_NOW // now | tonumber) as $now
   | (.model.display_name // "") as $model
   | (.effort.level // "" | tostring) as $effort
-  | (" " + c(2) + "|" + c(0) + " ") as $sep
+  | (" " + c(1) + "|" + c(0) + " ") as $sep
   # Segments are joined by the separator, so an absent one leaves no stray separator.
   | [ c(1) + c(36) + $model + c(0)
         + (if $effort != "" then " " + c(36) + $effort + c(0) else "" end),
       (($cached // empty | try cache($now)) // ""),
-      c(2) + "ctx" + c(0) + (.context_window.used_percentage | pct),
+      "📋" + (.context_window.used_percentage | pct),
       ((.rate_limits.five_hour // empty | seg("5h"; .; $now)) // ""),
       ((.rate_limits.seven_day // empty | seg("7d"; .; $now)) // ""),
-      c(2) + "◷" + c(0) + " " + (.cost.total_duration_ms | runtime),
+      "🕒 " + (.cost.total_duration_ms | runtime),
       "$" + (.cost.total_cost_usd | cost)
     ]
   | map(select(. != "")) | join($sep) + "\n"

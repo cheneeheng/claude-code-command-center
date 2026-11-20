@@ -6,6 +6,11 @@ All notable changes to `statusline-hook` are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Emoji markers: `⏳` cache, `📋` context (was `ctx`), `🔄` reset, `🕒` runtime.
+- No dimmed text. Separators and the `5h` and `7d` labels are bold, and countdowns print in the default colour.
+
 ## [0.4.0] - 2026-11-18
 
 ### Added
