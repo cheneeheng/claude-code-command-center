@@ -826,4 +826,12 @@ function activate(context) {
 
 function deactivate() {}
 
-module.exports = { activate, deactivate };
+// VSCode reads only activate and deactivate. `_internals` is for the unit tests in test/.
+const _internals = {
+  parseSkillFrontmatter,
+  buildSections,
+  loadInstalledPlugins,
+  SkillsViewProvider,
+};
+
+module.exports = { activate, deactivate, _internals };
