@@ -3,7 +3,8 @@
    explicit theme-toggle ([data-theme]) blocks, and all toggler-only component
    classes are dropped; only the token palette + base typography are reused, then
    this browser's own two-pane layout is skinned with the tokens. Keep the token
-   values in sync with apps/per-project-plugin-toggler/html/styles.css. */
+   values in sync with
+   apps/per-project-plugin-toggler/vscode-extension/webview/styles.css. */
 
 :root {
   --font-ui:      "Hanken Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

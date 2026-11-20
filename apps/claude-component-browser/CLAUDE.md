@@ -35,7 +35,7 @@ For a quick sanity check on an edit, parse/type-check the changed file
 ## Invariants — do not break these
 
 - **Plugin reading lives in `claude-plugins`, not here.** This app is a thin consumer; the parsing
-  logic is shared with `per-project-plugin-toggler` via that library — see
+  logic has a registered Node copy in `per-project-plugin-toggler`'s VSCode extension — see
   `../../docs/shared-plugin-logic.md`. Do not fork the reader into this app.
 - **No file paths cross the wire.** `Member.path`/`body` are server-side only. The member list
   never exposes filesystem paths; the body endpoint takes a bounds-checked index into the server's

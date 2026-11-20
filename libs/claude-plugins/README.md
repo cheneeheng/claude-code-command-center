@@ -7,9 +7,8 @@ It models one well-defined external contract — the
 `~/.claude/plugins/installed_plugins.json` registry and each plugin's
 `skills/<name>/SKILL.md`, `agents/<name>.md` and `hooks/hooks.json` layout — and
 turns it into typed records. It exists because more than one member needs this
-exact parsing: the [`claude-component-browser`](../../apps/claude-component-browser/),
-[`per-project-plugin-toggler`](../../apps/per-project-plugin-toggler/), and
-[`usage-insights`](../../apps/usage-insights/) apps all consume it.
+exact parsing: the [`claude-component-browser`](../../apps/claude-component-browser/) and
+[`usage-insights`](../../apps/usage-insights/) apps both consume it.
 
 ## API
 

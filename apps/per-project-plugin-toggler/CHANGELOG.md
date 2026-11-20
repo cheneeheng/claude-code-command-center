@@ -17,6 +17,11 @@ this log starts at the first release tracked here.
   you pick (plugins, settings, and install/uninstall/marketplace refresh). The choice is
   remembered per workspace. A single-folder window keeps the fixed card.
 
+### Removed
+- Archive the browser version (HTML page and Python server), with its smoke tests and CSS
+  sync scripts, under `archive/`: it is no longer built or tested, and the VSCode extension
+  is the only surface. Edit `webview/styles.css` and `webview/icon.svg` directly.
+
 ### Fixed
 - The VSCode extension now watches the user settings and `installed_plugins.json` even when
   the window had no folder open when the panel was first shown.
