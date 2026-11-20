@@ -1,15 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- data-context="vscode" is what styles.css keys the editor's colours and fonts on. -->
+<html lang="en" data-context="vscode">
 <head>
   <meta charset="UTF-8" />
-  <!-- default-src 'none' is the part that earns its keep: the panel renders names and
-       descriptions read from plugin files this tool does not own, and this stops any
-       script that does get in from loading remote code or talking to the network.
-       'unsafe-inline' is unavoidable while the rows use inline onclick handlers, so
-       treat this as containment, not as injection prevention. __CSP_SOURCE__ is
-       replaced by extension.js with webview.cspSource. -->
+  <!-- The panel renders names and descriptions read from plugin files this tool does not
+       own. default-src 'none' stops anything from loading remote code or talking to the
+       network, and script-src allows only the extension's own script files, so inline
+       script is refused: a block or an on-event attribute that slips through HTML
+       escaping does not run. Actions are wired in webview/js/events.js instead.
+       __CSP_SOURCE__ is replaced by extension.js with webview.cspSource. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src __CSP_SOURCE__ 'unsafe-inline'; script-src __CSP_SOURCE__ 'unsafe-inline'; img-src __CSP_SOURCE__ data:;" />
+        content="default-src 'none'; style-src __CSP_SOURCE__ 'unsafe-inline'; script-src __CSP_SOURCE__; img-src __CSP_SOURCE__ data:;" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Skills Toggle</title>
   <link rel="stylesheet" href="__STYLES_URI__" />
@@ -56,11 +57,6 @@
       .boot-spinner, .boot-bar { animation: none; }
     }
   </style>
-  <script>
-    if (typeof acquireVsCodeApi !== "undefined") {
-      document.documentElement.setAttribute("data-context", "vscode");
-    }
-  </script>
 </head>
 <body>
   <header>
@@ -116,7 +112,7 @@
       <button id="btn-enable-all">Enable all</button>
       <button id="btn-disable-all">Disable all</button>
     </div>
-    <button class="bulk-install-btn" id="btn-install-plugin" onclick="openInstallPanel()">+ Install/Uninstall plugin</button>
+    <button class="bulk-install-btn" id="btn-install-plugin" data-action="open-install-panel">+ Install/Uninstall plugin</button>
   </div>
 
   <div class="install-panel" id="install-panel"></div>
@@ -129,6 +125,7 @@
   <script src="__JS_BASE__/render.js"></script>
   <script src="__JS_BASE__/install-panel.js"></script>
   <script src="__JS_BASE__/actions.js"></script>
+  <script src="__JS_BASE__/events.js"></script>
   <script src="__JS_BASE__/messages.js"></script>
   <script src="__JS_BASE__/main.js"></script>
 </body>

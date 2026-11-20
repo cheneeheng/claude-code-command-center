@@ -24,8 +24,8 @@ function renderInstallPanel() {
         <span class="install-panel-title">Install plugin</span>
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="marketplace-refresh-btn" id="marketplace-refresh-btn"
-                  onclick="triggerMarketplaceRefresh()">&#8635; Refresh</button>
-          <button class="install-panel-close" onclick="closeInstallPanel()">&#10005; Close</button>
+                  data-action="marketplace-refresh">&#8635; Refresh</button>
+          <button class="install-panel-close" data-action="close-install-panel">&#10005; Close</button>
         </div>
       </div>
       <div class="mp-install-log" id="marketplace-refresh-log"></div>
@@ -54,20 +54,20 @@ function renderInstallPanel() {
       <span class="install-panel-title">Install plugin</span>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="marketplace-refresh-btn" id="marketplace-refresh-btn"
-                onclick="triggerMarketplaceRefresh()">&#8635; Refresh</button>
-        <button class="install-panel-close" onclick="closeInstallPanel()">&#10005; Close</button>
+                data-action="marketplace-refresh">&#8635; Refresh</button>
+        <button class="install-panel-close" data-action="close-install-panel">&#10005; Close</button>
       </div>
     </div>
     <div class="mp-install-log" id="marketplace-refresh-log"></div>
     <div class="marketplace-select-row">
       <span class="marketplace-select-label">Marketplace</span>
-      <select class="marketplace-select" onchange="selectedMarketplace = this.value; mpSearch = ''; renderInstallPanel()">
+      <select class="marketplace-select" data-action="select-marketplace">
         ${options}
       </select>
     </div>
     <input type="search" class="marketplace-search" id="marketplace-search"
            placeholder="Search plugins" value="${esc(mpSearch)}"
-           oninput="mpSearch = this.value; applyMpSearch()">
+           data-action="search-marketplace">
     <div class="mp-plugin-list">${pluginListHtml}<div class="status" id="mp-search-empty" style="display:none">No matching plugins.</div></div>`;
   applyMpSearch();
 }
@@ -87,7 +87,6 @@ function applyMpSearch() {
 
 function renderMpPluginRow(p) {
   const escId = esc(p.id);  // HTML attribute context
-  const jsId = jsStr(p.id); // inline-handler (JS string) context
   const installedScopes = installedScopesMap[p.id] || [];
   const notInstalled = SCOPES.filter((s) => !installedScopes.includes(s));
 
@@ -107,7 +106,7 @@ function renderMpPluginRow(p) {
     installControl = `
       <select class="mp-scope-select" id="mp-scope-${escId}">${opts}</select>
       <button class="mp-install-btn" id="mp-btn-${escId}"
-              onclick="installPlugin('${jsId}', mpScopeVal('${jsId}'), mpEls('${jsId}'))">
+              data-action="mp-install" data-id="${escId}">
         Install &#8595;
       </button>`;
   }

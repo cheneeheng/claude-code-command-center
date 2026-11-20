@@ -45,6 +45,9 @@ this log starts at the first release tracked here.
 - Stop a `claude` call that is still running when the panel is closed.
 
 ### Security
+- Refuse inline script in the panel: the content security policy now allows only the
+  extension's own script files, and buttons are wired from those files instead of inline
+  handlers. Plugin metadata that slipped through HTML escaping can no longer run code.
 - Run only a `claude` found on `PATH`. On Windows a `claude.cmd`, `claude.bat` or
   `claude.exe` in the project folder could run in its place.
 - Refuse a plugin id that starts with a dash, which the CLI would read as an option.
