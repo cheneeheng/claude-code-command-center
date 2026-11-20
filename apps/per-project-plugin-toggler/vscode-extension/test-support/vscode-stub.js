@@ -20,8 +20,10 @@ const stub = {
     createFileSystemWatcher: noopWatcher,
     onDidChangeWorkspaceFolders: () => ({ dispose() {} }),
   },
+  errors: [], // every showErrorMessage text, in order
   window: {
     showWarningMessage: async () => stub.confirmAnswer,
+    showErrorMessage: async (text) => void stub.errors.push(text),
     registerWebviewViewProvider: () => ({ dispose() {} }),
   },
   Uri: {

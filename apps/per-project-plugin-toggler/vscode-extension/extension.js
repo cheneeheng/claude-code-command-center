@@ -80,61 +80,46 @@ function loadInstalledPlugins(projectRoot) {
   }
 }
 
-function loadSettingsLocal(projectRoot) {
-  const p = path.join(projectRoot, ".claude", "settings.local.json");
+// The settings file of a scope: local and project live in the project, user in the home dir.
+function settingsPath(scope, projectRoot) {
+  if (scope === "user") return path.join(os.homedir(), ".claude", "settings.json");
+  return path.join(
+    projectRoot,
+    ".claude",
+    scope === "local" ? "settings.local.json" : "settings.json"
+  );
+}
+
+// A missing file is empty settings. A file that does not parse, or whose root is not an
+// object, throws: returning {} for it made the next save replace the whole file with only
+// enabledPlugins.
+function loadSettings(scope, projectRoot) {
+  const p = settingsPath(scope, projectRoot);
   if (!fs.existsSync(p)) return {};
+  let data;
   try {
-    return JSON.parse(fs.readFileSync(p, "utf8"));
+    data = JSON.parse(fs.readFileSync(p, "utf8"));
   } catch (e) {
     throw new Error(`Failed to parse ${p}: ${e.message}`);
   }
+  if (data === null || typeof data !== "object" || Array.isArray(data))
+    throw new Error(`Failed to parse ${p}: the root is not a JSON object`);
+  return data;
 }
 
-function loadSettingsProject(projectRoot) {
-  const p = path.join(projectRoot, ".claude", "settings.json");
-  if (!fs.existsSync(p)) return {};
+// Written to a temp file beside the target and renamed over it, so a write that fails
+// midway (full disk, crash) leaves the old settings intact instead of a truncated file.
+function saveSettings(scope, projectRoot, settings) {
+  const p = settingsPath(scope, projectRoot);
+  const tmp = `${p}.${process.pid}.tmp`;
   try {
-    return JSON.parse(fs.readFileSync(p, "utf8"));
-  } catch {
-    return {};
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(tmp, JSON.stringify(settings, null, 2));
+    fs.renameSync(tmp, p);
+  } catch (e) {
+    fs.rmSync(tmp, { force: true });
+    throw new Error(`Could not save ${p}: ${e.message}`);
   }
-}
-
-function loadSettingsUser() {
-  const p = path.join(os.homedir(), ".claude", "settings.json");
-  if (!fs.existsSync(p)) return {};
-  try {
-    return JSON.parse(fs.readFileSync(p, "utf8"));
-  } catch {
-    return {};
-  }
-}
-
-function saveSettingsLocal(projectRoot, settings) {
-  const dir = path.join(projectRoot, ".claude");
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, "settings.local.json"),
-    JSON.stringify(settings, null, 2)
-  );
-}
-
-function saveSettingsProject(projectRoot, settings) {
-  const dir = path.join(projectRoot, ".claude");
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, "settings.json"),
-    JSON.stringify(settings, null, 2)
-  );
-}
-
-function saveSettingsUser(settings) {
-  const dir = path.join(os.homedir(), ".claude");
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, "settings.json"),
-    JSON.stringify(settings, null, 2)
-  );
 }
 
 function parseSkillFrontmatter(text, fallbackName) {
@@ -597,9 +582,9 @@ class SkillsViewProvider {
       const isMock = raw.mock || false;
 
       const settings = {
-        local: loadSettingsLocal(projectRoot).enabledPlugins || {},
-        project: loadSettingsProject(projectRoot).enabledPlugins || {},
-        user: loadSettingsUser().enabledPlugins || {},
+        local: loadSettings("local", projectRoot).enabledPlugins || {},
+        project: loadSettings("project", projectRoot).enabledPlugins || {},
+        user: loadSettings("user", projectRoot).enabledPlugins || {},
       };
       const sections = buildSections(
         { local: raw.local || [], project: raw.project || [], user: raw.user || [] },
@@ -686,6 +671,8 @@ class SkillsViewProvider {
       const projectRoot = this._projectRoot();
       if (!projectRoot) return;
       if (!["local", "project", "user"].includes(scope)) return;
+      // The webview is the only sender, but what it sends is written to a settings file.
+      if (typeof id !== "string" || !id || typeof enabled !== "boolean") return;
 
       // Confirmation — wording escalates with blast radius. Skipped unless opted in.
       if (confirmActionsEnabled()) {
@@ -706,18 +693,16 @@ class SkillsViewProvider {
         }
       }
 
-      // A malformed settings file throws here; _refresh then posts the error state (with
-      // the folder list) instead of leaving an unhandled rejection behind.
+      // A malformed settings file or a failed save throws here, before anything is
+      // written. The user is told why, and the refresh below resets the toggle (or posts
+      // the error state for a file that does not parse).
       try {
-        const load = { local: loadSettingsLocal, project: loadSettingsProject, user: loadSettingsUser };
-        const settings = scope === "user" ? load.user() : load[scope](projectRoot);
+        const settings = loadSettings(scope, projectRoot);
         if (!settings.enabledPlugins) settings.enabledPlugins = {};
         settings.enabledPlugins[id] = enabled;
-        if (scope === "local") saveSettingsLocal(projectRoot, settings);
-        else if (scope === "project") saveSettingsProject(projectRoot, settings);
-        else saveSettingsUser(settings);
-      } catch (_e) {
-        // Fall through: the refresh below reads the same file and reports its error.
+        saveSettings(scope, projectRoot, settings);
+      } catch (e) {
+        vscode.window.showErrorMessage(e.message);
       }
 
       this._refresh(webview);
