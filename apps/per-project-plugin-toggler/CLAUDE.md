@@ -38,5 +38,17 @@ diagram.
 
 ## Tests
 
-No test suite. CI (`.github/workflows/extension.yml`) runs ESLint on `extension.js` and a
-`vsce package` check. The Node surface has no test runner.
+Unit tests with Node's built-in runner, no test dependency: `cd vscode-extension && npm test`
+(`node --test test/`). CI (`.github/workflows/extension.yml`) also runs ESLint on
+`extension.js` and a `vsce package` check.
+
+- `test/` holds only `*.test.js` files. Helpers live in `test-support/`, because Node 20 may
+  run every `.js` file under a folder named `test` as a test.
+- `test-support/load-extension.js` loads `extension.js` with `test-support/vscode-stub.js`
+  standing in for the `vscode` module. Add what a new test needs to the stub or the loader;
+  do not add a second loader.
+- Any test that reaches the file system calls `useTempHome(t)` first, so it never reads or
+  writes the real `~/.claude`.
+- `extension.js` exports its internals for tests under `_internals`. Add a function there
+  when a test needs it.
+- The webview scripts under `webview/js/` have no tests (they need a DOM).
