@@ -64,8 +64,6 @@ Each installed plugin row shows what the plugin brings, as counts such as **3 sk
 
 **Refresh** runs `claude plugin marketplace update`, which fetches the latest plugin lists. Marketplaces themselves are added with Claude Code (`claude plugin marketplace add`), not in this panel.
 
-The button sits under the plugin list, so it shows once the project has at least one plugin. Install your first plugin with the `claude` CLI.
-
 ## Multi-root workspaces
 
 With two or more folders in the workspace, the **PROJECT** card becomes a dropdown of the folders. Pick one and the panel reloads for that folder: its plugins, its settings files, and the folder the `claude` CLI runs in.
@@ -100,7 +98,7 @@ The extension is turned off in Restricted Mode and in virtual workspaces.
 
 **"No workspace folder open."** Open a folder (`File > Open Folder`). The panel needs a project folder to work on.
 
-**"No plugins found for this project."** No plugin is installed for this project or for your user, and no settings file names one. Install one with the `claude` CLI and the panel reloads.
+**"No plugins found for this project."** No plugin is installed for this project or for your user, and no settings file names one. Install one with **+ Install/Uninstall plugin**, or with the `claude` CLI and the panel reloads.
 
 **The panel shows a parse error.** One of the files it reads is not valid JSON. The message names the file. Fix the file and the panel reloads.
 

@@ -4,16 +4,18 @@ function renderPlugins() {
   const bulk = document.getElementById("bulk-actions");
 
   const total = SCOPES.reduce((n, s) => n + state[s].length, 0);
+  // The install button stays up with no plugin listed: it is how the first one gets
+  // installed. Enable all / Disable all have nothing to act on then.
+  bulk.style.display = "flex";
+  document.getElementById("bulk-toggles").style.display = total === 0 ? "none" : "";
   if (total === 0) {
-    showStatus("No plugins found for this project. Install plugins via Claude Code.");
+    showStatus("No plugins found for this project. Install one below, or with the claude CLI.");
     sections.style.display = "none";
-    bulk.style.display = "none";
     return;
   }
 
   document.getElementById("status").style.display = "none";
   sections.style.display = "block";
-  bulk.style.display = "flex";
 
   for (const scope of SCOPES) {
     document.getElementById(`${scope}-list`).innerHTML =
