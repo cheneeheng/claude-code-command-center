@@ -9,6 +9,10 @@ Claude Code Plugin Toggler is a sidebar panel inside VS Code. It works on one pr
 
 ## Installation
 
+### From the VS Code Marketplace
+
+Open the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`), search for **Claude Code Plugin Toggler** and click **Install**. Or run `code --install-extension c4-tools.claude-code-plugin-toggler`.
+
 ### From a `.vsix` file
 
 1. Download `claude-code-plugin-toggler.vsix` from a release, or build it (see [Building from source](#building-from-source)).

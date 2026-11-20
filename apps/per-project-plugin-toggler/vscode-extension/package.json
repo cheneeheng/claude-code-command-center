@@ -2,7 +2,7 @@
   "name": "claude-code-plugin-toggler",
   "displayName": "Claude Code Plugin Toggler",
   "description": "Enable and disable Claude Code plugins per project from a VS Code sidebar, and install plugins from your marketplaces.",
-  "version": "0.10.0",
+  "version": "1.0.0",
   "publisher": "c4-tools",
   "repository": {
     "type": "git",

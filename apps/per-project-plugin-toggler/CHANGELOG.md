@@ -12,7 +12,13 @@ this log starts at the first release tracked here.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-20
+
+First release on the VS Code Marketplace, as `c4-tools.claude-code-plugin-toggler`.
+
 ### Added
+- Publish each `pppt-v*` release to the VS Code Marketplace from the release workflow,
+  through Marketplace Trusted Publishing, so no access token is stored.
 - Multi-root workspace support in the VSCode extension: with two or more workspace folders
   open, the PROJECT card becomes a dropdown of the folders, and the panel works on the one
   you pick (plugins, settings, and install/uninstall/marketplace refresh). The choice is
