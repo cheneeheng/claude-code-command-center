@@ -12,7 +12,13 @@ this log starts at the first release tracked here.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-20
+
+First release on the VS Code Marketplace, as `c4-tools.claude-code-plugin-toggler`.
+
 ### Added
+- Publish each `pppt-v*` release to the VS Code Marketplace from the release workflow,
+  through Marketplace Trusted Publishing, so no access token is stored.
 - Multi-root workspace support in the VSCode extension: with two or more workspace folders
   open, the PROJECT card becomes a dropdown of the folders, and the panel works on the one
   you pick (plugins, settings, and install/uninstall/marketplace refresh). The choice is
@@ -38,6 +44,8 @@ this log starts at the first release tracked here.
   is the only surface. Edit `webview/styles.css` and `webview/icon.svg` directly.
 
 ### Fixed
+- Keep the **+ Install/Uninstall plugin** button up when a project has no plugins. It was
+  hidden with the empty list, so a first plugin could not be installed from the panel.
 - Stop a toggle from replacing a malformed `.claude/settings.json` or `~/.claude/settings.json`
   with only `enabledPlugins`: a settings file that does not parse is now left untouched at
   every scope, and the panel shows the error.
