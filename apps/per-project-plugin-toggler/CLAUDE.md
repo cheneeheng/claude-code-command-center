@@ -24,14 +24,14 @@ diagram.
 
 - **VSCode extension:** stateful webview panel; `projectRoot` is the single workspace folder, or
   in a multi-root workspace the folder picked in the PROJECT card dropdown (kept in
-  `workspaceState` under `skillsToggle.selectedProject`, falling back to the first folder). The
+  `workspaceState` under `pluginToggler.selectedProject`, falling back to the first folder). The
   host validates every `selectProject` path against the open folders.
 
 ## Key implementation details
 
 - The extension's reader for installed plugins/skills/agents/hooks is a Node port of the in-repo
   `claude-plugins` Python library — see `docs/shared-plugin-logic.md`.
-- VSCode extension confirmation is opt-in via the `skillsToggle.confirmActions` setting (default `false`). When enabled, toggle/uninstall show a `showWarningMessage`; on cancel, current state is re-posted to reset the webview toggle. When disabled (default), these actions apply immediately.
+- VSCode extension confirmation is opt-in via the `pluginToggler.confirmActions` setting (default `false`). When enabled, toggle/uninstall show a `showWarningMessage`; on cancel, current state is re-posted to reset the webview toggle. When disabled (default), these actions apply immediately.
 - The VSCode webview requests its own first load with a `ready` message; the extension must not
   push `load` from `resolveWebviewView` (see README — VSCode's 200ms frame-promotion timer drops it).
 - No npm runtime dependencies — `@types/vscode` is dev-only.

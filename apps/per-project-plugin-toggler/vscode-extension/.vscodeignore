@@ -1,9 +1,12 @@
-.vscode/**
+node_modules/.vscode/**
 node_modules/**
 **/*.ts
 **/*.map
 **/.gitignore
 **/tsconfig.json
-**/eslint*
+.eslintrc.json
+package-lock.json
+dist/**
+scripts/**
 test/**
 test-support/**

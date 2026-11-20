@@ -1,43 +1,56 @@
 {
-  "name": "skills-toggle",
-  "displayName": "Skills Toggle",
-  "description": "Manage Claude Code skill plugins per project from a VSCode sidebar.",
+  "name": "claude-code-plugin-toggler",
+  "displayName": "Claude Code Plugin Toggler",
+  "description": "Enable and disable Claude Code plugins per project from a VS Code sidebar, and install plugins from your marketplaces.",
   "version": "0.10.0",
-  "publisher": "ceh-plugins",
+  "publisher": "c4-tools",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cheneeheng/skills-toggle"
+    "url": "https://github.com/cheneeheng/claude-code-command-center",
+    "directory": "apps/per-project-plugin-toggler/vscode-extension"
   },
-  "license": "Apache-2.0",
+  "bugs": { "url": "https://github.com/cheneeheng/claude-code-command-center/issues" },
+  "homepage": "https://github.com/cheneeheng/claude-code-command-center/tree/main/apps/per-project-plugin-toggler#readme",
+  "license": "SEE LICENSE IN LICENSE",
   "icon": "media/icon.png",
-  "engines": { "vscode": "^1.144.0", "node": ">=20" },
+  "engines": { "vscode": "^1.144.0" },
   "categories": ["Other"],
-  "keywords": ["claude", "plugins", "skills", "claude code"],
+  "keywords": ["claude", "claude code", "anthropic", "plugins", "skills", "agents", "ai"],
   "activationEvents": [],
   "main": "./extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "The extension runs the claude CLI in the workspace folder and writes Claude Code settings files."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "The extension reads and writes files on the local disk."
+    }
+  },
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "skillsToggle",
-          "title": "Skills Toggle",
+          "id": "pluginToggler",
+          "title": "Plugin Toggler",
           "icon": "icon.svg"
         }
       ]
     },
     "views": {
-      "skillsToggle": [
+      "pluginToggler": [
         {
           "type": "webview",
-          "id": "skillsToggle.pluginList",
+          "id": "pluginToggler.pluginList",
           "name": "Plugins"
         }
       ]
     },
     "configuration": {
-      "title": "Skills Toggle",
+      "title": "Claude Code Plugin Toggler",
       "properties": {
-        "skillsToggle.confirmActions": {
+        "pluginToggler.confirmActions": {
           "type": "boolean",
           "default": false,
           "description": "Ask for confirmation before enabling/disabling or uninstalling a plugin. When off, these actions apply immediately."
@@ -46,10 +59,11 @@
     }
   },
   "scripts": {
-    "lint":        "eslint extension.js webview/js test test-support",
+    "lint":        "eslint extension.js webview/js test test-support scripts",
     "test":        "node --test test/",
-    "package":     "vsce package --out dist/skills-toggle.vsix",
-    "install-ext": "code --install-extension dist/skills-toggle.vsix"
+    "vscode:prepublish": "node scripts/copy-package-files.js",
+    "package":     "vsce package --out dist/claude-code-plugin-toggler.vsix --baseContentUrl https://github.com/cheneeheng/claude-code-command-center/blob/main/apps/per-project-plugin-toggler/vscode-extension --baseImagesUrl https://github.com/cheneeheng/claude-code-command-center/raw/main/apps/per-project-plugin-toggler/vscode-extension",
+    "install-ext": "code --install-extension dist/claude-code-plugin-toggler.vsix"
   },
   "devDependencies": {
     "@types/vscode": "^1.144.0",

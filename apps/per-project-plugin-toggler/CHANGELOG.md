@@ -5,7 +5,8 @@ All notable changes to the per-project-plugin-toggler are documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Releases are tagged `pppt-vX.Y.Z` (see [`docs/releasing.md`](../../docs/releasing.md)).
+Releases are tagged `pppt-vX.Y.Z` (see
+[`docs/releasing.md`](https://github.com/cheneeheng/claude-code-command-center/blob/main/docs/releasing.md)).
 Development through 0.9.x predates this monorepo and happened in a previous repository;
 this log starts at the first release tracked here.
 
@@ -18,6 +19,14 @@ this log starts at the first release tracked here.
   remembered per workspace. A single-folder window keeps the fixed card.
 
 ### Changed
+- Rename the extension from Skills Toggle (`skills-toggle`) to Claude Code Plugin Toggler
+  (`claude-code-plugin-toggler`), published by `c4-tools`. The sidebar reads Plugin
+  Toggler. It installs as a new extension, so uninstall Skills Toggle first.
+- Rename the setting `skillsToggle.confirmActions` to `pluginToggler.confirmActions`. The
+  old setting is not read: set the new one again if you had it on. The project picked in a
+  multi-root workspace is also asked for once more.
+- The VSIX now holds a `LICENSE` and this changelog, and no longer holds the lint config,
+  the lockfile or the tests.
 - Read and write the user settings and the plugin registry under `CLAUDE_CONFIG_DIR` when
   it is set, as Claude Code does, instead of always `~/.claude`.
 - Show the empty state when `installed_plugins.json` does not exist. The panel used to

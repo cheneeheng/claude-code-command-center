@@ -1,4 +1,7 @@
 .claude/settings.local.json
 vscode-extension/dist/
+# Copied in at package time by vscode-extension/scripts/copy-package-files.js
+vscode-extension/LICENSE
+vscode-extension/CHANGELOG.md
 *.vsix
 node_modules/
