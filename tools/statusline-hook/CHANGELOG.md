@@ -6,6 +6,8 @@ All notable changes to `statusline-hook` are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-20
+
 ### Changed
 
 - Emoji markers: `⏳` cache, `📋` context (was `ctx`), `🔄` reset, `🕒` runtime.
