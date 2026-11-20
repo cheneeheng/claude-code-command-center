@@ -25,7 +25,7 @@ cd vscode-extension
 vsce package
 ```
 
-This produces `claude-code-plugin-toggler-<version>.vsix` in the same directory. The `prepackage` script syncs the webview CSS automatically — no manual step needed.
+This produces `claude-code-plugin-toggler-<version>.vsix` in the same directory.
 
 ### Development mode
 

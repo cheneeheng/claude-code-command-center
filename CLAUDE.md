@@ -35,9 +35,8 @@ zero-dependency, or has a parallel non-Python implementation). When logic is cop
 members on purpose, register it in `docs/shared-plugin-logic.md` and add a `Cross-reference:`
 comment in each copy, so the copies are kept in sync. That file is the worked example: the
 plugin/skill/agent/hook reader is the `claude-plugins` library, consumed by
-`claude-component-browser`, `usage-insights`, and `per-project-plugin-toggler`'s Python server,
-with only the
-toggler's VSCode **Node** port left as
+`claude-component-browser` and `usage-insights`, with only
+`per-project-plugin-toggler`'s VSCode **Node** port left as
 a deliberate copy a Python library can't serve.
 
 Members are **self-contained**: each keeps its own README, tests, and CLAUDE.md.
@@ -105,7 +104,7 @@ they name that member.
   groups every task of a member together.
 - **Docs:** **one `README.md` per member** (apps/tools/libs/setup) plus the root README,
   which is the catalog. Deeper end-user docs live under a member's `docs/` (e.g.
-  `multi-repo-plan-runner/docs/guide/`, `per-project-plugin-toggler/docs/user-guide-*.md`) and the
+  `multi-repo-plan-runner/docs/guide/`, `per-project-plugin-toggler/docs/user-guide-vscode.md`) and the
   README links into them — do not split a member into multiple READMEs. One sanctioned exception:
   `per-project-plugin-toggler/vscode-extension/README.md`, which ships with the VSIX and is
   rendered on the VSCode marketplace page. Independently released components keep their own `CHANGELOG.md` (Keep a Changelog

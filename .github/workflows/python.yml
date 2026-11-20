@@ -19,7 +19,6 @@ jobs:
         member:
           - apps/multi-repo-plan-runner
           - apps/multi-repo-workspace
-          - apps/per-project-plugin-toggler
           - apps/usage-insights
           - apps/claude-component-browser
           - apps/usage-limit-widget

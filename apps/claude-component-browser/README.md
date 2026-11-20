@@ -35,8 +35,8 @@ UI over it, managed with `uv`. Binds to `127.0.0.1`. The member list never expos
 body endpoint takes a bounds-checked index into the server's own scan (no user-supplied paths, so
 no traversal).
 
-> The reading logic is shared with
-> [`per-project-plugin-toggler`](../per-project-plugin-toggler/) (the app for enabling/disabling
-> plugins per project) via the `claude-plugins` library — see
+> The reading logic lives in the `claude-plugins` library, with a registered Node copy in
+> [`per-project-plugin-toggler`](../per-project-plugin-toggler/) (the VSCode extension for
+> enabling/disabling plugins per project) — see
 > [`docs/shared-plugin-logic.md`](../../docs/shared-plugin-logic.md). The skills you see come from
 > marketplaces like [`cheneeheng/agent-skills`](https://github.com/cheneeheng/agent-skills).

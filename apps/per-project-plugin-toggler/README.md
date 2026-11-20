@@ -1,8 +1,10 @@
 # claude-code-plugin-toggler
 
-A developer tool for managing Claude Code skill plugins. Toggle plugins on/off per-project from a browser UI or directly inside VSCode. Browse and install new plugins from known marketplaces without leaving the UI.
+A developer tool for managing Claude Code skill plugins. Toggle plugins on/off per-project from a VSCode sidebar. Browse and install new plugins from known marketplaces without leaving the editor.
 
-**User guides:** [HTML version](docs/user-guide-html.md) · [VSCode extension](docs/user-guide-vscode.md)
+**User guide:** [VSCode extension](docs/user-guide-vscode.md)
+
+The earlier browser version is archived under [`archive/`](archive/). It is frozen: not built, not tested, and not kept runnable.
 
 ## How it works
 
@@ -12,19 +14,18 @@ Reads installed plugins from `~/.claude/plugins/installed_plugins.json` (global,
 ~/.claude/plugins/installed_plugins.json   (global — source of installed plugins)
 ~/.claude/plugins/known_marketplaces.json  (global — marketplace registry)
         │
-        ├──▶ html/server.py  ←HTTP/SSE→  html/index.html
         └──▶ vscode-extension/extension.js  ←Webview→  vscode-extension/webview/panel.html
                     │
                     ▼
         <project>/.claude/settings.local.json   (per-project — enabled state)
 ```
 
-Both surfaces use the same read/merge/write logic (implemented independently in Python and Node.js). `server.py` is stdlib-only. The VSCode extension has no npm runtime dependencies.
+The VSCode extension has no npm runtime dependencies.
 
-> **Future work — selectable Claude config dir.** Both surfaces currently hardcode `~/.claude` as
+> **Future work — selectable Claude config dir.** The extension currently hardcodes `~/.claude` as
 > the user-scope config dir (reads and writes). If we ever need to target a different dir (multiple
 > installs/profiles, or a relocated config), the low-effort, low-risk move is to honor Claude Code's
-> own `CLAUDE_CONFIG_DIR` env var (fallback `~/.claude`) in both the Python and Node paths — writes
+> own `CLAUDE_CONFIG_DIR` env var (fallback `~/.claude`) — writes
 > then land where Claude actually reads. A free-form UI dir picker is deliberately deferred: this
 > tool *writes* enablement state, so pointing it at a dir Claude isn't using is a silent footgun.
 
@@ -38,8 +39,8 @@ host, then walk every plugin's `skills/`, `agents/`, `hooks/` and every `marketp
 What covers it today is **a loading state** (`#status` in `panel.html`): a spinner and
 skeleton rows in place of a blank panel. Its markup *and* its CSS are inlined in
 `panel.html` on purpose — they must paint on the webview's first frame, before `styles.css`
-and `webview/js` are fetched. Do not move these rules into `html/styles.css`; that file
-arrives too late to help, and it is shared with the HTML surface, which has no such gap.
+and `webview/js` are fetched. Do not move these rules into `webview/styles.css`; that file
+arrives too late to help.
 
 **The webview asks for its own first load.** `main.js` posts `ready` once its scripts have
 run, and only then does the extension call `_refresh`. Do not "simplify" this back into a
@@ -84,25 +85,10 @@ Still on the list: `_refresh` re-reads every `SKILL.md` on every refresh with no
 
 ## Quick start
 
-**HTML version** — run from the root of the project you want to manage:
-
-```bash
-cd /your/project
-python3 /path/to/claude-code-plugin-toggler/html/server.py        # port 7779
-python3 /path/to/claude-code-plugin-toggler/html/server.py 8080   # custom port
-```
-
-Convenience scripts in `html/`: `start.sh` (Linux/macOS), `start.ps1` / `start.bat` (Windows).
-
-The server binds `127.0.0.1` and rejects any `POST` whose `Origin` is not its own origin —
-same host *and* same port — so neither a page you happen to visit nor another local service
-can drive it. Requests with no `Origin` at all — curl, PowerShell, the smoke tests — are
-still accepted.
-
 **VSCode extension** — dev mode: open `vscode-extension/` and press `F5`. To package:
 
 ```bash
-cd vscode-extension && vsce package   # produces .vsix; prepackage hook syncs CSS
+cd vscode-extension && vsce package   # produces .vsix
 ```
 
 ## Data format
@@ -147,29 +133,10 @@ Marketplace plugin listings are read from:
 <installLocation>/.claude-plugin/marketplace.json
 ```
 
-If `installed_plugins.json` is missing, `server.py` falls back to `MOCK_PLUGINS` and sets `"mock": true` in the API response.
-
-## CSS sync
-
-`html/styles.css` is canonical. `vscode-extension/webview/styles.css` is generated — do not edit it directly.
-
-```bash
-make sync-css           # macOS / Linux
-.\scripts\sync-css.ps1  # Windows
-```
-
-`vsce package` runs this automatically via the `prepackage` npm script.
-
 ## Requirements
 
-- **HTML version:** Python 3.13+ (stdlib only)
 - **VSCode extension:** VSCode 1.80+
 - **Install feature:** `claude` CLI on `PATH`
-- **CSS sync:** `make` (macOS/Linux) or PowerShell (Windows)
-
-## Troubleshooting
-
-**`[WinError 10053]` in server output (Windows only):** benign — the browser closed a connection before the server finished reading it. Suppressed at the `handle_error` level; no action needed. See [HTML user guide](docs/user-guide-html.md#winError-10053-in-the-terminal-windows) for details.
 
 ## Releases
 

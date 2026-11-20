@@ -16,7 +16,7 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 | [`cross-repo-file-diff`](apps/cross-repo-file-diff/) | Survey many local repos from one board; diff and copy files across any two of them. Serverless, no build (Chromium only). |
 | [`multi-repo-plan-runner`](apps/multi-repo-plan-runner/) | A command center over the Claude Code repos you work across: surface every plan and its lifecycle status, and run plans without leaving the tool. |
 | [`multi-repo-workspace`](apps/multi-repo-workspace/) | Turn-based workspace over your Claude Code repos (internal name *roundtable*): a board of repos with live git/plan state, in-app Claude Code planning sessions, rounds of orders executed headlessly with live streams and per-run cost, and a review phase with diffs, commits, and carried follow-ups. Successor to `multi-repo-plan-runner`; both share the same lifecycle sidecar format. |
-| [`per-project-plugin-toggler`](apps/per-project-plugin-toggler/) | Enable/disable Claude Code plugins per project from a browser UI or inside VSCode; browse and install from known marketplaces. |
+| [`per-project-plugin-toggler`](apps/per-project-plugin-toggler/) | VSCode extension to enable/disable Claude Code plugins per project from a sidebar; browse and install from known marketplaces. |
 | [`usage-insights`](apps/usage-insights/) | Local dashboard that helps you decide what to change: this week's and month's token and cost forecast, where spend goes by project, model, and session, and which skills, subagents, and tools are never used, fading, or followed by trouble. Keeps its own transcript store, so history outlives Claude Code's cleanup. Replaces `usage-dashboard`. |
 | [`claude-component-browser`](apps/claude-component-browser/) | Local web app to search and read every Claude Code component — skill, agent, and hook — on your machine, from installed plugins and from loose (non-plugin) `.claude` skills/agents, grouped by source. |
 | [`usage-limit-widget`](apps/usage-limit-widget/) | Windows widget hidden at the top edge of the screen: hover it to see your 5-hour and 7-day Claude usage limits and when they reset. Starts at logon and restarts hourly. |
@@ -53,8 +53,8 @@ Releases are tagged per component — see the [release guide](docs/releasing.md)
 A library earns a place here only with a **cohesive domain** and **≥2 real consumers** — not as a
 utilities junk drawer. `claude-usage` qualifies (the transcript layout, consumed by the
 `usage-insights` app and the `usage-report` CLI); so does `claude-plugins`
-(the installed-plugin layout, consumed by the `claude-component-browser`,
-`per-project-plugin-toggler`, and `usage-insights` apps).
+(the installed-plugin layout, consumed by the `claude-component-browser`
+and `usage-insights` apps).
 
 ## Installing the tools
 
