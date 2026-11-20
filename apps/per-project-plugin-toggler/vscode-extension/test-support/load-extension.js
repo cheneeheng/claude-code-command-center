@@ -69,7 +69,8 @@ if (process.env.FAKE_CLAUDE_PID_FILE) {
     );
   } else {
     const shim = path.join(dir, "claude");
-    fs.writeFileSync(shim, `#!/bin/sh\nexec "${process.execPath}" "$(dirname "$0")/claude-fake.js" "$@"\n`);
+    // Absolute paths only: the tests run it with a PATH that holds nothing else.
+    fs.writeFileSync(shim, `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`);
     fs.chmodSync(shim, 0o755);
   }
 }
