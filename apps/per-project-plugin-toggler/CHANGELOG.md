@@ -23,6 +23,13 @@ this log starts at the first release tracked here.
   is the only surface. Edit `webview/styles.css` and `webview/icon.svg` directly.
 
 ### Fixed
+- Stop a toggle from replacing a malformed `.claude/settings.json` or `~/.claude/settings.json`
+  with only `enabledPlugins`: a settings file that does not parse is now left untouched at
+  every scope, and the panel shows the error.
+- Show an error when a toggle cannot be saved, instead of silently flipping the toggle back.
+- Save settings through a temp file and a rename, so a write that fails midway no longer
+  leaves a truncated settings file.
+- Ignore a toggle message whose plugin id or enabled value has the wrong type.
 - The VSCode extension now watches the user settings and `installed_plugins.json` even when
   the window had no folder open when the panel was first shown.
 - A malformed `.claude/settings*.json` no longer leaves an unhandled error behind a toggle;
