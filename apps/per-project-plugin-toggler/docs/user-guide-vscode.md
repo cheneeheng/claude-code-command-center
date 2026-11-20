@@ -1,41 +1,40 @@
-# User Guide — VSCode Extension
+# User Guide: VS Code Extension
 
-The VSCode extension embeds the plugin manager as a sidebar panel inside VSCode. It works on one project at a time (the folder you have open, or the one you pick in a multi-root workspace) and watches for file changes without needing a separate server process.
+Claude Code Plugin Toggler is a sidebar panel inside VS Code. It works on one project at a time (the folder you have open, or the one you pick in a multi-root workspace) and reloads when the files it reads change. It runs no server.
 
 ## Prerequisites
 
-- VSCode 1.80 or later
-- Node.js is not required separately — VSCode bundles its own runtime
-- The `claude` CLI on `PATH` if you want to install plugins from the marketplace
+- VS Code 1.144 or later
+- The `claude` CLI on `PATH` to install, uninstall and refresh marketplaces. Enabling and disabling plugins works without it.
 
 ## Installation
 
-### From a `.vsix` file (recommended for end users)
+### From a `.vsix` file
 
-1. Download or build the `.vsix` file (see [Building from source](#building-from-source) below).
-2. Open VSCode.
-3. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
-4. Run **Extensions: Install from VSIX...** and select the file.
-5. Reload VSCode when prompted.
+1. Download `claude-code-plugin-toggler.vsix` from a release, or build it (see [Building from source](#building-from-source)).
+2. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+3. Run **Extensions: Install from VSIX...** and select the file.
+4. Reload VS Code when prompted.
 
 ### Building from source
 
 ```bash
 cd vscode-extension
-vsce package
+npm ci
+npm run package
 ```
 
-This produces `claude-code-plugin-toggler-<version>.vsix` in the same directory.
+This writes `dist/claude-code-plugin-toggler.vsix`.
 
 ### Development mode
 
-1. Open the `vscode-extension/` folder in VSCode (not the repo root).
+1. Open the `vscode-extension/` folder in VS Code (not the repo root).
 2. Press `F5`. A new **Extension Development Host** window opens with the extension loaded.
 3. In that window, open a project folder and use the extension normally.
 
 ## Opening the panel
 
-Click the **Skills Toggle** icon in the VSCode activity bar (left sidebar). The panel opens in the primary sidebar. It stays open across sessions — VSCode restores it on next launch.
+Click the **Plugin Toggler** icon in the activity bar. The panel opens in the sidebar.
 
 ## Choosing the project
 
@@ -55,65 +54,91 @@ In a multi-root workspace:
 
 ## Understanding the plugin list
 
-Plugins are shown in two sections:
+Plugins are shown in three sections, one per scope:
 
-| Section | What it means |
-|---------|---------------|
-| **Local** | Has an explicit entry in this project's `.claude/settings.local.json`. You can toggle it on or off directly. |
-| **Inherited** | No local override — the plugin is treated as enabled by Claude Code. To toggle it, click **Localize** first. |
+| Section | Settings file | Who it affects |
+|---------|---------------|----------------|
+| **Local plugins** | `<project>/.claude/settings.local.json` | Just you, in this project |
+| **Project plugins** | `<project>/.claude/settings.json` | Everyone on the project, when the file is committed |
+| **User plugins** | `~/.claude/settings.json` | All your projects |
+
+A section lists the plugins installed at that scope, plus any plugin its settings file names. A plugin a settings file names that is not installed at that scope is tagged **Not installed** and has an **Install** button. A plugin with no entry in a settings file counts as enabled.
+
+If you set `CLAUDE_CONFIG_DIR`, the extension uses that folder in place of `~/.claude`, as Claude Code does.
 
 ### Enabling / disabling a plugin
 
-Flip the toggle on any **Local** plugin. VSCode shows a confirmation dialog before writing the change. If you cancel, the toggle resets to its previous state.
+Flip the toggle on a plugin row. The change is written at once to the settings file of that section, and only the plugin's `enabledPlugins` entry changes. Claude Code picks it up on the next session start.
 
-The change is written to `.claude/settings.local.json` in the selected project's folder. Claude Code picks it up on the next session start.
+There is no confirmation by default. To be asked first, turn on `pluginToggler.confirmActions` (see [Settings](#settings)). If you cancel, the toggle goes back to its previous state.
 
-### Localizing an inherited plugin
-
-1. Find the plugin in the **Inherited** section.
-2. Click **Localize**. VSCode shows a confirmation dialog.
-3. On confirm, the plugin moves to the **Local** section with its current state pinned.
-4. Now toggle it as needed.
+A settings file that is not valid JSON is never overwritten: the panel shows the error instead.
 
 ### Bulk actions
 
-**Enable all** and **Disable all** apply only to plugins already in the **Local** section.
+**Enable all** and **Disable all** apply to the **Local plugins** section only.
 
-## Viewing plugin skills
+### Uninstalling a plugin
 
-Each plugin row shows a skill count badge. Click it to expand an inline list of skill names and descriptions.
+Click **Uninstall** on a plugin row. The extension runs `claude plugin uninstall` for that scope and shows the CLI's output in the row. With `pluginToggler.confirmActions` on, it asks first.
 
-A skill tagged **manual only** cannot be invoked by the model — you must call it yourself. Model invocation is the default, so skills without the tag can be invoked either way.
+## Viewing skills, agents and hooks
+
+Each installed plugin row shows counts such as **3 skills**, **1 agent** and **2 hooks**. Click a count to open the list: skills and agents by name and description, hooks by event with the matcher and what each hook runs.
+
+A skill tagged **manual only** cannot be invoked by the model, so you call it yourself. Model invocation is the default, so skills without the tag can be invoked either way.
 
 ## Installing plugins from a marketplace
 
-1. Click **+ Install plugin** (right of the bulk-actions row).
-2. Select a marketplace from the dropdown.
-3. Browse the plugin list. Each row shows name, version, install status, description, and tags.
-4. Click **Install** on an uninstalled plugin. VSCode shows a confirmation before proceeding.
-5. On success, both the plugin list and the marketplace panel refresh automatically.
+1. Click **+ Install/Uninstall plugin** under the plugin list.
+2. Pick a marketplace from the **Marketplace** dropdown. The search box filters its plugins by name, description and keywords.
+3. Each row shows name, version, the scopes where the plugin is installed, description and keywords.
+4. Pick the scope to install at (Local, Project or User) and click **Install**. Installing does not ask for confirmation.
+5. The CLI's output shows in the row. On success, the plugin list and the install panel reload.
 
-> If `claude` is not on `PATH` the error appears inline in the plugin row at install time, not on panel load.
+**Refresh** runs `claude plugin marketplace update`. **Close** closes the install panel. Marketplaces are added with Claude Code (`claude plugin marketplace add`), not in this panel.
+
+The button sits under the plugin list, so it shows once the project has at least one plugin. Install your first plugin with the `claude` CLI.
+
+> If `claude` is not on `PATH`, the error appears in the plugin row at install time, not when the panel loads.
 
 ## Live updates
 
-The extension watches `.claude/settings.local.json` and `~/.claude/plugins/installed_plugins.json` using `vscode.workspace.createFileSystemWatcher`. The panel refreshes silently whenever either file changes — no manual reload needed.
+The panel reloads on its own when one of these files changes:
+
+- `<project>/.claude/settings.local.json`
+- `<project>/.claude/settings.json`
+- `~/.claude/settings.json`
+- `~/.claude/plugins/installed_plugins.json`
+
+## Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `pluginToggler.confirmActions` | `false` | Ask for confirmation before enabling, disabling or uninstalling a plugin. When off, these actions apply at once. |
+
+## Workspace trust
+
+The extension is turned off in Restricted Mode, because it runs the `claude` CLI in the workspace folder and writes settings files there. It is also off in virtual workspaces, because it reads and writes files on the local disk.
 
 ## Troubleshooting
 
-### Panel shows no plugins / blank panel
+### "No workspace folder open."
 
-- Verify the workspace has a folder open (`File > Open Folder`). In a multi-root workspace, check which project the PROJECT card dropdown has selected (see [Choosing the project](#choosing-the-project)). The extension does not work in a windowless VSCode instance.
-- Check that `~/.claude/plugins/installed_plugins.json` exists. If it doesn't, the panel enters mock mode (banner shown).
+Open a folder (`File > Open Folder`). In a multi-root workspace, check which project the PROJECT card dropdown has selected (see [Choosing the project](#choosing-the-project)).
 
-### Confirmation dialog does not appear / toggle resets immediately
+### "No plugins found for this project."
 
-VSCode webview dialogs require the panel to be in the foreground. If the panel lost focus during a drag-resize, click it once to refocus before toggling.
+No plugin is installed for this project or for your user, and no settings file names one. Check that `~/.claude/plugins/installed_plugins.json` exists, and install a plugin with the `claude` CLI.
+
+### "The claude CLI was not found on PATH."
+
+Install Claude Code, or start VS Code from a shell where `claude` runs.
 
 ### Changes not reflected in Claude Code
 
-Settings take effect on the next Claude Code session. Restart any active Claude Code terminal or IDE integration after making changes.
+Settings take effect on the next Claude Code session. Restart any running session after making changes.
 
 ### Extension not visible in activity bar
 
-Open the Command Palette and run **Skills: Manage Plugins** to bring the panel into focus. If the icon is hidden, right-click the activity bar and ensure the extension is not disabled.
+Right-click the activity bar and enable **Plugin Toggler**.
