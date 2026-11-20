@@ -47,8 +47,6 @@
   },
   "scripts": {
     "lint":        "eslint extension.js",
-    "sync-css":    "make sync-css || powershell -ExecutionPolicy Bypass -File ../scripts/sync-css.ps1",
-    "prepackage":  "npm run sync-css",
     "package":     "vsce package --out dist/skills-toggle.vsix",
     "install-ext": "code --install-extension dist/skills-toggle.vsix"
   },

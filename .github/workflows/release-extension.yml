@@ -41,11 +41,6 @@ jobs:
         working-directory: apps/per-project-plugin-toggler/vscode-extension
         run: npm ci
 
-      - name: Sync canonical CSS/icon into webview
-        run: |
-          cp html/styles.css vscode-extension/webview/styles.css
-          cp html/icon.svg vscode-extension/webview/icon.svg
-
       - name: Package extension
         working-directory: apps/per-project-plugin-toggler/vscode-extension
         run: |
