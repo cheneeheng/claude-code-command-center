@@ -51,9 +51,9 @@ view, port `loose_bases` there and update this section.
 
 ## Known intentional differences (not drift)
 
-- The toggler's Node copy returns **mock** plugin data when `installed_plugins.json` is missing
-  (a dev aid); the library itself and `claude-component-browser` return empty (read-only
-  viewers).
+- The Node copy honours Claude Code's `CLAUDE_CONFIG_DIR` for the registry location; the
+  library takes the config dir from its caller (`C4_CLAUDE_DIR` in the Python members).
+- The Node copy folds case when matching `projectPath` on Windows and macOS.
 - The library raises nothing on a malformed `installed_plugins.json` — it returns empty buckets;
   the Node copy should match (return empty rather than throw).
 - Display quirks inherited from the shared parser (e.g. a quoted `name: "x"` renders with quotes)

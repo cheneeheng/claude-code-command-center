@@ -17,6 +17,12 @@ this log starts at the first release tracked here.
   you pick (plugins, settings, and install/uninstall/marketplace refresh). The choice is
   remembered per workspace. A single-folder window keeps the fixed card.
 
+### Changed
+- Read and write the user settings and the plugin registry under `CLAUDE_CONFIG_DIR` when
+  it is set, as Claude Code does, instead of always `~/.claude`.
+- Show the empty state when `installed_plugins.json` does not exist. The panel used to
+  show two mock plugins with a notice.
+
 ### Removed
 - Archive the browser version (HTML page and Python server), with its smoke tests and CSS
   sync scripts, under `archive/`: it is no longer built or tested, and the VSCode extension
@@ -30,6 +36,11 @@ this log starts at the first release tracked here.
 - Save settings through a temp file and a rename, so a write that fails midway no longer
   leaves a truncated settings file.
 - Ignore a toggle message whose plugin id or enabled value has the wrong type.
+- Read a skill or agent description in full when its file has CRLF line endings. A
+  block-scalar description showed as `>-`.
+- Skip a skill or agent file that cannot be read, instead of putting the whole panel in
+  its error state.
+- Match a project's plugins when its path differs only in letter case, on Windows and macOS.
 - Say that the `claude` CLI was not found on `PATH`, instead of only `Exit code 1`.
 - Stop a `claude` call that is still running when the panel is closed.
 
