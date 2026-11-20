@@ -318,118 +318,86 @@ function loadMarketplacePlugins(marketplaceKey, installLocation) {
 }
 
 
-// The `claude` CLI is spawned with `shell: true` (on Windows it resolves to a .cmd shim
-// that spawn cannot execute directly), and Node does not quote arguments in shell mode.
 // Plugin ids come from marketplace.json / installed_plugins.json — files this tool does
-// not own — so an id carrying `&`, `|` or a quote would run as a second shell command.
-// Ids are `name@marketplace`; anything outside that alphabet is rejected before spawning.
-const PLUGIN_ID_RE = /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/;
+// not own — and reach the `claude` command line, through a shell when the CLI is a .cmd
+// shim. An id carrying `&`, `|` or a quote would run as a second shell command, and one
+// starting with `-` would read as a CLI option. Ids are `name@marketplace`, each part
+// starting with a letter or digit; anything else is rejected before spawning.
+const PLUGIN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-function streamInstall(pluginId, scope, projectRoot, onLine) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn("claude", ["plugin", "install", pluginId, "--scope", scope], {
-      cwd: projectRoot,
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: true,
-    });
-
-    let stdoutBuf = "";
-    proc.stdout.on("data", (chunk) => {
-      stdoutBuf += chunk.toString("utf8");
-      const lines = stdoutBuf.split("\n");
-      stdoutBuf = lines.pop();
-      lines.forEach((l) => onLine(l + "\n"));
-    });
-
-    let stderrBuf = "";
-    proc.stderr.on("data", (chunk) => {
-      stderrBuf += chunk.toString("utf8");
-      const lines = stderrBuf.split("\n");
-      stderrBuf = lines.pop();
-      lines.forEach((l) => onLine(l + "\n"));
-    });
-
-    proc.on("close", (code) => {
-      if (stdoutBuf) onLine(stdoutBuf);
-      if (stderrBuf) onLine(stderrBuf);
-      if (code === 0) resolve();
-      else reject(new Error(`Exit code ${code}`));
-    });
-
-    proc.on("error", (err) => {
-      reject(err);
-    });
-  });
+// The `claude` executable, looked up on PATH only. Spawning the bare name through a
+// shell let cmd.exe search the working directory first, which is the project folder: a
+// cloned repo holding a claude.cmd would have run in place of the CLI.
+function resolveClaude() {
+  const windows = process.platform === "win32";
+  const exts = windows
+    ? (process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)
+    : [""];
+  for (const dir of (process.env.PATH || "").split(path.delimiter)) {
+    if (!path.isAbsolute(dir)) continue; // "" and "." would mean the working directory
+    for (const ext of exts) {
+      const candidate = path.join(dir, "claude" + ext);
+      try {
+        if (!fs.statSync(candidate).isFile()) continue;
+        if (!windows) fs.accessSync(candidate, fs.constants.X_OK);
+        return candidate;
+      } catch {
+        // not in this folder
+      }
+    }
+  }
+  return null;
 }
 
-function streamUninstall(pluginId, scope, projectRoot, onLine) {
+// Runs `claude <args>` in cwd and passes its output to onLine as it arrives. onSpawn
+// receives the child process, so the caller can stop it.
+function runClaude(args, cwd, onLine, onSpawn = () => {}) {
   return new Promise((resolve, reject) => {
-    const proc = spawn("claude", ["plugin", "uninstall", pluginId, "--scope", scope], {
-      cwd: projectRoot,
+    const exe = resolveClaude();
+    if (!exe) {
+      reject(new Error("The claude CLI was not found on PATH. Install Claude Code, then try again."));
+      return;
+    }
+    // A .cmd or .bat shim (an npm install of the CLI on Windows) only runs through the
+    // shell, where Node joins the arguments unquoted: the callers validate every one.
+    const viaShell = /\.(cmd|bat)$/i.test(exe);
+    const proc = spawn(viaShell ? `"${exe}"` : exe, args, {
+      cwd,
       stdio: ["ignore", "pipe", "pipe"],
-      shell: true,
+      shell: viaShell,
     });
+    onSpawn(proc);
 
-    let stdoutBuf = "";
-    proc.stdout.on("data", (chunk) => {
-      stdoutBuf += chunk.toString("utf8");
-      const lines = stdoutBuf.split("\n");
-      stdoutBuf = lines.pop();
-      lines.forEach((l) => onLine(l + "\n"));
-    });
-
-    let stderrBuf = "";
-    proc.stderr.on("data", (chunk) => {
-      stderrBuf += chunk.toString("utf8");
-      const lines = stderrBuf.split("\n");
-      stderrBuf = lines.pop();
-      lines.forEach((l) => onLine(l + "\n"));
-    });
+    for (const stream of [proc.stdout, proc.stderr]) {
+      let buf = "";
+      stream.on("data", (chunk) => {
+        buf += chunk.toString("utf8");
+        const lines = buf.split("\n");
+        buf = lines.pop();
+        lines.forEach((l) => onLine(l + "\n"));
+      });
+      stream.on("end", () => {
+        if (buf) onLine(buf);
+      });
+    }
 
     proc.on("close", (code) => {
-      if (stdoutBuf) onLine(stdoutBuf);
-      if (stderrBuf) onLine(stderrBuf);
       if (code === 0) resolve();
-      else reject(new Error(`Exit code ${code}`));
+      else reject(new Error(code === null ? "Stopped" : `Exit code ${code}`));
     });
-
     proc.on("error", reject);
   });
 }
 
-function streamMarketplaceRefresh(projectRoot, onLine) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn("claude", ["plugin", "marketplace", "update"], {
-      cwd: projectRoot,
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: true,
-    });
-
-    let stdoutBuf = "", stderrBuf = "";
-
-    proc.stdout.on("data", (chunk) => {
-      stdoutBuf += chunk.toString("utf8");
-      const lines = stdoutBuf.split("\n");
-      stdoutBuf = lines.pop();
-      lines.forEach((l) => onLine(l + "\n"));
-    });
-
-    proc.stderr.on("data", (chunk) => {
-      stderrBuf += chunk.toString("utf8");
-      const lines = stderrBuf.split("\n");
-      stderrBuf = lines.pop();
-      lines.forEach((l) => onLine(l + "\n"));
-    });
-
-    proc.on("close", (code) => {
-      if (stdoutBuf) onLine(stdoutBuf);
-      if (stderrBuf) onLine(stderrBuf);
-      if (code === 0) resolve();
-      else reject(new Error(`Exit code ${code}`));
-    });
-
-    proc.on("error", reject);
-  });
+// Stops a child and what it started. On Windows the child may be a shell whose own child
+// is the CLI, and killing the shell alone would leave the CLI running.
+function killTree(proc) {
+  if (process.platform !== "win32") {
+    proc.kill();
+    return;
+  }
+  const taskkill = path.join(process.env.SystemRoot || "C:\\Windows", "System32", "taskkill.exe");
+  spawn(taskkill, ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore" });
 }
 
 const SELECTED_PROJECT_KEY = "skillsToggle.selectedProject";
@@ -455,6 +423,15 @@ class SkillsViewProvider {
     this._selectedRoot = workspaceState.get(SELECTED_PROJECT_KEY) || null;
     // The settings watchers of the folder in use; rebuilt by _watchFolder on every switch.
     this._folderWatchers = [];
+    // The `claude` calls still running, so closing the panel can stop them.
+    this._running = new Set();
+  }
+
+  _claude(args, projectRoot, onLine) {
+    return runClaude(args, projectRoot, onLine, (proc) => {
+      this._running.add(proc);
+      proc.on("close", () => this._running.delete(proc));
+    });
   }
 
   resolveWebviewView(webviewView) {
@@ -521,6 +498,8 @@ class SkillsViewProvider {
       for (const w of this._folderWatchers) w.dispose();
       this._folderWatchers = [];
       foldersListener.dispose();
+      // Nobody is left to read their output, and a hung call would otherwise run on.
+      for (const proc of this._running) killTree(proc);
     });
   }
 
@@ -712,7 +691,7 @@ class SkillsViewProvider {
 
       webview.postMessage({ type: "marketplaceRefreshStart" });
       try {
-        await streamMarketplaceRefresh(projectRoot, (line) => {
+        await this._claude(["plugin", "marketplace", "update"], projectRoot, (line) => {
           webview.postMessage({ type: "marketplaceRefreshLine", text: line });
         });
         this._refresh(webview);
@@ -733,7 +712,7 @@ class SkillsViewProvider {
       webview.postMessage({ type: "installStart", id });
 
       try {
-        await streamInstall(id, installScope, projectRoot, (line) => {
+        await this._claude(["plugin", "install", id, "--scope", installScope], projectRoot, (line) => {
           webview.postMessage({ type: "installLine", id, text: line });
         });
         webview.postMessage({ type: "installDone", id, ok: true });
@@ -767,7 +746,7 @@ class SkillsViewProvider {
       webview.postMessage({ type: "uninstallStart", id });
 
       try {
-        await streamUninstall(id, scope, projectRoot, (line) => {
+        await this._claude(["plugin", "uninstall", id, "--scope", scope], projectRoot, (line) => {
           webview.postMessage({ type: "uninstallLine", id, text: line });
         });
         webview.postMessage({ type: "uninstallDone", id, ok: true });
