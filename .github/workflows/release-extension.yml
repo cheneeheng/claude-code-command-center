@@ -43,12 +43,18 @@ jobs:
 
       - name: Package extension
         working-directory: apps/per-project-plugin-toggler/vscode-extension
+        run: npm run package
+
+      - name: Extract release notes
+        if: github.event_name == 'push'
         run: |
-          mkdir -p dist
-          npx vsce package --out dist/skills-toggle.vsix
+          TAG="${GITHUB_REF_NAME#pppt-v}"
+          awk -v h="## [$TAG]" 'index($0, h) == 1 {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] || { echo "::error::no CHANGELOG section for $TAG"; exit 1; }
 
       - name: Attach .vsix to release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
-          files: apps/per-project-plugin-toggler/vscode-extension/dist/skills-toggle.vsix
+          body_path: ${{ github.event_name == 'push' && format('{0}/notes.md', runner.temp) || '' }}
+          files: apps/per-project-plugin-toggler/vscode-extension/dist/claude-code-plugin-toggler.vsix

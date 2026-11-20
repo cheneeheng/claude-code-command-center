@@ -12,7 +12,7 @@ function claudeDir() {
 
 function confirmActionsEnabled() {
   return vscode.workspace
-    .getConfiguration("skillsToggle")
+    .getConfiguration("pluginToggler")
     .get("confirmActions", false);
 }
 
@@ -387,7 +387,7 @@ function killTree(proc) {
   spawn(taskkill, ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore" });
 }
 
-const SELECTED_PROJECT_KEY = "skillsToggle.selectedProject";
+const SELECTED_PROJECT_KEY = "pluginToggler.selectedProject";
 
 // VSCode returns lowercase drive letters on Windows; normalize to uppercase so spawn's cwd
 // matches what the CLI writes to installed_plugins.json, and so stored selections compare
@@ -399,7 +399,7 @@ function folderPath(folder) {
 }
 
 class SkillsViewProvider {
-  static viewType = "skillsToggle.pluginList";
+  static viewType = "pluginToggler.pluginList";
 
   constructor(extensionUri, workspaceState) {
     this._extensionUri = extensionUri;

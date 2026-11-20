@@ -125,7 +125,7 @@ they name that member.
   a SemVer tag prefixed with the component's short alias (e.g. `pppt-vX.Y.Z` for
   `per-project-plugin-toggler`) and triggers only that component's release workflow — the plugin
   toggler's is `.github/workflows/release-extension.yml`, which asserts the tag matches
-  `vscode-extension/package.json`, builds `skills-toggle.vsix` on Ubuntu, and attaches it to a
+  `vscode-extension/package.json`, builds `claude-code-plugin-toggler.vsix` on Ubuntu, and attaches it to a
   GitHub release (it does NOT publish to the VSCode Marketplace). A *whole-repo* release is a bare
   `vX.Y.Z` tag; that namespace is reserved but not yet wired (no `release-repo.yml` / root
   `CHANGELOG.md` yet), deferred until the first repo-wide release. The bare `v*` namespace never
