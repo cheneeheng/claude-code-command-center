@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install/uninstall the SessionStart hook that names each new session <folder>-<yyMMddHHmm>.
+# Install/uninstall the SessionStart hook that names each new session <folder>-<yyMMddHHmmss>.
 # The hook lives in settings.json; other keys and hooks are preserved. Needs jq.
 # Usage:
 #   bash session-name-date-prefixer-setup.sh                        # install (default)
@@ -26,7 +26,7 @@ marker="session-name-date-prefixer"
 # Prints nothing when the session already has a title (--name, /rename). The leading
 # no-op names the tool, so install and uninstall can find this hook.
 # shellcheck disable=SC2016  # expanded by the hook's shell, not here
-cmd=': session-name-date-prefixer; grep -q '\''"session_title"'\'' || printf '\''{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"%s-%s"}}'\'' "$(basename "$PWD" | tr -c '\''A-Za-z0-9_\n-'\'' '\''-'\'')" "$(date +%y%m%d%H%M)"'
+cmd=': session-name-date-prefixer; grep -q '\''"session_title"'\'' || printf '\''{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"%s-%s"}}'\'' "$(basename "$PWD" | tr -c '\''A-Za-z0-9_\n-'\'' '\''-'\'')" "$(date +%y%m%d%H%M%S)"'
 
 # The retired PATH wrapper this hook replaces.
 old_wrapper="$HOME/.local/bin/claude"
