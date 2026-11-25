@@ -69,7 +69,7 @@ for s in $scripts; do
   for r in $runners; do
     out="$(run_hook "$s" "$r" "$cmd" '{"source":"startup"}')" || fail "$s/$r: hook exited non-zero"
     title="$(printf '%s' "$out" | jq -r '.hookSpecificOutput.sessionTitle')" || fail "$s/$r: output is not JSON: $out"
-    [[ "$title" =~ ^my-proj-[0-9]{10}$ ]] || fail "$s/$r: unexpected title '$title'"
+    [[ "$title" =~ ^my-proj-[0-9]{12}$ ]] || fail "$s/$r: unexpected title '$title'"
     out="$(run_hook "$s" "$r" "$cmd" '{"source":"startup","session_title":"mine"}')" || fail "$s/$r: hook exited non-zero"
     [ -z "$out" ] || fail "$s/$r: hook overrode an existing title: $out"
     echo "pass  $s/$r  $title"

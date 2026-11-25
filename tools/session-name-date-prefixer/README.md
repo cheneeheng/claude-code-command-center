@@ -1,6 +1,6 @@
 # session-name-date-prefixer
 
-Names each new Claude Code session `<folder>-<yyMMddHHmm>` at startup, so your session history is
+Names each new Claude Code session `<folder>-<yyMMddHHmmss>` at startup, so your session history is
 easy to browse. A session you start with `--name` keeps the name you gave it.
 
 **Limitation:** `/clear` keeps the old session's title. Claude Code ignores a hook's title on
