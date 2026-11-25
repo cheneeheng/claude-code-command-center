@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A Claude Code `SessionStart` hook (matcher `startup`) that sets each new session's title to
-`<cwd leaf>-<yyMMddHHmm>`, unless the session already has one. The setup scripts write it into
+`<cwd leaf>-<yyMMddHHmmss>`, unless the session already has one. The setup scripts write it into
 `settings.json`.
 
 ## Running

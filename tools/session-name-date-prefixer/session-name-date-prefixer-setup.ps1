@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Install/uninstall the SessionStart hook that names each new session <folder>-<yyMMddHHmm>.
+# Install/uninstall the SessionStart hook that names each new session <folder>-<yyMMddHHmmss>.
 # The hook lives in settings.json; other keys and hooks are preserved.
 # Usage:
 #   .\session-name-date-prefixer-setup.ps1                        # install (default)
@@ -22,7 +22,7 @@ $marker       = 'session-name-date-prefixer'
 # stays valid in both. Prints nothing when the session already has a title (--name, /rename).
 # The leading no-op names the tool, so install and uninstall can find this hook.
 $command = @'
-$null = 'session-name-date-prefixer'; if (-not ([Console]::In.ReadToEnd() | ConvertFrom-Json).session_title) { '{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"' + ((Split-Path -Leaf (Get-Location)) -replace '[^A-Za-z0-9_-]', '-') + '-' + (Get-Date -Format yyMMddHHmm) + '"}}' }
+$null = 'session-name-date-prefixer'; if (-not ([Console]::In.ReadToEnd() | ConvertFrom-Json).session_title) { '{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"' + ((Split-Path -Leaf (Get-Location)) -replace '[^A-Za-z0-9_-]', '-') + '-' + (Get-Date -Format yyMMddHHmmss) + '"}}' }
 '@
 
 # The retired PATH wrapper this hook replaces (Windows only, hence the LOCALAPPDATA guard).
